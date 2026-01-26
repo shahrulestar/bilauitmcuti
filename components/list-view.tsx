@@ -1,4 +1,4 @@
-import { memo } from 'react';
+import { memo, useState, useEffect } from 'react';
 import { getActivitiesForMonth, formatDateRange, type ProgramGroup } from '@/lib/data';
 import type { Theme } from '@/app/page';
 
@@ -31,6 +31,12 @@ export const ListView = memo(function ListView({
   onMonthChange,
   selectedStates = [],
 }: ListViewProps) {
+  const [isMounted, setIsMounted] = useState(false);
+  
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+  
   const getProgramGroup = (program: string): ProgramGroup => {
     if (program === 'Foundation/Professional' || program === 'Foundation' || program === 'Professional') return 'A';
     return 'B';
@@ -199,10 +205,20 @@ export const ListView = memo(function ListView({
               filteredGroupedByMonth[month].map((activity) => {
                 // Use regional dates if KKT filter is on
                 const useRegionalDate = showKKT && activity.regionalStartDate;
-                const startDate = useRegionalDate ? new Date(activity.regionalStartDate!) : new Date(activity.startDate);
-                const dayName = startDate.toLocaleString('en-US', { weekday: 'short' });
-                const dayNum = startDate.getDate();
-                const monthShort = startDate.toLocaleString('en-US', { month: 'short' });
+                const dateStr = useRegionalDate ? activity.regionalStartDate! : activity.startDate;
+                
+                // Parse date on client-only to avoid hydration mismatch
+                let dayName = '';
+                let dayNum = '';
+                let monthShort = '';
+                
+                if (isMounted) {
+                  const [year, monthNum, day] = dateStr.split('-').map(Number);
+                  const startDate = new Date(Date.UTC(year, monthNum - 1, day));
+                  dayName = startDate.toLocaleString('en-US', { weekday: 'short', timeZone: 'UTC' });
+                  dayNum = String(startDate.getUTCDate());
+                  monthShort = startDate.toLocaleString('en-US', { month: 'short', timeZone: 'UTC' });
+                }
                 
                 // Check if this activity has KKT-specific dates
                 const hasKKTVariant = activity.regionalStartDate || activity.regionalEndDate;
@@ -210,9 +226,9 @@ export const ListView = memo(function ListView({
                 return (
                   <div key={activity.name + activity.startDate} className="flex gap-4 p-3 rounded-lg px-0">
                     {/* Date column */}
-                    <div className={`flex w-20 flex-col items-start text-xs ${mutedClass}`}>
-                      <div>{dayName}</div>
-                      <div className={`text-sm font-medium ${textClass}`}>{dayNum} {monthShort}</div>
+                    <div className={`flex w-20 flex-col items-start text-xs ${mutedClass}`} suppressHydrationWarning>
+                      <div suppressHydrationWarning>{isMounted ? dayName : '\u00A0'}</div>
+                      <div className={`text-sm font-medium ${textClass}`} suppressHydrationWarning>{isMounted ? `${dayNum} ${monthShort}` : '\u00A0'}</div>
                     </div>
                     
                     {/* Activity info */}

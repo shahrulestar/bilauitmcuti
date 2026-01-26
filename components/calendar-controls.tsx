@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { List, Settings, Sun, Moon, Calendar, ChevronDown, ChevronUp } from 'lucide-react';
 import {
@@ -70,34 +70,40 @@ export function CalendarControls({
   currentMonth = 'Academic Calendar',
 }: CalendarControlsProps) {
   const router = useRouter();
+  const [isPending, startTransition] = useTransition();
   const [isOpen, setIsOpen] = useState(false);
   const [scrolling, setScrolling] = useState(false);
   const [selectOpen, setSelectOpen] = useState(false);
   const [isPWAInstalled, setIsPWAInstalled] = useState(false);
 
-  // Prefetch routes on mount - only prefetch current view mode routes for faster switching
+  // Optimized prefetch strategy - delay prefetch until user interaction
   useEffect(() => {
-    // Prefetch all program routes for current view mode only (not both modes)
-    programOptions.forEach((option) => {
-      const currentPath = getRoutePath(option.value as ProgramValue, viewMode);
-      router.prefetch(currentPath);
-    });
+    // Delay prefetch to not block initial render
+    const timeoutId = setTimeout(() => {
+      // Only prefetch adjacent routes for faster switching
+      programOptions.slice(0, 3).forEach((option) => {
+        const currentPath = getRoutePath(option.value as ProgramValue, viewMode);
+        router.prefetch(currentPath);
+      });
+    }, 1000); // Delay 1 second after mount
+    
+    return () => clearTimeout(timeoutId);
   }, [router, viewMode]);
 
-  // Handle program change - navigate instantly for smooth UX
+  // Handle program change - navigate instantly and preserve settings
   const handleProgramChange = useCallback((programValue: ProgramValue) => {
     const newPath = getRoutePath(programValue, viewMode);
-    // Use replace instead of push for instant navigation without adding to history
-    router.replace(newPath);
     setSelectOpen(false);
+    // Navigate without transition for instant feedback
+    router.replace(newPath, { scroll: false });
   }, [router, viewMode]);
 
-  // Handle view mode change - navigate instantly for smooth UX
+  // Handle view mode change - navigate instantly and preserve settings
   const handleViewModeChange = useCallback((newViewMode: ViewMode) => {
     const programValue = selectedProgram as ProgramValue;
     const newPath = getRoutePath(programValue, newViewMode);
-    // Use replace instead of push for instant navigation without adding to history
-    router.replace(newPath);
+    // Navigate without transition for instant feedback
+    router.replace(newPath, { scroll: false });
   }, [router, selectedProgram]);
 
   // Check if app is installed as PWA
@@ -111,40 +117,41 @@ export function CalendarControls({
     }
   }, []);
 
-  const groupAOptions = programOptions.filter(p => p.group === 'A');
-  const groupBOptions = programOptions.filter(p => p.group === 'B');
+  // Memoize filtered program options to avoid recalculation
+  const groupAOptions = useMemo(() => programOptions.filter(p => p.group === 'A'), []);
+  const groupBOptions = useMemo(() => programOptions.filter(p => p.group === 'B'), []);
   
-  // Get the current program label for display
-  const currentProgramLabel = programOptions.find(p => p.value === selectedProgram)?.label || 'Foundation/Prof';
+  // Memoize current program label
+  const currentProgramLabel = useMemo(() => 
+    programOptions.find(p => p.value === selectedProgram)?.label || 'Foundation/Prof',
+    [selectedProgram]
+  );
+  
+  // Theme classes (simple computations, no need for useMemo)
   const bgClass = theme === 'dark' ? 'bg-[#1a1a1a]' : 'bg-white';
   const borderClass = theme === 'dark' ? 'border-secondary bg-secondary/50' : 'border-gray-200 bg-gray-100';
   const textClass = theme === 'dark' ? 'text-white' : 'text-[#1a1a1a]';
-  
-  // #region agent log
-  if (typeof window !== 'undefined') {
-    fetch('http://127.0.0.1:7244/ingest/256b6304-26dc-4efd-a8c7-f1d9375b8e0d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'calendar-controls.tsx:119',message:'CalendarControls theme classes',data:{theme,bgClass,borderClass,textClass},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H3'})}).catch(()=>{});
-  }
-  // #endregion
-  
-  // #region agent log
-  if (typeof window !== 'undefined') {
-    fetch('http://127.0.0.1:7244/ingest/256b6304-26dc-4efd-a8c7-f1d9375b8e0d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'calendar-controls.tsx:122',message:'CalendarControls theme prop received',data:{theme,borderClass,textClass},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H3'})}).catch(()=>{});
-  }
-  // #endregion
 
-  // Determine current group based on selectedProgram
-  const currentGroup = groupAOptions.some(p => p.value === selectedProgram) ? 'A' : 'B';
+  // Memoize current group determination
+  const currentGroup = useMemo(() => 
+    groupAOptions.some(p => p.value === selectedProgram) ? 'A' : 'B',
+    [groupAOptions, selectedProgram]
+  );
 
-  // Check if certain activity types exist for the current group
-  const hasSemesterPendek = allActivities.some(
-    a => a.group === currentGroup && a.type === 'lecture' && a.name.includes('Semester Pendek')
-  );
-  const hasKuliahIntersesi = allActivities.some(
-    a => a.group === currentGroup && a.type === 'lecture' && a.name.includes('Intersesi')
-  );
-  const hasOthersExams = allActivities.some(
-    a => a.group === currentGroup && a.type === 'examination' && a.name.includes('Khas')
-  );
+  // Memoize activity type checks to avoid repeated array iterations
+  const activityChecks = useMemo(() => ({
+    hasSemesterPendek: allActivities.some(
+      a => a.group === currentGroup && a.type === 'lecture' && a.name.includes('Semester Pendek')
+    ),
+    hasKuliahIntersesi: allActivities.some(
+      a => a.group === currentGroup && a.type === 'lecture' && a.name.includes('Intersesi')
+    ),
+    hasOthersExams: allActivities.some(
+      a => a.group === currentGroup && a.type === 'examination' && a.name.includes('Khas')
+    )
+  }), [currentGroup]);
+  
+  const { hasSemesterPendek, hasKuliahIntersesi, hasOthersExams } = activityChecks;
 
   useEffect(() => {
     const handleScroll = () => {
@@ -179,7 +186,7 @@ export function CalendarControls({
         {/* Program selector - Left */}
         <div className="px-0">
           <Select value={selectedProgram} onValueChange={handleProgramChange} open={selectOpen} onOpenChange={setSelectOpen}>
-            <SelectTrigger className={`w-[140px] !h-11 !py-1 border ${borderClass} ${textClass} truncate flex items-center justify-between [&>svg]:hidden rounded-lg`}>
+            <SelectTrigger className={`w-[140px] !h-11 !py-1 border ${borderClass} ${textClass} truncate flex items-center justify-between [&>svg]:hidden rounded-lg`} suppressHydrationWarning>
               <span className="truncate text-left font-medium text-xs">
                 {currentProgramLabel.substring(0, 12)}
               </span>
@@ -230,13 +237,17 @@ export function CalendarControls({
         </div>
         {/* View controls and Settings combined - Right */}
         <div className="px-0">
-          <div className={`flex gap-0 rounded-lg ${borderClass} p-1 w-fit`}>
+          <div 
+            className={`flex gap-0 rounded-lg p-1 w-fit ${borderClass}`}
+            suppressHydrationWarning
+          >
             <Button
               variant={viewMode === 'grid' ? 'secondary' : 'ghost'}
               size="icon"
               onClick={() => handleViewModeChange('grid')}
               className={`${viewMode === 'grid' ? (theme === 'dark' ? 'bg-secondary text-white' : 'bg-gray-200 text-[#1a1a1a]') : `bg-transparent ${theme === 'dark' ? 'text-muted-foreground hover:text-white' : 'text-gray-600 hover:text-[#1a1a1a]'}`}`}
               title="Grid View"
+              suppressHydrationWarning
             >
               <Calendar className="h-5 w-5" />
             </Button>
@@ -246,10 +257,17 @@ export function CalendarControls({
               onClick={() => handleViewModeChange('list')}
               className={`${viewMode === 'list' ? (theme === 'dark' ? 'bg-secondary text-white' : 'bg-gray-200 text-[#1a1a1a]') : `bg-transparent ${theme === 'dark' ? 'text-muted-foreground hover:text-white' : 'text-gray-600 hover:text-[#1a1a1a]'}`}`}
               title="List View"
+              suppressHydrationWarning
             >
               <List className="h-5 w-5" />
             </Button>
-            <div className={`mx-1 w-px ${theme === 'dark' ? 'bg-border' : 'bg-gray-300'}`} />
+            <div 
+              className="mx-1 w-px" 
+              suppressHydrationWarning
+              style={{
+                backgroundColor: theme === 'dark' ? 'hsl(var(--border))' : '#d1d5db'
+              }}
+            />
             <Popover open={isOpen} onOpenChange={setIsOpen}>
               <PopoverTrigger asChild>
                 <Button
@@ -257,6 +275,7 @@ export function CalendarControls({
                   size="icon"
                   className={`bg-transparent ${theme === 'dark' ? 'text-muted-foreground hover:text-white' : 'text-gray-600 hover:text-[#1a1a1a]'}`}
                   title="Settings"
+                  suppressHydrationWarning
                 >
                   <Settings className="h-5 w-5 transition-colors duration-300" />
                 </Button>

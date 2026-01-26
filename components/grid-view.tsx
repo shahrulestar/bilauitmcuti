@@ -29,11 +29,6 @@ interface GridViewProps {
 }
 
 function MiniCalendar({ month, year, selectedProgram, showKKT, onDateClick, selectedDate, theme, showRegistration, showLecture, showSemesterPendek, showKuliahIntersesi, showExamination, showOthersExams, showBreak, selectedStates = [] }: { month: number; year: number; selectedProgram: string; showKKT: boolean; onDateClick: (date: string) => void; selectedDate: string | null; theme: Theme; showRegistration: boolean; showLecture: boolean; showSemesterPendek: boolean; showKuliahIntersesi: boolean; showExamination: boolean; showOthersExams: boolean; showBreak: boolean; selectedStates?: string[] }) {
-  // #region agent log
-  if (typeof window !== 'undefined') {
-    fetch('http://127.0.0.1:7244/ingest/256b6304-26dc-4efd-a8c7-f1d9375b8e0d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'grid-view.tsx:31',message:'MiniCalendar theme prop received',data:{theme},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H3'})}).catch(()=>{});
-  }
-  // #endregion
   const [tooltipOpen, setTooltipOpen] = useState<string | null>(null);
   const [isMounted, setIsMounted] = useState(false);
 
@@ -402,10 +397,6 @@ function MiniCalendar({ month, year, selectedProgram, showKKT, onDateClick, sele
     
     const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
     
-    // #region agent log
-    fetch('http://127.0.0.1:7244/ingest/256b6304-26dc-4efd-a8c7-f1d9375b8e0d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'grid-view.tsx:395',message:'getPriorityActivitiesForDay entry',data:{day,dateStr,showKKT,selectedStates,showRegistration,showLecture,showExamination,showBreak,isServer:typeof window==='undefined'},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H2'})}).catch(()=>{});
-    // #endregion
-    
     // Get all activities for this date
     const activitiesForDay: Activity[] = [];
     for (const activity of allActivities) {
@@ -441,25 +432,13 @@ function MiniCalendar({ month, year, selectedProgram, showKKT, onDateClick, sele
     activitiesForDay.sort((a, b) => getActivityPriority(a, activitiesForDay) - getActivityPriority(b, activitiesForDay));
     const result = activitiesForDay.slice(0, 3);
     
-    // #region agent log
-    fetch('http://127.0.0.1:7244/ingest/256b6304-26dc-4efd-a8c7-f1d9375b8e0d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'grid-view.tsx:432',message:'getPriorityActivitiesForDay result',data:{count:result.length,activities:result.map(a=>({name:a.name,type:a.type,startDate:a.startDate}))},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H2'})}).catch(()=>{});
-    // #endregion
-    
     return result;
   };
 
   const getIndicatorDots = (day: number | null) => {
     if (!day) return null;
     
-    // #region agent log
-    fetch('http://127.0.0.1:7244/ingest/256b6304-26dc-4efd-a8c7-f1d9375b8e0d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'grid-view.tsx:436',message:'getIndicatorDots entry',data:{day,showKKT,selectedStates,showRegistration,showLecture,showSemesterPendek,showKuliahIntersesi,showExamination,showOthersExams,showBreak,isServer:typeof window==='undefined'},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H1'})}).catch(()=>{});
-    // #endregion
-    
     const priorityActivities = getPriorityActivitiesForDay(day);
-    
-    // #region agent log
-    fetch('http://127.0.0.1:7244/ingest/256b6304-26dc-4efd-a8c7-f1d9375b8e0d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'grid-view.tsx:440',message:'priorityActivities result',data:{count:priorityActivities.length,activities:priorityActivities.map(a=>({name:a.name,type:a.type,startDate:a.startDate}))},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H2'})}).catch(()=>{});
-    // #endregion
     
     if (priorityActivities.length === 0) return null;
     
@@ -474,14 +453,6 @@ function MiniCalendar({ month, year, selectedProgram, showKKT, onDateClick, sele
     }
     
     const uniqueActivities = Array.from(activityTypeMap.values());
-    
-    // #region agent log
-    fetch('http://127.0.0.1:7244/ingest/256b6304-26dc-4efd-a8c7-f1d9375b8e0d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'grid-view.tsx:455',message:'getIndicatorDots uniqueActivities',data:{uniqueCount:uniqueActivities.length,activities:uniqueActivities.map(a=>({name:a.name,type:a.type,startDate:a.startDate,key:a.name+a.startDate}))},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H3'})}).catch(()=>{});
-    // #endregion
-    
-    // #region agent log
-    fetch('http://127.0.0.1:7244/ingest/256b6304-26dc-4efd-a8c7-f1d9375b8e0d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'grid-view.tsx:460',message:'getIndicatorDots returning',data:{willRender:true,dotsCount:uniqueActivities.length,dotTypes:uniqueActivities.map(a=>a.type)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H4'})}).catch(()=>{});
-    // #endregion
     
     return (
       <div className="flex gap-1 justify-center mt-1" suppressHydrationWarning>
@@ -507,12 +478,6 @@ function MiniCalendar({ month, year, selectedProgram, showKKT, onDateClick, sele
   const weekDays = ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'];
   const textClass = theme === 'dark' ? 'text-white' : 'text-[#1a1a1a]';
   const mutedClass = theme === 'dark' ? 'text-muted-foreground' : 'text-gray-600';
-  
-  // #region agent log
-  if (typeof window !== 'undefined') {
-    fetch('http://127.0.0.1:7244/ingest/256b6304-26dc-4efd-a8c7-f1d9375b8e0d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'grid-view.tsx:508',message:'MiniCalendar theme classes calculated',data:{theme,textClass,mutedClass,isServer:typeof window==='undefined'},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H3'})}).catch(()=>{});
-  }
-  // #endregion
   
   const getTooltip = (day: number | null) => {
     if (!day) return '';
@@ -549,10 +514,34 @@ function MiniCalendar({ month, year, selectedProgram, showKKT, onDateClick, sele
               <div
                 key={index}
                 className={`flex flex-col h-12 items-center justify-center text-xs font-medium ${textClass}`}
+                suppressHydrationWarning
               />
             );
           }
 
+          const dayColor = getDayColor(day);
+          const ringColor = getRingColor(day);
+          const borderColor = getCurrentDateBorderColor(day);
+          
+          // Get inline background color for events only (no weekend colors)
+          const getInlineEventBg = () => {
+            if (!isMounted) return undefined;
+            
+            // Event backgrounds only - no color for weekends or non-events
+            if (dayColor.includes('purple')) {
+              return theme === 'dark' ? 'rgba(88, 28, 135, 0.5)' : 'rgba(243, 232, 255, 1)';
+            }
+            if (dayColor.includes('red')) {
+              return theme === 'dark' ? 'rgba(127, 29, 29, 0.5)' : 'rgba(254, 226, 226, 1)';
+            }
+            if (dayColor.includes('green')) {
+              return theme === 'dark' ? 'rgba(20, 83, 45, 0.5)' : 'rgba(220, 252, 231, 1)';
+            }
+            
+            // No background color for weekends or non-events
+            return undefined;
+          };
+          
           const calendarCell = (
             <div
               onClick={() => {
@@ -575,9 +564,12 @@ function MiniCalendar({ month, year, selectedProgram, showKKT, onDateClick, sele
                 // Immediately blur if element somehow gets focus
                 e.currentTarget.blur();
               }}
-              className={`calendar-date-cell flex flex-col h-12 items-center justify-center rounded-lg text-sm font-semibold cursor-pointer transition touch-manipulation select-none outline-none focus:outline-none focus-visible:outline-none focus:ring-0 focus-visible:ring-0 focus:shadow-none focus-visible:shadow-none [&:focus]:ring-0 [&:focus-visible]:ring-0 [&:focus]:shadow-none [&:focus-visible]:shadow-none [&:focus]:outline-none [&:focus-visible]:outline-none ${getDayColor(day)} ${isSelected ? `ring-2 ${getRingColor(day)}` : ''} ${isCurrentDate(day) && isCurrentDateInRange() ? getCurrentDateBorderColor(day) : 'border border-transparent'} ${isWeekend(day) ? (theme === 'dark' ? 'bg-gray-800/30' : 'bg-gray-100/50') : ''} ${textClass}`}
+              className={`calendar-date-cell flex flex-col h-12 items-center justify-center rounded-lg text-sm font-semibold cursor-pointer transition touch-manipulation select-none outline-none focus:outline-none focus-visible:outline-none focus:ring-0 focus-visible:ring-0 focus:shadow-none focus-visible:shadow-none [&:focus]:ring-0 [&:focus-visible]:ring-0 [&:focus]:shadow-none [&:focus-visible]:shadow-none [&:focus]:outline-none [&:focus-visible]:outline-none ${isSelected ? `ring-2 ${ringColor}` : ''} ${isCurrentDate(day) && isCurrentDateInRange() ? borderColor : 'border border-transparent'} ${textClass}`}
               tabIndex={-1}
               suppressHydrationWarning
+              style={{
+                backgroundColor: getInlineEventBg()
+              }}
             >
               <div suppressHydrationWarning>{day}</div>
               {isMounted ? (

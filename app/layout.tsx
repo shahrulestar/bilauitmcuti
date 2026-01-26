@@ -84,8 +84,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
-        <meta name="theme-color" content="#1a1a1a" media="(prefers-color-scheme: dark)" />
-        <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
+        <meta name="theme-color" content="#1a1a1a" />
         <link rel="manifest" href="/manifest.json" />
         <link rel="canonical" href="https://cutiuitm.xyz" />
         <script
@@ -98,11 +97,6 @@ export default function RootLayout({
                   const savedTheme = localStorage.getItem('theme');
                   const htmlEl = document.documentElement;
                   
-                  // Log for debugging
-                  try {
-                    fetch('http://127.0.0.1:7244/ingest/256b6304-26dc-4efd-a8c7-f1d9375b8e0d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'layout.tsx:96',message:'Blocking script theme init',data:{savedTheme,beforeClass:htmlEl.className},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H5'})}).catch(()=>{});
-                  } catch(e) {}
-                  
                   // Remove both classes first to ensure clean state
                   htmlEl.classList.remove('dark', 'light');
                   
@@ -114,10 +108,7 @@ export default function RootLayout({
                     themeToApply = 'dark';
                   }
                   
-                  // Apply theme class immediately
-                  htmlEl.classList.add(themeToApply);
-                  
-                  // Also set inline style as backup to prevent any flash
+                  // Apply inline style FIRST for instant visual feedback (before class)
                   // This ensures background color is applied even before CSS loads
                   if (themeToApply === 'light') {
                     htmlEl.style.backgroundColor = '#ffffff';
@@ -127,20 +118,27 @@ export default function RootLayout({
                     htmlEl.style.color = '#ffffff';
                   }
                   
-                  // Log after applying
-                  try {
-                    fetch('http://127.0.0.1:7244/ingest/256b6304-26dc-4efd-a8c7-f1d9375b8e0d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'layout.tsx:120',message:'Blocking script theme applied',data:{themeToApply,afterClass:htmlEl.className},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H5'})}).catch(()=>{});
-                  } catch(e) {}
+                  // Then apply theme class
+                  htmlEl.classList.add(themeToApply);
+                  
+                  // Update browser tab/window chrome color
+                  const metaThemeColor = document.querySelector('meta[name="theme-color"]');
+                  if (metaThemeColor) {
+                    metaThemeColor.setAttribute('content', themeToApply === 'dark' ? '#1a1a1a' : '#ffffff');
+                  }
                 } catch (e) {
                   // Fallback to dark if localStorage fails
                   const htmlEl = document.documentElement;
-                  htmlEl.classList.remove('light');
-                  htmlEl.classList.add('dark');
                   htmlEl.style.backgroundColor = '#1a1a1a';
                   htmlEl.style.color = '#ffffff';
-                  try {
-                    fetch('http://127.0.0.1:7244/ingest/256b6304-26dc-4efd-a8c7-f1d9375b8e0d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'layout.tsx:130',message:'Blocking script fallback dark',data:{error:String(e)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H5'})}).catch(()=>{});
-                  } catch(e2) {}
+                  htmlEl.classList.remove('light');
+                  htmlEl.classList.add('dark');
+                  
+                  // Set theme-color to dark
+                  const metaThemeColor = document.querySelector('meta[name="theme-color"]');
+                  if (metaThemeColor) {
+                    metaThemeColor.setAttribute('content', '#1a1a1a');
+                  }
                 }
                 
                 // Store filter states in data attributes for synchronous access
