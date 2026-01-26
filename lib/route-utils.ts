@@ -77,3 +77,21 @@ export function isValidProgramRoute(route: string | null | undefined): boolean {
   
   return validRoutes.includes(route);
 }
+
+// Get display name for a program route
+export function getProgramDisplayName(route: string | null | undefined): string {
+  if (!route) return 'All';
+  
+  const displayNameMap: Record<string, string> = {
+    'foundation-professional': 'Foundation/Professional',
+    'pre-diploma': 'Pre-Diploma',
+    'diploma': 'Diploma',
+    'diploma-part-time': 'Diploma (Part-Time)',
+    'bachelor': 'Bachelor',
+    'bachelor-part-time': 'Bachelor (Part-Time)',
+    'master': 'Master',
+    'phd': 'PhD',
+  };
+  
+  return displayNameMap[route] || 'All';
+}

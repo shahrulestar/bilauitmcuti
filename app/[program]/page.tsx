@@ -1,11 +1,50 @@
 import { SharedCalendarLayout } from '@/components/shared-calendar-layout';
 import { notFound } from 'next/navigation';
-import { isValidProgramRoute } from '@/lib/route-utils';
+import { isValidProgramRoute, getProgramDisplayName } from '@/lib/route-utils';
+import type { Metadata } from 'next';
 
 interface ProgramPageProps {
   params: Promise<{
     program: string;
   }>;
+}
+
+// Generate metadata for program pages
+export async function generateMetadata({ params }: ProgramPageProps): Promise<Metadata> {
+  const { program } = await params;
+  
+  if (!isValidProgramRoute(program)) {
+    return {};
+  }
+  
+  const programName = getProgramDisplayName(program);
+  const title = `${programName} | Bila UiTM?`;
+  const description = `Kalendar akademik UiTM 2026 untuk ${programName}. Lihat tarikh pendaftaran, jadual kuliah, tempoh peperiksaan, dan cuti.`;
+  
+  return {
+    title,
+    description,
+    openGraph: {
+      title,
+      description,
+      type: 'website',
+      url: `https://cutiuitm.xyz/${program}`,
+      locale: 'ms_MY',
+      images: [
+        {
+          url: '/og-image.png',
+          width: 1200,
+          height: 630,
+          alt: title,
+        },
+      ],
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title,
+      description,
+    },
+  };
 }
 
 // Program-specific Grid views

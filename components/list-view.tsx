@@ -248,9 +248,13 @@ export const ListView = memo(function ListView({
                       <div className="w-full" suppressHydrationWarning>
                         <h3 className={`font-medium text-base leading-6 break-words ${textClass}`} suppressHydrationWarning>{activity.name}</h3>
                         <p className={`mt-1 text-sm leading-5 break-words ${mutedClass}`} suppressHydrationWarning>
-                          {showKKT && activity.regionalStartDate
-                            ? formatDateRange(activity.regionalStartDate, activity.regionalEndDate)
-                            : formatDateRange(activity.startDate, activity.endDate)}
+                          {isMounted ? (
+                            showKKT && activity.regionalStartDate
+                              ? formatDateRange(activity.regionalStartDate, activity.regionalEndDate)
+                              : formatDateRange(activity.startDate, activity.endDate)
+                          ) : (
+                            formatDateRange(activity.startDate, activity.endDate)
+                          )}
                         </p>
                         {activity.duration ? (
                           <p className={`mt-1 text-xs leading-4 break-words ${mutedClass}`} suppressHydrationWarning>
@@ -262,7 +266,7 @@ export const ListView = memo(function ListView({
                             {activity.details}
                           </p>
                         ) : null}
-                        {hasKKTVariant && showKKT ? (
+                        {isMounted && hasKKTVariant && showKKT ? (
                           <p className="mt-1 text-xs leading-4 text-blue-500 italic" suppressHydrationWarning>
                             *Kedah, Kelantan & Terengganu
                           </p>

@@ -41,13 +41,11 @@ export function SharedCalendarLayout({
   // Initialize filter states synchronously from DOM data attribute (set by layout.tsx script)
   // This MUST run synchronously during component initialization, before first render
   // The blocking script in layout.tsx sets data-filters attribute before React hydration
-  // IMPORTANT: Server and client MUST use the same initial values to prevent hydration mismatch
-  // CRITICAL: Client MUST use defaults on first render, then sync from localStorage AFTER hydration
+  // IMPORTANT: Read from data-filters attribute synchronously to prevent flicker
+  // CRITICAL: This ensures filter state is synced before first render
   const getInitialFilterState = () => {
-    // Use consistent defaults for both server and client initial render
-    // This ensures server HTML matches client's first render exactly
-    // Filters will be synced from localStorage AFTER hydration completes
-    return {
+    // Default values as fallback
+    const defaults = {
       showKKT: false,
       showRegistration: false,
       showLecture: true,
@@ -57,6 +55,34 @@ export function SharedCalendarLayout({
       showOthersExams: false,
       showBreak: true,
     };
+
+    // Only read from DOM on client side
+    if (typeof window === 'undefined') {
+      return defaults;
+    }
+
+    // Try to read from data-filters attribute synchronously
+    try {
+      const filtersAttr = document.documentElement.getAttribute('data-filters');
+      if (filtersAttr) {
+        const filters = JSON.parse(filtersAttr);
+        return {
+          showKKT: JSON.parse(filters.showKKT || 'false'),
+          showRegistration: JSON.parse(filters.showRegistration || 'false'),
+          showLecture: JSON.parse(filters.showLecture || 'true'),
+          showSemesterPendek: JSON.parse(filters.showSemesterPendek || 'false'),
+          showKuliahIntersesi: JSON.parse(filters.showKuliahIntersesi || 'false'),
+          showExamination: JSON.parse(filters.showExamination || 'true'),
+          showOthersExams: JSON.parse(filters.showOthersExams || 'false'),
+          showBreak: JSON.parse(filters.showBreak || 'true'),
+        };
+      }
+    } catch (e) {
+      // If parsing fails, fall back to defaults
+      console.warn('Failed to parse data-filters attribute:', e);
+    }
+
+    return defaults;
   };
 
   const initialFilters = getInitialFilterState();
@@ -77,44 +103,10 @@ export function SharedCalendarLayout({
   const [selectedStates, setSelectedStates] = useState<string[]>(initialFilters.showKKT ? ['Kedah', 'Kelantan', 'Terengganu'] : []);
 
 
-  // Mark as loaded after initial render and sync filters from localStorage
-  // CRITICAL: This runs AFTER hydration completes to prevent hydration mismatch
-  // The initial render uses defaults to match server HTML exactly
+  // Mark as loaded after initial render
+  // Since filters are now synced synchronously, we only need to mark as loaded
   useEffect(() => {
-    // Use requestAnimationFrame to ensure this runs after React hydration completes
-    requestAnimationFrame(() => {
-      setIsLoaded(true);
-      
-      // After hydration, sync filters from localStorage/data-filters to match user's saved preferences
-      try {
-        const filtersAttr = document.documentElement.getAttribute('data-filters');
-        if (filtersAttr) {
-          const filters = JSON.parse(filtersAttr);
-          setShowKKT(JSON.parse(filters.showKKT));
-          setShowRegistration(JSON.parse(filters.showRegistration));
-          setShowLecture(JSON.parse(filters.showLecture));
-          setShowSemesterPendek(JSON.parse(filters.showSemesterPendek));
-          setShowKuliahIntersesi(JSON.parse(filters.showKuliahIntersesi));
-          setShowExamination(JSON.parse(filters.showExamination));
-          setShowOthersExams(JSON.parse(filters.showOthersExams));
-          setShowBreak(JSON.parse(filters.showBreak));
-        }
-      } catch (e) {
-        // If data attribute parsing fails, try localStorage directly
-        try {
-          setShowKKT(JSON.parse(localStorage.getItem('showKKT') || 'false'));
-          setShowRegistration(JSON.parse(localStorage.getItem('showRegistration') || 'false'));
-          setShowLecture(JSON.parse(localStorage.getItem('showLecture') || 'true'));
-          setShowSemesterPendek(JSON.parse(localStorage.getItem('showSemesterPendek') || 'false'));
-          setShowKuliahIntersesi(JSON.parse(localStorage.getItem('showKuliahIntersesi') || 'false'));
-          setShowExamination(JSON.parse(localStorage.getItem('showExamination') || 'true'));
-          setShowOthersExams(JSON.parse(localStorage.getItem('showOthersExams') || 'false'));
-          setShowBreak(JSON.parse(localStorage.getItem('showBreak') || 'true'));
-        } catch {
-          // Keep defaults if all else fails
-        }
-      }
-    });
+    setIsLoaded(true);
   }, []);
 
   // Save all preferences to localStorage synchronously to prevent loss during navigation

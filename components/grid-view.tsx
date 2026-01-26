@@ -50,10 +50,12 @@ function MiniCalendar({ month, year, selectedProgram, showKKT, onDateClick, sele
 
   const [currentDateStr, setCurrentDateStr] = useState<string | null>(getInitialCurrentDate);
 
-  // Only render Tooltip after mount to prevent hydration mismatch
+  // Prevent hydration mismatch: only render dots and colors after client-side mount
+  // This ensures server and client render the same initial HTML
   useEffect(() => {
     setIsMounted(true);
   }, []);
+
   const isKKTStates = selectedStates.some(state => ['Kedah', 'Kelantan', 'Terengganu'].includes(state));
   
   // Update current date every minute to catch date changes
@@ -194,7 +196,9 @@ function MiniCalendar({ month, year, selectedProgram, showKKT, onDateClick, sele
         }
       }
       
-      if (matchesDate && shouldShowActivity(activity)) {
+      const shouldShow = shouldShowActivity(activity);
+      
+      if (matchesDate && shouldShow) {
         if (!highestPriorityActivity || priorityMap[activity.type] > priorityMap[highestPriorityActivity.type]) {
           highestPriorityActivity = activity;
         }
@@ -205,6 +209,7 @@ function MiniCalendar({ month, year, selectedProgram, showKKT, onDateClick, sele
       if (highestPriorityActivity.type === 'lecture') return 'bg-purple-100';
       if (highestPriorityActivity.type === 'examination') return 'bg-red-100';
       if (highestPriorityActivity.type === 'break') return 'bg-green-100';
+      if (highestPriorityActivity.type === 'registration') return 'bg-gray-100';
     }
     
     return 'bg-transparent';
@@ -421,6 +426,7 @@ function MiniCalendar({ month, year, selectedProgram, showKKT, onDateClick, sele
       }
       
       const shouldShow = shouldShowActivity(activity);
+      
       if (matchesDate && shouldShow) {
         activitiesForDay.push(activity);
       }
@@ -518,26 +524,41 @@ function MiniCalendar({ month, year, selectedProgram, showKKT, onDateClick, sele
             );
           }
 
-          const dayColor = getDayColor(day);
-          const ringColor = getRingColor(day);
-          const borderColor = getCurrentDateBorderColor(day);
+          // Only calculate colors after mount to prevent hydration mismatch
+          // Server and client must render the same initial HTML
+          const dayColor = isMounted ? getDayColor(day) : 'bg-transparent';
+          const ringColor = isMounted ? getRingColor(day) : '';
+          const borderColor = isMounted ? getCurrentDateBorderColor(day) : 'border border-transparent';
           
           // Get inline background color for events only (no weekend colors)
           // Event backgrounds only - no color for weekends or non-events
+          // Only calculate after mount to prevent hydration mismatch
           const getInlineEventBg = () => {
-            if (dayColor.includes('purple')) {
+            // Never return a value during SSR or before mount to prevent hydration mismatch
+            if (typeof window === 'undefined' || !isMounted) return null;
+            
+            // Check dayColor for event types and return corresponding background color
+            if (dayColor === 'bg-purple-100') {
               return 'rgba(243, 232, 255, 1)';
             }
-            if (dayColor.includes('red')) {
+            if (dayColor === 'bg-red-100') {
               return 'rgba(254, 226, 226, 1)';
             }
-            if (dayColor.includes('green')) {
+            if (dayColor === 'bg-green-100') {
               return 'rgba(220, 252, 231, 1)';
+            }
+            if (dayColor === 'bg-gray-100') {
+              return 'rgba(243, 244, 246, 1)';
             }
             
             // No background color for weekends or non-events
-            return undefined;
+            return null;
           };
+          
+          // Build style prop only if bgColor exists and is not null to prevent hydration mismatch
+          // Never include style prop during SSR (when window is undefined)
+          const bgColor = getInlineEventBg();
+          const styleProps = (typeof window !== 'undefined' && isMounted && bgColor) ? { style: { backgroundColor: bgColor } } : {};
           
           const calendarCell = (
             <div
@@ -561,12 +582,10 @@ function MiniCalendar({ month, year, selectedProgram, showKKT, onDateClick, sele
                 // Immediately blur if element somehow gets focus
                 e.currentTarget.blur();
               }}
-              className={`calendar-date-cell flex flex-col h-12 items-center justify-center rounded-lg text-sm font-semibold cursor-pointer transition touch-manipulation select-none outline-none focus:outline-none focus-visible:outline-none focus:ring-0 focus-visible:ring-0 focus:shadow-none focus-visible:shadow-none [&:focus]:ring-0 [&:focus-visible]:ring-0 [&:focus]:shadow-none [&:focus-visible]:shadow-none [&:focus]:outline-none [&:focus-visible]:outline-none ${isSelected ? `ring-2 ${ringColor}` : ''} ${isCurrentDate(day) && isCurrentDateInRange() ? borderColor : 'border border-transparent'} ${textClass}`}
+              className={`calendar-date-cell flex flex-col h-12 items-center justify-center rounded-lg text-sm font-semibold cursor-pointer transition touch-manipulation select-none outline-none focus:outline-none focus-visible:outline-none focus:ring-0 focus-visible:ring-0 focus:shadow-none focus-visible:shadow-none [&:focus]:ring-0 [&:focus-visible]:ring-0 [&:focus]:shadow-none [&:focus-visible]:shadow-none [&:focus]:outline-none [&:focus-visible]:outline-none ${isMounted && isSelected ? `ring-2 ${ringColor}` : ''} ${isMounted && isCurrentDate(day) && isCurrentDateInRange() ? borderColor : 'border border-transparent'} ${textClass}`}
               tabIndex={-1}
               suppressHydrationWarning
-              style={{
-                backgroundColor: getInlineEventBg()
-              }}
+              {...styleProps}
             >
               <div suppressHydrationWarning>{day}</div>
               {isMounted ? (
