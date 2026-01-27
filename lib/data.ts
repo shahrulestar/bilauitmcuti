@@ -1,5 +1,17 @@
 export type ActivityType = 'registration' | 'lecture' | 'examination' | 'break' | 'other';
 
+// Default filter states - single source of truth
+export const DEFAULT_FILTER_STATES = {
+  showKKT: false,
+  showRegistration: false,
+  showLecture: true,
+  showSemesterPendek: false,
+  showKuliahIntersesi: false,
+  showExamination: true,
+  showOthersExams: false,
+  showBreak: true,
+} as const;
+
 export interface Activity {
   name: string;
   details?: string;

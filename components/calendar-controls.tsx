@@ -176,7 +176,7 @@ export function CalendarControls({
   const isDark = theme === 'dark';
   const getSwitchBgColor = (checked: boolean) => {
     if (checked) return '#2563eb';
-    return isDark ? '#1A1A1A' : '#d1d5db';
+    return isDark ? '#525252' : '#d1d5db';
   };
 
   return (
@@ -453,8 +453,6 @@ export function CalendarControls({
                     </label>
                   </div>
 
-                  <div className="h-px bg-border transition-none" />
-
                   <label className="flex items-center justify-between cursor-pointer py-0.5 transition-none">
                     <div className="flex items-center gap-2">
                       <span className="text-sm font-medium text-foreground">Show</span>
@@ -490,12 +488,8 @@ export function CalendarControls({
                     </div>
                   </label>
 
-                  <div className="h-px bg-border transition-none" />
-
                   {/* Theme Toggle */}
                   <ThemeToggle />
-
-                  <div className="h-px bg-border transition-none" />
 
                   {/* Made By and Source + Share/PWA */}
                   <div className="text-left text-xs pt-0.5 space-y-3 text-muted-foreground transition-none">

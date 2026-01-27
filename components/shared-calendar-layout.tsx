@@ -7,6 +7,7 @@ import { CalendarControls } from '@/components/calendar-controls';
 import { ListView } from '@/components/list-view';
 import { GridView } from '@/components/grid-view';
 import { getProgramFromRoute } from '@/lib/route-utils';
+import { DEFAULT_FILTER_STATES } from '@/lib/data';
 import type { ViewMode } from '@/app/page';
 
 interface SharedCalendarLayoutProps {
@@ -44,17 +45,8 @@ export function SharedCalendarLayout({
   // IMPORTANT: Read from data-filters attribute synchronously to prevent flicker
   // CRITICAL: This ensures filter state is synced before first render
   const getInitialFilterState = () => {
-    // Default values as fallback
-    const defaults = {
-      showKKT: false,
-      showRegistration: false,
-      showLecture: true,
-      showSemesterPendek: false,
-      showKuliahIntersesi: false,
-      showExamination: true,
-      showOthersExams: false,
-      showBreak: true,
-    };
+    // Use DEFAULT_FILTER_STATES from data.ts as single source of truth
+    const defaults = DEFAULT_FILTER_STATES;
 
     // Only read from DOM on client side
     if (typeof window === 'undefined') {
@@ -67,18 +59,18 @@ export function SharedCalendarLayout({
       if (filtersAttr) {
         const filters = JSON.parse(filtersAttr);
         return {
-          showKKT: JSON.parse(filters.showKKT || 'false'),
-          showRegistration: JSON.parse(filters.showRegistration || 'false'),
-          showLecture: JSON.parse(filters.showLecture || 'true'),
-          showSemesterPendek: JSON.parse(filters.showSemesterPendek || 'false'),
-          showKuliahIntersesi: JSON.parse(filters.showKuliahIntersesi || 'false'),
-          showExamination: JSON.parse(filters.showExamination || 'true'),
-          showOthersExams: JSON.parse(filters.showOthersExams || 'false'),
-          showBreak: JSON.parse(filters.showBreak || 'true'),
+          showKKT: JSON.parse(filters.showKKT ?? JSON.stringify(defaults.showKKT)),
+          showRegistration: JSON.parse(filters.showRegistration ?? JSON.stringify(defaults.showRegistration)),
+          showLecture: JSON.parse(filters.showLecture ?? JSON.stringify(defaults.showLecture)),
+          showSemesterPendek: JSON.parse(filters.showSemesterPendek ?? JSON.stringify(defaults.showSemesterPendek)),
+          showKuliahIntersesi: JSON.parse(filters.showKuliahIntersesi ?? JSON.stringify(defaults.showKuliahIntersesi)),
+          showExamination: JSON.parse(filters.showExamination ?? JSON.stringify(defaults.showExamination)),
+          showOthersExams: JSON.parse(filters.showOthersExams ?? JSON.stringify(defaults.showOthersExams)),
+          showBreak: JSON.parse(filters.showBreak ?? JSON.stringify(defaults.showBreak)),
         };
       }
     } catch (e) {
-      // If parsing fails, fall back to defaults
+      // If parsing fails, fall back to defaults from data.ts
       console.warn('Failed to parse data-filters attribute:', e);
     }
 

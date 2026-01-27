@@ -137,30 +137,44 @@ export default function RootLayout({
                 
                 // Store filter states in data attributes for synchronous access
                 // This prevents flicker when filters are applied - MUST run before React hydration
+                // Default values from data.ts (single source of truth) - inlined to avoid import in script
+                const DEFAULT_FILTER_STATES = {
+                  showKKT: false,
+                  showRegistration: false,
+                  showLecture: true,
+                  showSemesterPendek: false,
+                  showKuliahIntersesi: false,
+                  showExamination: true,
+                  showOthersExams: false,
+                  showBreak: true,
+                };
+                
                 try {
+                  // Properly check if localStorage keys exist using ?? (null coalescing)
+                  // Only use defaults when localStorage key is null (doesn't exist)
                   const filters = {
-                    showRegistration: localStorage.getItem('showRegistration') || 'false',
-                    showLecture: localStorage.getItem('showLecture') || 'true',
-                    showSemesterPendek: localStorage.getItem('showSemesterPendek') || 'false',
-                    showKuliahIntersesi: localStorage.getItem('showKuliahIntersesi') || 'false',
-                    showExamination: localStorage.getItem('showExamination') || 'true',
-                    showOthersExams: localStorage.getItem('showOthersExams') || 'false',
-                    showBreak: localStorage.getItem('showBreak') || 'true',
-                    showKKT: localStorage.getItem('showKKT') || 'false',
+                    showRegistration: localStorage.getItem('showRegistration') ?? JSON.stringify(DEFAULT_FILTER_STATES.showRegistration),
+                    showLecture: localStorage.getItem('showLecture') ?? JSON.stringify(DEFAULT_FILTER_STATES.showLecture),
+                    showSemesterPendek: localStorage.getItem('showSemesterPendek') ?? JSON.stringify(DEFAULT_FILTER_STATES.showSemesterPendek),
+                    showKuliahIntersesi: localStorage.getItem('showKuliahIntersesi') ?? JSON.stringify(DEFAULT_FILTER_STATES.showKuliahIntersesi),
+                    showExamination: localStorage.getItem('showExamination') ?? JSON.stringify(DEFAULT_FILTER_STATES.showExamination),
+                    showOthersExams: localStorage.getItem('showOthersExams') ?? JSON.stringify(DEFAULT_FILTER_STATES.showOthersExams),
+                    showBreak: localStorage.getItem('showBreak') ?? JSON.stringify(DEFAULT_FILTER_STATES.showBreak),
+                    showKKT: localStorage.getItem('showKKT') ?? JSON.stringify(DEFAULT_FILTER_STATES.showKKT),
                   };
                   // Store as data attribute for synchronous access during component initialization
                   document.documentElement.setAttribute('data-filters', JSON.stringify(filters));
                 } catch (e) {
                   // Fallback: set default values if localStorage fails
                   const defaultFilters = {
-                    showRegistration: 'false',
-                    showLecture: 'true',
-                    showSemesterPendek: 'false',
-                    showKuliahIntersesi: 'false',
-                    showExamination: 'true',
-                    showOthersExams: 'false',
-                    showBreak: 'true',
-                    showKKT: 'false',
+                    showRegistration: JSON.stringify(DEFAULT_FILTER_STATES.showRegistration),
+                    showLecture: JSON.stringify(DEFAULT_FILTER_STATES.showLecture),
+                    showSemesterPendek: JSON.stringify(DEFAULT_FILTER_STATES.showSemesterPendek),
+                    showKuliahIntersesi: JSON.stringify(DEFAULT_FILTER_STATES.showKuliahIntersesi),
+                    showExamination: JSON.stringify(DEFAULT_FILTER_STATES.showExamination),
+                    showOthersExams: JSON.stringify(DEFAULT_FILTER_STATES.showOthersExams),
+                    showBreak: JSON.stringify(DEFAULT_FILTER_STATES.showBreak),
+                    showKKT: JSON.stringify(DEFAULT_FILTER_STATES.showKKT),
                   };
                   document.documentElement.setAttribute('data-filters', JSON.stringify(defaultFilters));
                 }
