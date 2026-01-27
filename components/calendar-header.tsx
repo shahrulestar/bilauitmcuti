@@ -6,12 +6,12 @@ export function CalendarHeader() {
   const currentYear = new Date(new Date().toLocaleString("en-US", {timeZone: "Asia/Kuala_Lumpur"})).getFullYear();
 
   return (
-    <div suppressHydrationWarning className="transition-none" style={{ transition: 'none' }}>
+    <div suppressHydrationWarning className="flex flex-col justify-center items-start gap-[2px] transition-none" style={{ transition: 'none' }}>
       {/* Year label */}
       <div className={`mb-2 text-sm ${mutedColor} transition-none`} suppressHydrationWarning style={{ transition: 'none' }}>{currentYear}</div>
 
       {/* Main heading with custom typography */}
-      <h1 className={`mb-6 font-semibold leading-[2.5rem] tracking-tight text-5xl ${textColor} transition-none`} suppressHydrationWarning style={{ transition: 'none' }}>
+      <h1 className={`mb-2 font-semibold leading-[2.5rem] tracking-tight text-5xl ${textColor} transition-none`} suppressHydrationWarning style={{ transition: 'none' }}>
         Bila <span className="text-[#8b5cf6]">UiTM</span> Cuti?
       </h1>
 
