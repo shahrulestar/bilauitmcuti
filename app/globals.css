@@ -50,6 +50,19 @@ button[type="button"][title*="View"],
   transition: none !important;
 }
 
+/* Set padding for select trigger */
+[data-slot="select-trigger"] {
+  padding-left: 12px !important;
+  padding-right: 12px !important;
+}
+
+/* Set padding for select items in dropdown */
+[data-slot="select-item"] {
+  padding-top: 4px !important;
+  padding-bottom: 4px !important;
+  padding-left: 12px !important;
+}
+
 /* Disable transitions for calendar controls and UI components for instant theme switching */
 .sticky.top-0,
 .sticky.top-0 > *,

@@ -176,9 +176,9 @@ export function CalendarControls({
         {/* Program selector - Left */}
         <div className="px-0">
           <Select value={selectedProgram} onValueChange={handleProgramChange} open={selectOpen} onOpenChange={setSelectOpen}>
-            <SelectTrigger className={`w-[140px] !h-[46px] !py-1 border bg-secondary dark:bg-[#2A2A2A] border-border ${textClass} truncate flex items-center justify-between [&>svg]:hidden rounded-lg transition-none`} suppressHydrationWarning>
-              <span className="truncate text-left font-medium text-xs">
-                {currentProgramLabel.substring(0, 12)}
+            <SelectTrigger className={`w-[140px] !h-[38px] !py-1 border bg-secondary dark:bg-[#2A2A2A] border-border ${textClass} truncate flex items-center justify-between [&>svg]:hidden rounded-lg transition-none`} suppressHydrationWarning>
+              <span className="truncate text-left font-medium text-sm min-w-0 flex-1">
+                {currentProgramLabel}
               </span>
               <div className="flex-shrink-0 ml-2">
                 {selectOpen ? (
@@ -226,9 +226,9 @@ export function CalendarControls({
           </Select>
         </div>
         {/* View controls and Settings combined - Right */}
-        <div className="px-0">
+        <div className="px-0 flex items-center justify-center">
           <div 
-            className={`flex gap-0 rounded-lg p-1 w-fit border border-border bg-secondary dark:bg-[#2A2A2A] transition-none`}
+            className={`flex items-center justify-center gap-0 rounded-lg p-1 w-fit border border-border bg-secondary dark:bg-[#2A2A2A] transition-none h-[38px]`}
             suppressHydrationWarning
             style={{ transition: 'none' }}
           >
@@ -236,7 +236,7 @@ export function CalendarControls({
               variant={viewMode === 'grid' ? 'secondary' : 'ghost'}
               size="icon"
               onClick={() => handleViewModeChange('grid')}
-              className={`${viewMode === 'grid' ? 'bg-white dark:bg-[#262626] text-foreground' : 'bg-transparent text-muted-foreground'} transition-none`}
+              className={`bg-transparent ${viewMode === 'grid' ? 'text-[#0A0A0A] [&_svg]:text-[#0A0A0A]' : 'text-muted-foreground'} hover:!bg-transparent dark:hover:!bg-transparent hover:text-[#0A0A0A] hover:[&_svg]:text-[#0A0A0A] transition-none !h-[38px] !w-[38px] !min-h-[38px] !max-h-[38px] !p-0 flex items-center justify-center hover:!h-[38px] hover:!min-h-[38px] hover:!max-h-[38px] hover:!p-0 active:!h-[38px] active:!min-h-[38px] active:!max-h-[38px] active:!p-0 [&:hover]:!h-[38px] [&:hover]:!bg-transparent [&:hover]:text-[#0A0A0A] [&:hover_svg]:text-[#0A0A0A] [&:active]:!h-[38px]`}
               title="Grid View"
               suppressHydrationWarning
             >
@@ -246,14 +246,14 @@ export function CalendarControls({
               variant={viewMode === 'list' ? 'secondary' : 'ghost'}
               size="icon"
               onClick={() => handleViewModeChange('list')}
-              className={`${viewMode === 'list' ? 'bg-white dark:bg-[#262626] text-foreground' : 'bg-transparent text-muted-foreground'} transition-none`}
+              className={`bg-transparent ${viewMode === 'list' ? 'text-[#0A0A0A] [&_svg]:text-[#0A0A0A]' : 'text-muted-foreground'} hover:!bg-transparent dark:hover:!bg-transparent hover:text-[#0A0A0A] hover:[&_svg]:text-[#0A0A0A] transition-none !h-[38px] !w-[38px] !min-h-[38px] !max-h-[38px] !p-0 flex items-center justify-center hover:!h-[38px] hover:!min-h-[38px] hover:!max-h-[38px] hover:!p-0 active:!h-[38px] active:!min-h-[38px] active:!max-h-[38px] active:!p-0 [&:hover]:!h-[38px] [&:hover]:!bg-transparent [&:hover]:text-[#0A0A0A] [&:hover_svg]:text-[#0A0A0A] [&:active]:!h-[38px]`}
               title="List View"
               suppressHydrationWarning
             >
               <List className="h-5 w-5" />
             </Button>
             <div 
-              className="mx-1 w-px bg-border transition-none" 
+              className="mx-1 w-px bg-border transition-none h-full flex items-center" 
               suppressHydrationWarning
             />
             <Popover open={isOpen} onOpenChange={setIsOpen}>
@@ -261,7 +261,7 @@ export function CalendarControls({
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="bg-transparent text-muted-foreground hover:text-foreground transition-none"
+                  className="bg-transparent text-muted-foreground hover:!bg-transparent dark:hover:!bg-transparent hover:text-[#0A0A0A] hover:[&_svg]:text-[#0A0A0A] transition-none !h-[38px] !w-[38px] !min-h-[38px] !max-h-[38px] !p-0 flex items-center justify-center hover:!h-[38px] hover:!min-h-[38px] hover:!max-h-[38px] hover:!p-0 active:!h-[38px] active:!min-h-[38px] active:!max-h-[38px] active:!p-0 [&:hover]:!h-[38px] [&:hover]:!bg-transparent [&:hover]:text-[#0A0A0A] [&:hover_svg]:text-[#0A0A0A] [&:active]:!h-[38px]"
                   title="Settings"
                   suppressHydrationWarning
                 >
@@ -272,7 +272,8 @@ export function CalendarControls({
                 className="h-auto w-[300px] pt-4 pb-4 pl-4 z-50 border border-border bg-popover dark:bg-[#2A2A2A] pr-4 transition-none"
                 side="bottom"
                 align="end"
-                sideOffset={8}
+                sideOffset={4}
+                alignOffset={-5}
               >
                 <div className="space-y-3 transition-none">
                   {/* Activity Type Toggles */}
