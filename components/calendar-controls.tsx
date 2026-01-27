@@ -182,9 +182,9 @@ export function CalendarControls({
               </span>
               <div className="flex-shrink-0 ml-2">
                 {selectOpen ? (
-                  <ChevronUp className="h-4 w-4 transition-none" />
+                  <ChevronUp className="h-4 w-4 transition-none" strokeWidth={2} />
                 ) : (
-                  <ChevronDown className="h-4 w-4 transition-none" />
+                  <ChevronDown className="h-4 w-4 transition-none" strokeWidth={2} />
                 )}
               </div>
             </SelectTrigger>
@@ -236,21 +236,21 @@ export function CalendarControls({
               variant={viewMode === 'grid' ? 'secondary' : 'ghost'}
               size="icon"
               onClick={() => handleViewModeChange('grid')}
-              className={`bg-transparent ${viewMode === 'grid' ? 'text-[#0A0A0A] [&_svg]:text-[#0A0A0A]' : 'text-muted-foreground'} hover:!bg-transparent dark:hover:!bg-transparent hover:text-[#0A0A0A] hover:[&_svg]:text-[#0A0A0A] transition-none !h-[38px] !w-[38px] !min-h-[38px] !max-h-[38px] !p-0 flex items-center justify-center hover:!h-[38px] hover:!min-h-[38px] hover:!max-h-[38px] hover:!p-0 active:!h-[38px] active:!min-h-[38px] active:!max-h-[38px] active:!p-0 [&:hover]:!h-[38px] [&:hover]:!bg-transparent [&:hover]:text-[#0A0A0A] [&:hover_svg]:text-[#0A0A0A] [&:active]:!h-[38px]`}
+              className={`bg-transparent ${viewMode === 'grid' ? 'text-[#0A0A0A] dark:text-[#FAFAFA] [&_svg]:text-[#0A0A0A] dark:[&_svg]:text-[#FAFAFA]' : 'text-muted-foreground'} hover:!bg-transparent dark:hover:!bg-transparent hover:text-[#0A0A0A] dark:hover:text-[#FAFAFA] hover:[&_svg]:text-[#0A0A0A] dark:hover:[&_svg]:text-[#FAFAFA] active:text-[#0A0A0A] dark:active:text-[#FAFAFA] active:[&_svg]:text-[#0A0A0A] dark:active:[&_svg]:text-[#FAFAFA] transition-none !h-[38px] !w-[38px] !min-h-[38px] !max-h-[38px] !p-0 flex items-center justify-center hover:!h-[38px] hover:!min-h-[38px] hover:!max-h-[38px] hover:!p-0 active:!h-[38px] active:!min-h-[38px] active:!max-h-[38px] active:!p-0 [&:hover]:!h-[38px] [&:hover]:!bg-transparent [&:hover]:text-[#0A0A0A] dark:[&:hover]:text-[#FAFAFA] [&:hover_svg]:text-[#0A0A0A] dark:[&:hover_svg]:text-[#FAFAFA] [&:active]:!h-[38px] [&:active]:text-[#0A0A0A] dark:[&:active]:text-[#FAFAFA] [&:active_svg]:text-[#0A0A0A] dark:[&:active_svg]:text-[#FAFAFA]`}
               title="Grid View"
               suppressHydrationWarning
             >
-              <Calendar className="h-5 w-5" />
+              <Calendar className="h-5 w-5" strokeWidth={2} />
             </Button>
             <Button
               variant={viewMode === 'list' ? 'secondary' : 'ghost'}
               size="icon"
               onClick={() => handleViewModeChange('list')}
-              className={`bg-transparent ${viewMode === 'list' ? 'text-[#0A0A0A] [&_svg]:text-[#0A0A0A]' : 'text-muted-foreground'} hover:!bg-transparent dark:hover:!bg-transparent hover:text-[#0A0A0A] hover:[&_svg]:text-[#0A0A0A] transition-none !h-[38px] !w-[38px] !min-h-[38px] !max-h-[38px] !p-0 flex items-center justify-center hover:!h-[38px] hover:!min-h-[38px] hover:!max-h-[38px] hover:!p-0 active:!h-[38px] active:!min-h-[38px] active:!max-h-[38px] active:!p-0 [&:hover]:!h-[38px] [&:hover]:!bg-transparent [&:hover]:text-[#0A0A0A] [&:hover_svg]:text-[#0A0A0A] [&:active]:!h-[38px]`}
+              className={`bg-transparent ${viewMode === 'list' ? 'text-[#0A0A0A] dark:text-[#FAFAFA] [&_svg]:text-[#0A0A0A] dark:[&_svg]:text-[#FAFAFA]' : 'text-muted-foreground'} hover:!bg-transparent dark:hover:!bg-transparent hover:text-[#0A0A0A] dark:hover:text-[#FAFAFA] hover:[&_svg]:text-[#0A0A0A] dark:hover:[&_svg]:text-[#FAFAFA] active:text-[#0A0A0A] dark:active:text-[#FAFAFA] active:[&_svg]:text-[#0A0A0A] dark:active:[&_svg]:text-[#FAFAFA] transition-none !h-[38px] !w-[38px] !min-h-[38px] !max-h-[38px] !p-0 flex items-center justify-center hover:!h-[38px] hover:!min-h-[38px] hover:!max-h-[38px] hover:!p-0 active:!h-[38px] active:!min-h-[38px] active:!max-h-[38px] active:!p-0 [&:hover]:!h-[38px] [&:hover]:!bg-transparent [&:hover]:text-[#0A0A0A] dark:[&:hover]:text-[#FAFAFA] [&:hover_svg]:text-[#0A0A0A] dark:[&:hover_svg]:text-[#FAFAFA] [&:active]:!h-[38px] [&:active]:text-[#0A0A0A] dark:[&:active]:text-[#FAFAFA] [&:active_svg]:text-[#0A0A0A] dark:[&:active_svg]:text-[#FAFAFA]`}
               title="List View"
               suppressHydrationWarning
             >
-              <List className="h-5 w-5" />
+              <List className="h-5 w-5" strokeWidth={2} />
             </Button>
             <div 
               className="mx-1 w-px bg-border transition-none h-full flex items-center" 
@@ -261,11 +261,11 @@ export function CalendarControls({
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="bg-transparent text-muted-foreground hover:!bg-transparent dark:hover:!bg-transparent hover:text-[#0A0A0A] hover:[&_svg]:text-[#0A0A0A] transition-none !h-[38px] !w-[38px] !min-h-[38px] !max-h-[38px] !p-0 flex items-center justify-center hover:!h-[38px] hover:!min-h-[38px] hover:!max-h-[38px] hover:!p-0 active:!h-[38px] active:!min-h-[38px] active:!max-h-[38px] active:!p-0 [&:hover]:!h-[38px] [&:hover]:!bg-transparent [&:hover]:text-[#0A0A0A] [&:hover_svg]:text-[#0A0A0A] [&:active]:!h-[38px]"
+                  className="bg-transparent text-muted-foreground hover:!bg-transparent dark:hover:!bg-transparent hover:text-[#0A0A0A] dark:hover:text-[#FAFAFA] hover:[&_svg]:text-[#0A0A0A] dark:hover:[&_svg]:text-[#FAFAFA] active:text-[#0A0A0A] dark:active:text-[#FAFAFA] active:[&_svg]:text-[#0A0A0A] dark:active:[&_svg]:text-[#FAFAFA] transition-none !h-[38px] !w-[38px] !min-h-[38px] !max-h-[38px] !p-0 flex items-center justify-center hover:!h-[38px] hover:!min-h-[38px] hover:!max-h-[38px] hover:!p-0 active:!h-[38px] active:!min-h-[38px] active:!max-h-[38px] active:!p-0 [&:hover]:!h-[38px] [&:hover]:!bg-transparent [&:hover]:text-[#0A0A0A] dark:[&:hover]:text-[#FAFAFA] [&:hover_svg]:text-[#0A0A0A] dark:[&:hover_svg]:text-[#FAFAFA] [&:active]:!h-[38px] [&:active]:text-[#0A0A0A] dark:[&:active]:text-[#FAFAFA] [&:active_svg]:text-[#0A0A0A] dark:[&:active_svg]:text-[#FAFAFA]"
                   title="Settings"
                   suppressHydrationWarning
                 >
-                  <Settings className="h-5 w-5" />
+                  <Settings className="h-5 w-5" strokeWidth={2} />
                 </Button>
               </PopoverTrigger>
               <PopoverContent 
