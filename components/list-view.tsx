@@ -232,20 +232,34 @@ export const ListView = memo(function ListView({
                     
                     {/* Activity info */}
                     <div className="flex flex-1 flex-col transition-none" suppressHydrationWarning style={{ transition: 'none' }}>
-                      {/* Dot and h3 title in same row */}
-                      <div className="flex items-center gap-2 mb-1 transition-none" suppressHydrationWarning style={{ transition: 'none' }}>
-                        <div className={`h-2 w-2 shrink-0 rounded-full ${getActivityColor(activity)} transition-none`} suppressHydrationWarning style={{ transition: 'none' }} />
-                        <h3 className={`font-medium text-base leading-6 break-words ${textClass} transition-none`} suppressHydrationWarning style={{ transition: 'none' }}>{activity.name}</h3>
-                      </div>
-                      
-                      {/* Badge row (if exists) */}
-                      {getProgramBadgeColor(activity) ? (
-                        <div className="flex items-center mb-1 transition-none" suppressHydrationWarning style={{ transition: 'none' }}>
-                          <div className={`inline-block py-1 rounded-full text-xs font-medium px-3 ${getProgramBadgeColor(activity)?.bgClass} ${getProgramBadgeColor(activity)?.textClass} transition-none`} suppressHydrationWarning style={{ transition: 'none' }}>
-                            {getProgramBadgeColor(activity)?.label}
+                      {/* Group B with badge: dot + badge in one row above title (container fit content, left align, gap-2 like dot-title) */}
+                      {group === 'B' && getProgramBadgeColor(activity) ? (
+                        <>
+                          <div className="flex items-center gap-2 w-fit mb-1 transition-none" suppressHydrationWarning style={{ transition: 'none' }}>
+                            <div className={`h-2 w-2 shrink-0 rounded-full ${getActivityColor(activity)} transition-none`} suppressHydrationWarning style={{ transition: 'none' }} />
+                            <div className={`inline-block py-1 rounded-full text-xs font-medium px-3 ${getProgramBadgeColor(activity)?.bgClass} ${getProgramBadgeColor(activity)?.textClass} transition-none`} suppressHydrationWarning style={{ transition: 'none' }}>
+                              {getProgramBadgeColor(activity)?.label}
+                            </div>
                           </div>
-                        </div>
-                      ) : null}
+                          <h3 className={`font-medium text-base leading-6 break-words ${textClass} mb-1 transition-none`} suppressHydrationWarning style={{ transition: 'none' }}>{activity.name}</h3>
+                        </>
+                      ) : (
+                        <>
+                          {/* Group A or no badge: dot and h3 title in same row */}
+                          <div className="flex items-center gap-2 mb-1 transition-none" suppressHydrationWarning style={{ transition: 'none' }}>
+                            <div className={`h-2 w-2 shrink-0 rounded-full ${getActivityColor(activity)} transition-none`} suppressHydrationWarning style={{ transition: 'none' }} />
+                            <h3 className={`font-medium text-base leading-6 break-words ${textClass} transition-none`} suppressHydrationWarning style={{ transition: 'none' }}>{activity.name}</h3>
+                          </div>
+                          {/* Badge row for Group A (if exists) */}
+                          {getProgramBadgeColor(activity) ? (
+                            <div className="flex items-center mb-1 transition-none" suppressHydrationWarning style={{ transition: 'none' }}>
+                              <div className={`inline-block py-1 rounded-full text-xs font-medium px-3 ${getProgramBadgeColor(activity)?.bgClass} ${getProgramBadgeColor(activity)?.textClass} transition-none`} suppressHydrationWarning style={{ transition: 'none' }}>
+                                {getProgramBadgeColor(activity)?.label}
+                              </div>
+                            </div>
+                          ) : null}
+                        </>
+                      )}
                       
                       {/* Date and other details */}
                       <div className="w-full transition-none" suppressHydrationWarning style={{ transition: 'none' }}>
