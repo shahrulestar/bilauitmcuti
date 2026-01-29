@@ -1,66 +1,42 @@
-# Cuti UiTM - Academic Calendar 2026
+# Bila UiTM Cuti? - Academic Calendar 2026
 
-## Project Overview
-Cuti UiTM is an interactive academic calendar application for UiTM (Universiti Teknologi MARA) showing scheduled activities for 2026, including registration, lectures, examinations, and break periods.
+## Overview
+Bila UiTM Cuti? is an interactive academic calendar web app for UiTM (Universiti Teknologi MARA) showing scheduled activities for 2026. It is not an official UiTM product; it is for students and staff who need quick access to registration dates, lecture schedules, examination periods, and breaks.
+
+Base URL: https://cutiuitm.xyz
 
 ## Key Features
-- **Multiple View Modes**: List, Grid, and Month views for different browsing experiences
-- **Program Selection**: Support for 7 different programs (Foundation, Professional, Pre-Diploma, Diploma, Bachelor, Master, PhD)
-- **Group-based Schedules**: Different schedules for Group A and Group B programs
-- **Activity Filtering**: Toggle visibility of Registration, Lecture, Examination, and Break activities
-- **KKT State Support**: Special dates for Kedah, Kelantan, and Terengganu states
-- **Theme Support**: Light and Dark mode with smooth transitions
-- **Responsive Design**: Works seamlessly across desktop and mobile devices
-- **Persistent Preferences**: User selections saved to localStorage
+- **View Modes**: List view and Grid view for browsing the calendar
+- **Program Selection**: All programs, or by program: Foundation/Professional, Pre-Diploma, Diploma, Diploma (Part-Time), Bachelor, Bachelor (Part-Time), Master, PhD
+- **Group-based Schedules**: Group A (Foundation/Professional) and Group B (Pre-Diploma onwards) with different schedules
+- **Activity Filters**: Toggle visibility of Registration, Lecture, Semester Pendek, Kuliah Intersesi, Examination, Others Exams, and Break
+- **KKT State Support**: Special dates for Kedah, Kelantan, and Terengganu
+- **Theme**: Light and Dark mode with smooth transitions
+- **Responsive Design**: Works on desktop and mobile
+- **PWA**: Installable app with offline access
+- **Persistent Preferences**: User selections (program, view, filters, theme) saved via localStorage and cookie
 
-## Technology Stack
-- **Framework**: Next.js 16+ with App Router
-- **UI Library**: shadcn/ui components
-- **Styling**: Tailwind CSS v4
-- **State Management**: React hooks with localStorage persistence
-- **Typography**: Geist font family
+## SEO
+- **Canonical**: https://cutiuitm.xyz
+- **Metadata**: Title, description, keywords per page; metadataBase for absolute URLs
+- **Open Graph & Twitter Card**: Supported for sharing
+- **Locale**: ms_MY
+- **Keywords**: UiTM, academic calendar, 2026, registration, examination, lectures, holidays, Malaysia, Universiti Teknologi MARA, student app
+This file (llm.txt) is intended for crawlers and LLMs to understand the site structure and content.
 
-## Color Scheme
-- Registration: #ff6b00 (Orange)
-- Lecture: #8b5cf6 (Purple)
-- Examination: #dc2626 (Red)
-- Break: #10b981 (Green)
+## Pages and Content
+- **/** — Home. All programs, grid view. Main entry point.
+- **/list** — All programs, list view. Chronological list of activities.
+- **/[program]** — Calendar grid for one program. Valid slugs: foundation-professional, pre-diploma, diploma, diploma-part-time, bachelor, bachelor-part-time, master, phd.
+- **/[program]/list** — Calendar list view for one program. Same slugs as above.
+- **/changelog** — Changelog: list of updates and improvements to the app, grouped by month.
+- **/pwa** — How to install the app as PWA (Desktop, iOS, Android), offline features, and disclaimer that the app is not affiliated with UiTM.
 
 ## Data Structure
-Activities are organized by:
-- Month and Year
-- Program Group (A or B)
-- Activity Type (registration, lecture, examination, break)
-- Start and end dates
-- Optional states for KKT variation
+Activities are defined by: month/year, program group (A or B), activity type (registration, lecture, examination, break, other), start and end dates, optional KKT state variants. Types include Semester Pendek and Kuliah Intersesi where applicable.
 
-## User Settings
-Users can customize:
-- Selected program
-- View mode (list/grid/month)
-- Activity type visibility
-- KKT date display
-- Theme (light/dark)
-
-All settings are persisted in localStorage with keys:
-- selectedProgram
-- viewMode
-- showKKT
-- theme
-- showRegistration, showLecture, showExamination, showBreak
-
-## Components
-- CalendarHeader: Displays title and legend
-- CalendarControls: Program selector, view mode buttons, and settings
-- ListView: List view of all activities grouped by month
-- MonthView: Single month calendar with full month display
-- GridView: Multi-month calendar grid with mini calendars
-
-## SEO Metadata
-- Title: Cuti UiTM - Academic Calendar 2026
-- Description: UiTM academic calendar for 2026 with registration, lecture, and examination dates
-- Keywords: UiTM, academic calendar, 2026, registration, examination, Malaysia
-- Open Graph and Twitter card support
+## Technology
+- Next.js (App Router), shadcn/ui, Tailwind CSS v4, React hooks, Geist font. Service worker for PWA.
 
 ## Author
-Created by @shahrulestar (shahrulestar.com)
+Alumni UiTM

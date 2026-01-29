@@ -1,4 +1,0 @@
-User-agent: *
-Allow: /
-
-Sitemap: https://cuti-uitm.vercel.app/sitemap.xml

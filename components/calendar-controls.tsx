@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useCallback, useMemo, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import { useTheme } from 'next-themes';
 import { List, Settings, Calendar, ChevronDown, ChevronUp } from 'lucide-react';
 import {
   Select,
@@ -68,7 +67,6 @@ export function CalendarControls({
   currentMonth = 'Academic Calendar',
 }: CalendarControlsProps) {
   const router = useRouter();
-  const { theme } = useTheme();
   const [isPending, startTransition] = useTransition();
   const [isOpen, setIsOpen] = useState(false);
   const [scrolling, setScrolling] = useState(false);
@@ -172,12 +170,6 @@ export function CalendarControls({
     }, 3000);
     return () => clearInterval(interval);
   }, []);
-
-  const isDark = theme === 'dark';
-  const getSwitchBgColor = (checked: boolean) => {
-    if (checked) return '#2563eb';
-    return isDark ? '#525252' : '#d1d5db';
-  };
 
   return (
       <div 
@@ -300,12 +292,12 @@ export function CalendarControls({
                         <div className="h-2 w-2 rounded-full bg-[#d1d5db]" />
                         <span className="text-sm font-medium text-foreground">Registration</span>
                       </div>
-                      <div className="relative inline-flex h-6 w-11 items-center rounded-full transition-none"
-                        style={{backgroundColor: getSwitchBgColor(showRegistration), transition: 'none'}}
+                      <div className={`relative inline-flex h-6 w-11 items-center rounded-full transition-none ${showRegistration ? 'bg-primary' : 'bg-muted'}`}
+                        style={{ transition: 'none' }}
                       >
                         <span
-                          className="inline-block h-4 w-4 transform rounded-full bg-white transition-none shadow-sm"
-                          style={{transform: showRegistration ? 'translateX(20px)' : 'translateX(2px)', transition: 'none'}}
+                          className={`inline-block h-4 w-4 transform rounded-full transition-none shadow-sm ${showRegistration ? 'bg-primary-foreground' : 'bg-background dark:bg-foreground'}`}
+                          style={{ transform: showRegistration ? 'translateX(20px)' : 'translateX(2px)', transition: 'none' }}
                         />
                         <input
                           type="checkbox"
@@ -322,12 +314,12 @@ export function CalendarControls({
                         <div className="h-2 w-2 rounded-full bg-[#8b5cf6]" />
                         <span className="text-sm font-medium text-foreground">Lecture</span>
                       </div>
-                      <div className="relative inline-flex h-6 w-11 items-center rounded-full transition-none"
-                        style={{backgroundColor: getSwitchBgColor(showLecture), transition: 'none'}}
+                      <div className={`relative inline-flex h-6 w-11 items-center rounded-full transition-none ${showLecture ? 'bg-primary' : 'bg-muted'}`}
+                        style={{ transition: 'none' }}
                       >
                         <span
-                          className="inline-block h-4 w-4 transform rounded-full bg-white transition-none shadow-sm"
-                          style={{transform: showLecture ? 'translateX(20px)' : 'translateX(2px)', transition: 'none'}}
+                          className={`inline-block h-4 w-4 transform rounded-full transition-none shadow-sm ${showLecture ? 'bg-primary-foreground' : 'bg-background dark:bg-foreground'}`}
+                          style={{ transform: showLecture ? 'translateX(20px)' : 'translateX(2px)', transition: 'none' }}
                         />
                         <input
                           type="checkbox"
@@ -344,12 +336,12 @@ export function CalendarControls({
                       <div className="flex items-center gap-2">
                         <span className="text-xs font-medium text-muted-foreground">Semester Pendek</span>
                       </div>
-                      <div className="relative inline-flex h-6 w-11 items-center rounded-full transition-none"
-                        style={{backgroundColor: getSwitchBgColor(showSemesterPendek), transition: 'none'}}
+                      <div className={`relative inline-flex h-6 w-11 items-center rounded-full transition-none ${showSemesterPendek ? 'bg-primary' : 'bg-muted'}`}
+                        style={{ transition: 'none' }}
                       >
                         <span
-                          className="inline-block h-4 w-4 transform rounded-full bg-white transition-none shadow-sm"
-                          style={{transform: showSemesterPendek ? 'translateX(20px)' : 'translateX(2px)', transition: 'none'}}
+                          className={`inline-block h-4 w-4 transform rounded-full transition-none shadow-sm ${showSemesterPendek ? 'bg-primary-foreground' : 'bg-background dark:bg-foreground'}`}
+                          style={{ transform: showSemesterPendek ? 'translateX(20px)' : 'translateX(2px)', transition: 'none' }}
                         />
                         <input
                           type="checkbox"
@@ -367,12 +359,12 @@ export function CalendarControls({
                       <div className="flex items-center gap-2">
                         <span className="text-xs font-medium text-muted-foreground">Kuliah Intersesi</span>
                       </div>
-                      <div className="relative inline-flex h-6 w-11 items-center rounded-full transition-none"
-                        style={{backgroundColor: getSwitchBgColor(showKuliahIntersesi), transition: 'none'}}
+                      <div className={`relative inline-flex h-6 w-11 items-center rounded-full transition-none ${showKuliahIntersesi ? 'bg-primary' : 'bg-muted'}`}
+                        style={{ transition: 'none' }}
                       >
                         <span
-                          className="inline-block h-4 w-4 transform rounded-full bg-white transition-none shadow-sm"
-                          style={{transform: showKuliahIntersesi ? 'translateX(20px)' : 'translateX(2px)', transition: 'none'}}
+                          className={`inline-block h-4 w-4 transform rounded-full transition-none shadow-sm ${showKuliahIntersesi ? 'bg-primary-foreground' : 'bg-background dark:bg-foreground'}`}
+                          style={{ transform: showKuliahIntersesi ? 'translateX(20px)' : 'translateX(2px)', transition: 'none' }}
                         />
                         <input
                           type="checkbox"
@@ -390,12 +382,12 @@ export function CalendarControls({
                         <div className="h-2 w-2 rounded-full bg-[#dc2626]" />
                         <span className="text-sm font-medium text-foreground">Examination</span>
                       </div>
-                      <div className="relative inline-flex h-6 w-11 items-center rounded-full transition-none"
-                        style={{backgroundColor: getSwitchBgColor(showExamination), transition: 'none'}}
+                      <div className={`relative inline-flex h-6 w-11 items-center rounded-full transition-none ${showExamination ? 'bg-primary' : 'bg-muted'}`}
+                        style={{ transition: 'none' }}
                       >
                         <span
-                          className="inline-block h-4 w-4 transform rounded-full bg-white transition-none shadow-sm"
-                          style={{transform: showExamination ? 'translateX(20px)' : 'translateX(2px)', transition: 'none'}}
+                          className={`inline-block h-4 w-4 transform rounded-full transition-none shadow-sm ${showExamination ? 'bg-primary-foreground' : 'bg-background dark:bg-foreground'}`}
+                          style={{ transform: showExamination ? 'translateX(20px)' : 'translateX(2px)', transition: 'none' }}
                         />
                         <input
                           type="checkbox"
@@ -412,12 +404,12 @@ export function CalendarControls({
                       <div className="flex items-center gap-2">
                         <span className="text-xs font-medium text-muted-foreground">Others Exams</span>
                       </div>
-                      <div className="relative inline-flex h-6 w-11 items-center rounded-full transition-none"
-                        style={{backgroundColor: getSwitchBgColor(showOthersExams), transition: 'none'}}
+                      <div className={`relative inline-flex h-6 w-11 items-center rounded-full transition-none ${showOthersExams ? 'bg-primary' : 'bg-muted'}`}
+                        style={{ transition: 'none' }}
                       >
                         <span
-                          className="inline-block h-4 w-4 transform rounded-full bg-white transition-none shadow-sm"
-                          style={{transform: showOthersExams ? 'translateX(20px)' : 'translateX(2px)', transition: 'none'}}
+                          className={`inline-block h-4 w-4 transform rounded-full transition-none shadow-sm ${showOthersExams ? 'bg-primary-foreground' : 'bg-background dark:bg-foreground'}`}
+                          style={{ transform: showOthersExams ? 'translateX(20px)' : 'translateX(2px)', transition: 'none' }}
                         />
                         <input
                           type="checkbox"
@@ -435,12 +427,12 @@ export function CalendarControls({
                         <div className="h-2 w-2 rounded-full bg-[#10b981]" />
                         <span className="text-sm font-medium text-foreground">Break</span>
                       </div>
-                      <div className="relative inline-flex h-6 w-11 items-center rounded-full transition-none"
-                        style={{backgroundColor: getSwitchBgColor(showBreak), transition: 'none'}}
+                      <div className={`relative inline-flex h-6 w-11 items-center rounded-full transition-none ${showBreak ? 'bg-primary' : 'bg-muted'}`}
+                        style={{ transition: 'none' }}
                       >
                         <span
-                          className="inline-block h-4 w-4 transform rounded-full bg-white transition-none shadow-sm"
-                          style={{transform: showBreak ? 'translateX(20px)' : 'translateX(2px)', transition: 'none'}}
+                          className={`inline-block h-4 w-4 transform rounded-full transition-none shadow-sm ${showBreak ? 'bg-primary-foreground' : 'bg-background dark:bg-foreground'}`}
+                          style={{ transform: showBreak ? 'translateX(20px)' : 'translateX(2px)', transition: 'none' }}
                         />
                         <input
                           type="checkbox"
@@ -471,12 +463,12 @@ export function CalendarControls({
                         </Avatar>
                       </div>
                     </div>
-                    <div className="relative inline-flex h-6 w-11 items-center rounded-full transition-none"
-                      style={{backgroundColor: getSwitchBgColor(showKKT), transition: 'none'}}
+                    <div className={`relative inline-flex h-6 w-11 items-center rounded-full transition-none ${showKKT ? 'bg-primary' : 'bg-muted'}`}
+                      style={{ transition: 'none' }}
                     >
                       <span
-                        className="inline-block h-4 w-4 transform rounded-full bg-white transition-none shadow-sm"
-                        style={{transform: showKKT ? 'translateX(20px)' : 'translateX(2px)', transition: 'none'}}
+                        className={`inline-block h-4 w-4 transform rounded-full transition-none shadow-sm ${showKKT ? 'bg-primary-foreground' : 'bg-background dark:bg-foreground'}`}
+                        style={{ transform: showKKT ? 'translateX(20px)' : 'translateX(2px)', transition: 'none' }}
                       />
                       <input
                         type="checkbox"
@@ -504,7 +496,8 @@ export function CalendarControls({
                       >
                         <Button
                           size="sm"
-                          className="w-full justify-center text-center hover:bg-opacity-100 active:bg-opacity-100 bg-secondary dark:bg-[#1A1A1A] text-secondary-foreground dark:text-white"
+                          variant="secondary"
+                          className="w-full justify-center text-center bg-secondary text-secondary-foreground hover:opacity-90 active:opacity-95 transition-opacity"
                         >
                           Feedback
                         </Button>
@@ -514,10 +507,11 @@ export function CalendarControls({
                       {!isPWAInstalled && (
                         <Button
                           size="sm"
+                          variant="secondary"
                           onClick={() => {
                             window.location.href = '/pwa';
                           }}
-                          className="w-full justify-center text-center hover:bg-opacity-100 active:bg-opacity-100 bg-secondary dark:bg-[#1A1A1A] text-secondary-foreground dark:text-white"
+                          className="w-full justify-center text-center bg-secondary text-secondary-foreground hover:opacity-90 active:opacity-95 transition-opacity"
                         >
                           Download as PWA
                         </Button>
