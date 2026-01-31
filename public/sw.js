@@ -1,7 +1,6 @@
 const CACHE_NAME = 'cuti-uitm-v1';
 const urlsToCache = [
   '/',
-  '/index.html',
   '/favicon.ico',
   '/manifest.json',
 ];
