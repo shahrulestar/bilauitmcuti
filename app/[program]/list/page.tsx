@@ -25,6 +25,7 @@ export async function generateMetadata({ params }: ProgramListPageProps): Promis
     title,
     description,
     openGraph: {
+      siteName: 'Bila UiTM Cuti?',
       title,
       description,
       type: 'website',

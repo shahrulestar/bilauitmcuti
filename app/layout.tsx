@@ -21,6 +21,7 @@ export const metadata: Metadata = {
   ],
   creator: 'Alumni UiTM',
   openGraph: {
+    siteName: 'Bila UiTM Cuti?',
     title: 'Bila UiTM Cuti? - Academic Calendar 2026',
     description: 'Interactive calendar showing UiTM academic schedules, registration dates, lecture periods, and examination dates for 2026.',
     type: 'website',

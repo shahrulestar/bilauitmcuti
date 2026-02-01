@@ -16,6 +16,11 @@ const nextConfig = {
         destination: 'https://shahrulestar.com',
         permanent: true, // HTTP 308
       },
+      {
+        source: '/foundation',
+        destination: '/foundation-professional',
+        permanent: true, // HTTP 308
+      },
     ]
   },
 }
