@@ -30,6 +30,17 @@ interface GridViewProps {
 
 function MiniCalendar({ month, year, selectedProgram, showKKT, onDateClick, selectedDate, showRegistration, showLecture, showSemesterPendek, showKuliahIntersesi, showExamination, showOthersExams, showBreak, showCountdown, selectedStates = [], initialCurrentDate }: { month: number; year: number; selectedProgram: string; showKKT: boolean; onDateClick: (date: string) => void; selectedDate: string | null; showRegistration: boolean; showLecture: boolean; showSemesterPendek: boolean; showKuliahIntersesi: boolean; showExamination: boolean; showOthersExams: boolean; showBreak: boolean; showCountdown: boolean; selectedStates?: string[]; initialCurrentDate?: string }) {
   const [tooltipOpen, setTooltipOpen] = useState<string | null>(null);
+  const [hoveredDateStr, setHoveredDateStr] = useState<string | null>(null);
+  const [hasHoverCapability, setHasHoverCapability] = useState(false);
+
+  useEffect(() => {
+    const mq = typeof window !== 'undefined' ? window.matchMedia('(hover: hover)') : null;
+    if (!mq) return;
+    setHasHoverCapability(mq.matches);
+    const handler = () => setHasHoverCapability(mq.matches);
+    mq.addEventListener('change', handler);
+    return () => mq.removeEventListener('change', handler);
+  }, []);
 
   // Initialize currentDateStr synchronously on client to prevent hydration mismatch
   // This ensures the same value is used on first render (client-side)
@@ -248,6 +259,46 @@ function MiniCalendar({ month, year, selectedProgram, showKKT, onDateClick, sele
     }
     
     return '';
+  };
+
+  // Highlight background when hovered or tooltip open: darker (light theme) / lighter (dark theme) than base event color
+  const getDayHighlightColor = (day: number | null): string => {
+    if (!day) return '';
+    const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    let highestPriorityActivity: Activity | null = null;
+    const priorityMap: { [key in ActivityType]: number } = {
+      lecture: 3,
+      examination: 2,
+      break: 2,
+      registration: 1,
+      other: 0,
+    };
+    for (const activity of allActivities) {
+      if (activity.group !== group) continue;
+      let matchesDate = false;
+      const startDate = new Date(activity.startDate);
+      const endDate = activity.endDate ? new Date(activity.endDate) : startDate;
+      const targetDate = new Date(dateStr);
+      if (showKKT && activity.regionalStartDate) {
+        const regionalStart = new Date(activity.regionalStartDate);
+        const regionalEnd = activity.regionalEndDate ? new Date(activity.regionalEndDate) : regionalStart;
+        if (targetDate >= regionalStart && targetDate <= regionalEnd) matchesDate = true;
+      } else {
+        if (targetDate >= startDate && targetDate <= endDate) matchesDate = true;
+      }
+      if (matchesDate && shouldShowActivity(activity)) {
+        if (!highestPriorityActivity || priorityMap[activity.type] > priorityMap[highestPriorityActivity.type]) {
+          highestPriorityActivity = activity;
+        }
+      }
+    }
+    if (highestPriorityActivity) {
+      if (highestPriorityActivity.type === 'lecture') return 'bg-purple-200 dark:bg-purple-900/80';
+      if (highestPriorityActivity.type === 'examination') return 'bg-red-200 dark:bg-red-900/80';
+      if (highestPriorityActivity.type === 'break') return 'bg-green-200 dark:bg-green-900/80';
+      if (highestPriorityActivity.type === 'registration') return 'bg-gray-200 dark:bg-gray-900/80';
+    }
+    return 'bg-gray-200 dark:bg-gray-900/80';
   };
 
   // Check if current date is within the calendar range for this group
@@ -519,6 +570,7 @@ function MiniCalendar({ month, year, selectedProgram, showKKT, onDateClick, sele
           const dateStr = day ? `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}` : null;
           const tooltip = getTooltip(day);
           const isSelected = selectedDate === dateStr;
+          const isHighlighted = (hoveredDateStr === dateStr || tooltipOpen === dateStr);
           
           if (!day) {
             return (
@@ -536,18 +588,31 @@ function MiniCalendar({ month, year, selectedProgram, showKKT, onDateClick, sele
           const dayColor = getDayColor(day);
           const ringColor = getRingColor(day);
           const borderColor = getCurrentDateBorderColor(day);
+          const highlightColor = getDayHighlightColor(day);
 
           const calendarCell = (
             <div
               onClick={() => {
                 if (dateStr) {
-                  // Toggle tooltip on mobile, select date
+                  // Toggle tooltip on mobile/tablet (touch); on desktop with hover, click still closes or triggers onDateClick
                   if (tooltipOpen === dateStr) {
                     onDateClick(dateStr);
                     setTooltipOpen(null);
                   } else {
                     setTooltipOpen(dateStr);
                   }
+                }
+              }}
+              onMouseEnter={() => {
+                if (hasHoverCapability && dateStr) {
+                  setHoveredDateStr(dateStr);
+                  setTooltipOpen(dateStr);
+                }
+              }}
+              onMouseLeave={() => {
+                if (hasHoverCapability) {
+                  setHoveredDateStr(null);
+                  setTooltipOpen(null);
                 }
               }}
               onPointerDown={(e) => {
@@ -559,7 +624,7 @@ function MiniCalendar({ month, year, selectedProgram, showKKT, onDateClick, sele
                 // Immediately blur if element somehow gets focus
                 e.currentTarget.blur();
               }}
-              className={`calendar-date-cell flex flex-col h-12 items-center justify-center rounded-lg text-sm font-semibold cursor-pointer transition-none touch-manipulation select-none outline-none focus:outline-none focus-visible:outline-none focus:ring-0 focus-visible:ring-0 focus:shadow-none focus-visible:shadow-none [&:focus]:ring-0 [&:focus-visible]:ring-0 [&:focus]:shadow-none [&:focus-visible]:shadow-none [&:focus]:outline-none [&:focus-visible]:outline-none ${dayColor} ${isSelected ? `ring-2 ${ringColor}` : ''} ${isCurrentDate(day) && isCurrentDateInRange() ? borderColor : 'border border-transparent'} ${textClass}`}
+              className={`calendar-date-cell flex flex-col h-12 items-center justify-center rounded-lg text-sm font-semibold cursor-pointer transition-none touch-manipulation select-none outline-none focus:outline-none focus-visible:outline-none focus:ring-0 focus-visible:ring-0 focus:shadow-none focus-visible:shadow-none [&:focus]:ring-0 [&:focus-visible]:ring-0 [&:focus]:shadow-none [&:focus-visible]:shadow-none [&:focus]:outline-none [&:focus-visible]:outline-none ${dayColor} ${isHighlighted ? highlightColor : ''} ${isSelected ? `ring-2 ${ringColor}` : ''} ${isCurrentDate(day) && isCurrentDateInRange() ? borderColor : 'border border-transparent'} ${textClass}`}
               tabIndex={-1}
               suppressHydrationWarning
             >
