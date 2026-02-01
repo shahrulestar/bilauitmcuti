@@ -75,6 +75,7 @@ export function SharedCalendarLayout({
           showExamination: JSON.parse(filters.showExamination ?? JSON.stringify(defaults.showExamination)),
           showOthersExams: JSON.parse(filters.showOthersExams ?? JSON.stringify(defaults.showOthersExams)),
           showBreak: JSON.parse(filters.showBreak ?? JSON.stringify(defaults.showBreak)),
+          showCountdown: JSON.parse(filters.showCountdown ?? JSON.stringify(defaults.showCountdown)),
         };
       }
     } catch (e) {
@@ -98,6 +99,7 @@ export function SharedCalendarLayout({
   const [showExamination, setShowExamination] = useState(initialFilters.showExamination);
   const [showOthersExams, setShowOthersExams] = useState(initialFilters.showOthersExams);
   const [showBreak, setShowBreak] = useState(initialFilters.showBreak);
+  const [showCountdown, setShowCountdown] = useState(initialFilters.showCountdown);
   const [isLoaded, setIsLoaded] = useState(false);
   const [currentMonth, setCurrentMonth] = useState('Academic Calendar');
   const [selectedStates, setSelectedStates] = useState<string[]>(initialFilters.showKKT ? ['Kedah', 'Kelantan', 'Terengganu'] : []);
@@ -122,6 +124,7 @@ export function SharedCalendarLayout({
       showExamination,
       showOthersExams,
       showBreak,
+      showCountdown,
     };
     
     // Save all settings in one go
@@ -135,6 +138,7 @@ export function SharedCalendarLayout({
       localStorage.setItem('showExamination', JSON.stringify(showExamination));
       localStorage.setItem('showOthersExams', JSON.stringify(showOthersExams));
       localStorage.setItem('showBreak', JSON.stringify(showBreak));
+      localStorage.setItem('showCountdown', JSON.stringify(showCountdown));
       
       // Save to cookie for SSR consistency
       setFiltersToCookie(filterStates);
@@ -149,6 +153,7 @@ export function SharedCalendarLayout({
         showExamination: JSON.stringify(showExamination),
         showOthersExams: JSON.stringify(showOthersExams),
         showBreak: JSON.stringify(showBreak),
+        showCountdown: JSON.stringify(showCountdown),
       };
       document.documentElement.setAttribute('data-filters', JSON.stringify(filters));
     } catch (e) {
@@ -161,7 +166,7 @@ export function SharedCalendarLayout({
     } else {
       setSelectedStates([]);
     }
-  }, [showKKT, showRegistration, showLecture, showSemesterPendek, showKuliahIntersesi, showExamination, showOthersExams, showBreak, isLoaded]);
+  }, [showKKT, showRegistration, showLecture, showSemesterPendek, showKuliahIntersesi, showExamination, showOthersExams, showBreak, showCountdown, isLoaded]);
 
   // Theme-aware classes
   const bgClass = 'bg-background text-foreground';
@@ -192,6 +197,8 @@ export function SharedCalendarLayout({
           onShowOthersExamsChange={setShowOthersExams}
           showBreak={showBreak}
           onShowBreakChange={setShowBreak}
+          showCountdown={showCountdown}
+          onShowCountdownChange={setShowCountdown}
           currentMonth={currentMonth}
         />
 
@@ -209,6 +216,7 @@ export function SharedCalendarLayout({
               showExamination={showExamination}
               showOthersExams={showOthersExams}
               showBreak={showBreak}
+              showCountdown={showCountdown}
               onMonthChange={setCurrentMonth}
               selectedStates={selectedStates}
             />
@@ -223,8 +231,9 @@ export function SharedCalendarLayout({
               showKuliahIntersesi={showKuliahIntersesi}
               showExamination={showExamination}
               showOthersExams={showOthersExams}
-              onMonthChange={setCurrentMonth}
               showBreak={showBreak}
+              showCountdown={showCountdown}
+              onMonthChange={setCurrentMonth}
               selectedStates={selectedStates}
               initialCurrentDate={initialCurrentDate}
             />

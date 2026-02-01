@@ -1,5 +1,5 @@
-import { memo } from 'react';
-import { getActivitiesForMonth, formatDateRange, type ProgramGroup } from '@/lib/data';
+import { memo, useMemo } from 'react';
+import { getActivitiesForMonth, formatDateRange, getDaysUntilStart, formatCountdown, type ProgramGroup } from '@/lib/data';
 
 interface ListViewProps {
   selectedProgram: string;
@@ -11,8 +11,23 @@ interface ListViewProps {
   showExamination: boolean;
   showOthersExams: boolean;
   showBreak: boolean;
+  showCountdown: boolean;
   onMonthChange?: (month: string) => void;
   selectedStates?: string[];
+}
+
+function getMalaysiaTodayStr(): string {
+  if (typeof window === 'undefined') return '';
+  try {
+    const now = new Date();
+    const malaysiaTime = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Kuala_Lumpur' }));
+    const y = malaysiaTime.getFullYear();
+    const m = String(malaysiaTime.getMonth() + 1).padStart(2, '0');
+    const d = String(malaysiaTime.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  } catch {
+    return '';
+  }
 }
 
 export const ListView = memo(function ListView({ 
@@ -25,9 +40,12 @@ export const ListView = memo(function ListView({
   showExamination,
   showOthersExams,
   showBreak,
+  showCountdown,
   onMonthChange,
   selectedStates = [],
 }: ListViewProps) {
+  const todayStr = useMemo(() => getMalaysiaTodayStr(), []);
+
   // Helper function untuk format date - always calculates correctly
   const formatDateSafe = (dateStr: string) => {
     const [year, monthNum, day] = dateStr.split('-').map(Number);
@@ -228,6 +246,14 @@ export const ListView = memo(function ListView({
                           ? `${formattedDate.dayNum} ${formattedDate.monthShort}` 
                           : formattedDate.dayNum}
                       </div>
+                      {showCountdown && ['lecture', 'examination', 'break'].includes(activity.type) && todayStr && (() => {
+                        const days = getDaysUntilStart(activity, todayStr, showKKT);
+                        return days != null ? (
+                          <div className={`text-xs ${mutedClass} mt-0.5 transition-none`} suppressHydrationWarning style={{ transition: 'none' }}>
+                            {formatCountdown(days)}
+                          </div>
+                        ) : null;
+                      })()}
                     </div>
                     
                     {/* Activity info */}

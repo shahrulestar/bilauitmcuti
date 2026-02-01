@@ -9,6 +9,7 @@ export interface FilterStates {
   showExamination: boolean;
   showOthersExams: boolean;
   showBreak: boolean;
+  showCountdown: boolean;
 }
 
 const COOKIE_NAME = 'calendar-filters';
@@ -34,6 +35,7 @@ export function parseFiltersFromCookie(cookieValue: string | null | undefined): 
       showExamination: parsed.showExamination ?? DEFAULT_FILTER_STATES.showExamination,
       showOthersExams: parsed.showOthersExams ?? DEFAULT_FILTER_STATES.showOthersExams,
       showBreak: parsed.showBreak ?? DEFAULT_FILTER_STATES.showBreak,
+      showCountdown: parsed.showCountdown ?? DEFAULT_FILTER_STATES.showCountdown,
     };
   } catch {
     return DEFAULT_FILTER_STATES;

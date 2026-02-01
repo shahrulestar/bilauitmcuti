@@ -9,7 +9,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
-import { getActivitiesForMonth, getActivityForDate, getMonthsForGroup, type ProgramGroup, type Activity, type ActivityType } from '@/lib/data';
+import { getActivitiesForMonth, getActivityForDate, getMonthsForGroup, getDaysUntilStart, formatCountdown, type ProgramGroup, type Activity, type ActivityType } from '@/lib/data';
 import { allActivities } from '@/lib/data';
 
 interface GridViewProps {
@@ -22,12 +22,13 @@ interface GridViewProps {
   showExamination: boolean;
   showOthersExams: boolean;
   showBreak: boolean;
+  showCountdown: boolean;
   onMonthChange?: (month: string) => void;
   selectedStates?: string[];
   initialCurrentDate?: string;
 }
 
-function MiniCalendar({ month, year, selectedProgram, showKKT, onDateClick, selectedDate, showRegistration, showLecture, showSemesterPendek, showKuliahIntersesi, showExamination, showOthersExams, showBreak, selectedStates = [], initialCurrentDate }: { month: number; year: number; selectedProgram: string; showKKT: boolean; onDateClick: (date: string) => void; selectedDate: string | null; showRegistration: boolean; showLecture: boolean; showSemesterPendek: boolean; showKuliahIntersesi: boolean; showExamination: boolean; showOthersExams: boolean; showBreak: boolean; selectedStates?: string[]; initialCurrentDate?: string }) {
+function MiniCalendar({ month, year, selectedProgram, showKKT, onDateClick, selectedDate, showRegistration, showLecture, showSemesterPendek, showKuliahIntersesi, showExamination, showOthersExams, showBreak, showCountdown, selectedStates = [], initialCurrentDate }: { month: number; year: number; selectedProgram: string; showKKT: boolean; onDateClick: (date: string) => void; selectedDate: string | null; showRegistration: boolean; showLecture: boolean; showSemesterPendek: boolean; showKuliahIntersesi: boolean; showExamination: boolean; showOthersExams: boolean; showBreak: boolean; showCountdown: boolean; selectedStates?: string[]; initialCurrentDate?: string }) {
   const [tooltipOpen, setTooltipOpen] = useState<string | null>(null);
 
   // Initialize currentDateStr synchronously on client to prevent hydration mismatch
@@ -486,8 +487,14 @@ function MiniCalendar({ month, year, selectedProgram, showKKT, onDateClick, sele
   const getTooltip = (day: number | null) => {
     if (!day) return '';
     const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-    const activity = getActivityForDate(dateStr, group);
-    return activity && shouldShowActivity(activity) ? activity.name : '';
+    const activity = getActivityForDate(dateStr, group, showKKT);
+    if (!activity || !shouldShowActivity(activity)) return '';
+    const countdownTypes: ActivityType[] = ['lecture', 'examination', 'break'];
+    if (showCountdown && countdownTypes.includes(activity.type) && currentDateStr) {
+      const days = getDaysUntilStart(activity, currentDateStr, showKKT);
+      if (days != null) return `${activity.name} (${formatCountdown(days)})`;
+    }
+    return activity.name;
   };
 
   return (
@@ -622,11 +629,15 @@ function MiniCalendar({ month, year, selectedProgram, showKKT, onDateClick, sele
                           activity.type === 'lecture' ? 'bg-[#8b5cf6]' :
                           activity.type === 'examination' ? 'bg-[#dc2626]' :
                           activity.type === 'break' ? 'bg-[#10b981]' : 'bg-gray-400';
-                        
+                        const countdownTypes: ActivityType[] = ['lecture', 'examination', 'break'];
+                        const days = showCountdown && countdownTypes.includes(activity.type) && currentDateStr
+                          ? getDaysUntilStart(activity, currentDateStr, showKKT)
+                          : null;
+                        const displayName = days != null ? `${activity.name} (${formatCountdown(days)})` : activity.name;
                         return (
                           <div key={idx} className="flex items-start gap-2 transition-none" style={{ transition: 'none' }}>
                             <div className={`h-2 w-2 rounded-full mt-1 flex-shrink-0 ${dotColor} transition-none`} style={{ transition: 'none' }} />
-                            <p className="text-xs leading-relaxed transition-none">{activity.name}</p>
+                            <p className="text-xs leading-relaxed transition-none">{displayName}</p>
                           </div>
                         );
                       })}
@@ -653,6 +664,7 @@ export const GridView = memo(function GridView({
   showExamination,
   showOthersExams,
   showBreak,
+  showCountdown,
   onMonthChange,
   selectedStates = [],
   initialCurrentDate,
@@ -699,6 +711,7 @@ export const GridView = memo(function GridView({
               showExamination={showExamination}
               showOthersExams={showOthersExams}
               showBreak={showBreak}
+              showCountdown={showCountdown}
               selectedStates={selectedStates}
               initialCurrentDate={initialCurrentDate}
             />

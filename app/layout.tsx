@@ -28,7 +28,7 @@ export const metadata: Metadata = {
     locale: 'ms_MY',
     images: [
       {
-        url: '/og-image.png',
+        url: '/og-image-2.png',
         width: 1200,
         height: 630,
         alt: 'Bila UiTM Cuti? - Academic Calendar 2026',

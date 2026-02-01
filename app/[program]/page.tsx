@@ -32,7 +32,7 @@ export async function generateMetadata({ params }: ProgramPageProps): Promise<Me
       locale: 'ms_MY',
       images: [
         {
-          url: '/og-image.png',
+          url: '/og-image-2.png',
           width: 1200,
           height: 630,
           alt: title,

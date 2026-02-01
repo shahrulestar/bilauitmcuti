@@ -10,6 +10,7 @@ export const DEFAULT_FILTER_STATES = {
   showExamination: true,
   showOthersExams: false,
   showBreak: true,
+  showCountdown: true,
 } as const;
 
 export interface Activity {
@@ -781,6 +782,22 @@ export function formatDateRange(startDate: string, endDate?: string): string {
   }
   
   return `${start.getUTCDate()} ${monthNames[start.getUTCMonth()]} ${start.getUTCFullYear()} - ${end.getUTCDate()} ${monthNames[end.getUTCMonth()]} ${end.getUTCFullYear()}`;
+}
+
+/** Days from today to activity start (UTC-normalized). Returns null if start is today or in the past. */
+export function getDaysUntilStart(activity: Activity, todayStr: string, showKKT?: boolean): number | null {
+  const startStr = showKKT && activity.regionalStartDate ? activity.regionalStartDate : activity.startDate;
+  const [startYear, startMonth, startDay] = startStr.split('-').map(Number);
+  const [todayYear, todayMonth, todayDay] = todayStr.split('-').map(Number);
+  const start = new Date(Date.UTC(startYear, startMonth - 1, startDay));
+  const today = new Date(Date.UTC(todayYear, todayMonth - 1, todayDay));
+  const diffMs = start.getTime() - today.getTime();
+  const days = Math.floor(diffMs / 86400000);
+  return days > 0 ? days : null;
+}
+
+export function formatCountdown(days: number): string {
+  return days === 1 ? 'In 1 day' : `In ${days} days`;
 }
 
 // Get months that should be displayed for a group based on available activities
