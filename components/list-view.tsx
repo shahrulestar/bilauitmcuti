@@ -1,4 +1,4 @@
-import { memo, useMemo } from 'react';
+import { memo, useMemo, useState, useEffect } from 'react';
 import { getActivitiesForMonth, formatDateRange, getDaysUntilStart, formatCountdown, type ProgramGroup } from '@/lib/data';
 
 interface ListViewProps {
@@ -44,6 +44,8 @@ export const ListView = memo(function ListView({
   onMonthChange,
   selectedStates = [],
 }: ListViewProps) {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { setMounted(true); }, []);
   const todayStr = useMemo(() => getMalaysiaTodayStr(), []);
 
   // Helper function untuk format date - always calculates correctly
@@ -77,12 +79,8 @@ export const ListView = memo(function ListView({
     // Filter out Others Exams (Peperiksaan/Penilaian Khas/Intersesi/Semester Pendek + English Exit Test) if toggle is off
     if (type === 'examination' && (activity?.name?.includes('Khas') || activity?.name?.includes('English Exit Test') || activity?.name?.includes('EET Lisan')) && !showOthersExams) return false;
     
-    // Handle "All" option - show activities with semua flag or no specific programType
+    // Handle "All" option - show all Group B activities (semua and every programType)
     if (selectedProgram === 'All') {
-      // Show activities that apply to all students or have no specific program type
-      if (activity?.semua) return true;
-      // Don't show activities with specific programTypes when "All" is selected
-      if (activity?.programType) return false;
       return true;
     }
     
@@ -208,7 +206,7 @@ export const ListView = memo(function ListView({
   const borderClass = 'border-border';
 
   return (
-    <div className={`space-y-8 ${bgClass} transition-none`} suppressHydrationWarning style={{ transition: 'none' }}>
+    <div className={`space-y-8 ${bgClass} transition-none`} suppressHydrationWarning>
       {sortedMonths.map((month) => {
         // Hide months with no activities
         if (!filteredGroupedByMonth[month] || filteredGroupedByMonth[month].length === 0) {
@@ -216,12 +214,12 @@ export const ListView = memo(function ListView({
         }
         
         return (
-        <div key={month} suppressHydrationWarning className="transition-none" style={{ transition: 'none' }}>
-          <div className="-mx-3 pb-4 pt-3 transition-none" suppressHydrationWarning style={{ transition: 'none' }}>
-            <h3 className={`font-semibold text-xl leading-7 text-left ${textClass} px-3 transition-none`} suppressHydrationWarning style={{ transition: 'none' }}>{month}</h3>
+        <div key={month} suppressHydrationWarning className="transition-none">
+          <div className="-mx-3 pb-4 pt-3 transition-none" suppressHydrationWarning>
+            <h3 className={`font-semibold text-xl leading-7 text-left ${textClass} px-3 transition-none`} suppressHydrationWarning>{month}</h3>
           </div>
           
-          <div className="space-y-4 transition-none" suppressHydrationWarning style={{ transition: 'none' }}>
+          <div className="space-y-4 transition-none" suppressHydrationWarning>
             {filteredGroupedByMonth[month] && filteredGroupedByMonth[month].length > 0 ? (
               filteredGroupedByMonth[month].map((activity) => {
                 // Use regional dates if KKT filter is on
@@ -235,21 +233,21 @@ export const ListView = memo(function ListView({
                 const hasKKTVariant = activity.regionalStartDate || activity.regionalEndDate;
 
                 return (
-                  <div key={activity.name + activity.startDate} className="flex gap-4 p-3 rounded-lg px-0 transition-none" suppressHydrationWarning style={{ transition: 'none' }}>
+                  <div key={`${activity.name}|${activity.startDate}|${activity.programType ?? ''}|${activity.endDate ?? ''}`} className="flex gap-4 p-3 rounded-lg px-0 transition-none" suppressHydrationWarning>
                     {/* Date column */}
-                    <div className={`flex w-20 flex-col items-start text-xs ${mutedClass} transition-none`} suppressHydrationWarning style={{ transition: 'none' }}>
-                      <div className="transition-none" suppressHydrationWarning style={{ transition: 'none' }}>
+                    <div className={`flex w-20 flex-col items-start text-xs ${mutedClass} transition-none`} suppressHydrationWarning>
+                      <div className="transition-none" suppressHydrationWarning>
                         {formattedDate.dayName}
                       </div>
-                      <div className={`text-sm font-medium ${textClass} transition-none`} suppressHydrationWarning style={{ transition: 'none' }}>
+                      <div className={`text-sm font-medium ${textClass} transition-none`} suppressHydrationWarning>
                         {formattedDate.monthShort 
                           ? `${formattedDate.dayNum} ${formattedDate.monthShort}` 
                           : formattedDate.dayNum}
                       </div>
-                      {showCountdown && ['lecture', 'examination', 'break'].includes(activity.type) && todayStr && (() => {
+                      {mounted && showCountdown && ['lecture', 'examination', 'break'].includes(activity.type) && todayStr && (() => {
                         const days = getDaysUntilStart(activity, todayStr, showKKT);
                         return days != null ? (
-                          <div className={`text-xs ${mutedClass} mt-0.5 transition-none`} suppressHydrationWarning style={{ transition: 'none' }}>
+                          <div className={`text-xs ${mutedClass} mt-0.5 transition-none`} suppressHydrationWarning>
                             {formatCountdown(days)}
                           </div>
                         ) : null;
@@ -257,29 +255,29 @@ export const ListView = memo(function ListView({
                     </div>
                     
                     {/* Activity info */}
-                    <div className="flex flex-1 flex-col transition-none" suppressHydrationWarning style={{ transition: 'none' }}>
+                    <div className="flex flex-1 flex-col transition-none" suppressHydrationWarning>
                       {/* Group B with badge: dot + badge in one row above title (container fit content, left align, gap-2 like dot-title) */}
                       {group === 'B' && getProgramBadgeColor(activity) ? (
                         <>
-                          <div className="flex items-center gap-2 w-fit mb-1 transition-none" suppressHydrationWarning style={{ transition: 'none' }}>
-                            <div className={`h-2 w-2 shrink-0 rounded-full ${getActivityColor(activity)} transition-none`} suppressHydrationWarning style={{ transition: 'none' }} />
-                            <div className={`inline-block py-1 rounded-full text-xs font-medium px-3 ${getProgramBadgeColor(activity)?.bgClass} ${getProgramBadgeColor(activity)?.textClass} transition-none`} suppressHydrationWarning style={{ transition: 'none' }}>
+                          <div className="flex items-center gap-2 w-fit mb-1 transition-none" suppressHydrationWarning>
+                            <div className={`h-2 w-2 shrink-0 rounded-full ${getActivityColor(activity)} transition-none`} suppressHydrationWarning />
+                            <div className={`inline-block py-1 rounded-full text-xs font-medium px-3 ${getProgramBadgeColor(activity)?.bgClass} ${getProgramBadgeColor(activity)?.textClass} transition-none`} suppressHydrationWarning>
                               {getProgramBadgeColor(activity)?.label}
                             </div>
                           </div>
-                          <h3 className={`font-medium text-base leading-6 break-words ${textClass} mb-1 transition-none`} suppressHydrationWarning style={{ transition: 'none' }}>{activity.name}</h3>
+                          <h3 className={`font-medium text-base leading-6 break-words ${textClass} mb-1 transition-none`} suppressHydrationWarning>{activity.name}</h3>
                         </>
                       ) : (
                         <>
                           {/* Group A or no badge: dot and h3 title in same row */}
-                          <div className="flex items-start gap-2 mb-1 transition-none" suppressHydrationWarning style={{ transition: 'none' }}>
-                            <div className={`h-2 w-2 shrink-0 rounded-full mt-2 ${getActivityColor(activity)} transition-none`} suppressHydrationWarning style={{ transition: 'none' }} />
-                            <h3 className={`font-medium text-base leading-6 break-words ${textClass} transition-none`} suppressHydrationWarning style={{ transition: 'none' }}>{activity.name}</h3>
+                          <div className="flex items-start gap-2 mb-1 transition-none" suppressHydrationWarning>
+                            <div className={`h-2 w-2 shrink-0 rounded-full mt-2 ${getActivityColor(activity)} transition-none`} suppressHydrationWarning />
+                            <h3 className={`font-medium text-base leading-6 break-words ${textClass} transition-none`} suppressHydrationWarning>{activity.name}</h3>
                           </div>
                           {/* Badge row for Group A (if exists) */}
                           {getProgramBadgeColor(activity) ? (
-                            <div className="flex items-center mb-1 transition-none" suppressHydrationWarning style={{ transition: 'none' }}>
-                              <div className={`inline-block py-1 rounded-full text-xs font-medium px-3 ${getProgramBadgeColor(activity)?.bgClass} ${getProgramBadgeColor(activity)?.textClass} transition-none`} suppressHydrationWarning style={{ transition: 'none' }}>
+                            <div className="flex items-center mb-1 transition-none" suppressHydrationWarning>
+                              <div className={`inline-block py-1 rounded-full text-xs font-medium px-3 ${getProgramBadgeColor(activity)?.bgClass} ${getProgramBadgeColor(activity)?.textClass} transition-none`} suppressHydrationWarning>
                                 {getProgramBadgeColor(activity)?.label}
                               </div>
                             </div>
@@ -288,8 +286,8 @@ export const ListView = memo(function ListView({
                       )}
                       
                       {/* Date and other details */}
-                      <div className="w-full transition-none" suppressHydrationWarning style={{ transition: 'none' }}>
-                        <p className={`text-sm leading-5 break-words ${mutedClass} transition-none`} suppressHydrationWarning style={{ transition: 'none' }}>
+                      <div className="w-full transition-none" suppressHydrationWarning>
+                        <p className={`text-sm leading-5 break-words ${mutedClass} transition-none`} suppressHydrationWarning>
                           {showKKT && activity.regionalStartDate
                             ? formatDateRange(activity.regionalStartDate, activity.regionalEndDate)
                             : formatDateRange(activity.startDate, activity.endDate)}

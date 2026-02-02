@@ -113,12 +113,8 @@ function MiniCalendar({ month, year, selectedProgram, showKKT, onDateClick, sele
     // Filter out Others Exams (Peperiksaan/Penilaian Khas/Intersesi/Semester Pendek + English Exit Test) if toggle is off
     if (activity.type === 'examination' && (activity.name.includes('Khas') || activity.name.includes('English Exit Test') || activity.name.includes('EET Lisan')) && !showOthersExams) return false;
     
-    // Handle "All" option - show activities with semua flag or no specific programType
+    // Handle "All" option - show all Group B activities (semua and every programType)
     if (selectedProgram === 'All') {
-      // Show activities that apply to all students or have no specific program type
-      if (activity.semua) return true;
-      // Don't show activities with specific programTypes when "All" is selected
-      if (activity.programType) return false;
       return true;
     }
     
@@ -678,7 +674,16 @@ function MiniCalendar({ month, year, selectedProgram, showKKT, onDateClick, sele
                   }
                 }
                 
-                if (dayActivities.length === 0) return null;
+                // Deduplicate by name + dates so "All" does not show same activity text per program
+                const seenKey = new Set<string>();
+                const uniqueDayActivities = dayActivities.filter((a) => {
+                  const key = `${a.name}|${a.startDate}|${a.endDate ?? ''}`;
+                  if (seenKey.has(key)) return false;
+                  seenKey.add(key);
+                  return true;
+                });
+                
+                if (uniqueDayActivities.length === 0) return null;
                 
                 return (
                   <TooltipContent suppressHydrationWarning 
@@ -688,7 +693,7 @@ function MiniCalendar({ month, year, selectedProgram, showKKT, onDateClick, sele
                     style={{ pointerEvents: 'auto' } as React.CSSProperties & { '--radix-tooltip-content-transform-origin'?: string }}
                   >
                     <div className="space-y-2">
-                      {dayActivities.map((activity, idx) => {
+                      {uniqueDayActivities.map((activity, idx) => {
                         const dotColor = 
                           activity.type === 'registration' ? 'bg-[#d1d5db]' :
                           activity.type === 'lecture' ? 'bg-[#8b5cf6]' :

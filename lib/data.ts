@@ -845,12 +845,8 @@ export function getMonthsForGroup(
     // Filter out Others Exams (Peperiksaan/Penilaian Khas/Intersesi/Semester Pendek + English Exit Test) if toggle is off
     if (activity.type === 'examination' && (activity.name.includes('Khas') || activity.name.includes('English Exit Test') || activity.name.includes('EET Lisan')) && !showOthersExams) return false;
     
-    // Handle "All" option - show activities with semua flag or no specific programType
+    // Handle "All" option - show all Group B activities (semua and every programType)
     if (selectedProgram === 'All') {
-      // Show activities that apply to all students or have no specific program type
-      if (activity.semua) return true;
-      // Don't show activities with specific programTypes when "All" is selected
-      if (activity.programType) return false;
       return true;
     }
     

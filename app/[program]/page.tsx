@@ -1,6 +1,6 @@
 import { CalendarWrapper } from '@/components/calendar-wrapper';
 import { notFound } from 'next/navigation';
-import { isValidProgramRoute, getProgramDisplayName } from '@/lib/route-utils';
+import { isValidProgramRoute, getProgramDisplayName, getOgImageForRoute } from '@/lib/route-utils';
 import type { Metadata } from 'next';
 
 interface ProgramPageProps {
@@ -33,7 +33,7 @@ export async function generateMetadata({ params }: ProgramPageProps): Promise<Me
       locale: 'ms_MY',
       images: [
         {
-          url: '/og-image-2.png',
+          url: getOgImageForRoute(program),
           width: 1200,
           height: 630,
           alt: title,
