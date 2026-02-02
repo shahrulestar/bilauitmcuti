@@ -721,6 +721,67 @@ export const programOptions = [
   { label: 'PhD', value: 'PhD', group: 'B' as const },
 ];
 
+// Program badge config for list view - single source of truth for label and colors
+export interface ProgramBadgeConfig {
+  label: string;
+  bgClass: string;
+  textClass: string;
+}
+
+type ProgramTypeForBadge = NonNullable<Activity['programType']>;
+
+const programBadgeConfigMap: Record<ProgramTypeForBadge, ProgramBadgeConfig> = {
+  PreDiploma: {
+    label: 'Pre-Diploma',
+    bgClass: 'bg-[#0891B2]/10 dark:bg-[#22D3EE]/10',
+    textClass: 'text-[#0891B2] dark:text-[#22D3EE]',
+  },
+  Diploma: {
+    label: 'Diploma',
+    bgClass: 'bg-[#0891B2]/10 dark:bg-[#22D3EE]/10',
+    textClass: 'text-[#0891B2] dark:text-[#22D3EE]',
+  },
+  DiplomaPartTime: {
+    label: 'Part-Time',
+    bgClass: 'bg-[#65A30D]/10 dark:bg-[#A3E635]/10',
+    textClass: 'text-[#65A30D] dark:text-[#A3E635]',
+  },
+  Bachelor: {
+    label: 'Bachelor',
+    bgClass: 'bg-[#DB2777]/10 dark:bg-[#F472B6]/10',
+    textClass: 'text-[#DB2777] dark:text-[#F472B6]',
+  },
+  BachelorPartTime: {
+    label: 'Part-Time',
+    bgClass: 'bg-[#65A30D]/10 dark:bg-[#A3E635]/10',
+    textClass: 'text-[#65A30D] dark:text-[#A3E635]',
+  },
+  Master: {
+    label: 'Master',
+    bgClass: 'bg-[#475569]/10 dark:bg-[#CBD5E1]/10',
+    textClass: 'text-[#475569] dark:text-[#CBD5E1]',
+  },
+  PhD: {
+    label: 'PhD',
+    bgClass: 'bg-[#475569]/10 dark:bg-[#CBD5E1]/10',
+    textClass: 'text-[#475569] dark:text-[#CBD5E1]',
+  },
+};
+
+const allStudentsBadgeConfig: ProgramBadgeConfig = {
+  label: 'All Students',
+  bgClass: 'bg-[#EA580C]/10 dark:bg-[#FB923C]/10',
+  textClass: 'text-[#EA580C] dark:text-[#FB923C]',
+};
+
+export function getProgramBadgeConfig(activity: Activity): ProgramBadgeConfig | null {
+  if (activity.semua) return allStudentsBadgeConfig;
+  if (activity.programType && activity.programType in programBadgeConfigMap) {
+    return programBadgeConfigMap[activity.programType];
+  }
+  return null;
+}
+
 export type ProgramGroup = 'A' | 'B';
 
 // Get all activities for a specific month

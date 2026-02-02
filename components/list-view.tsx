@@ -1,5 +1,5 @@
 import { memo, useMemo, useState, useEffect } from 'react';
-import { getActivitiesForMonth, formatDateRange, getDaysUntilStart, formatCountdown, type ProgramGroup } from '@/lib/data';
+import { getActivitiesForMonth, formatDateRange, getDaysUntilStart, formatCountdown, getProgramBadgeConfig, type ProgramGroup } from '@/lib/data';
 
 interface ListViewProps {
   selectedProgram: string;
@@ -144,53 +144,6 @@ export const ListView = memo(function ListView({
     return 'bg-muted';
   };
 
-  const getProgramBadgeColor = (activity: any) => {
-    if (activity.semua) {
-      // All Students - Deep Orange
-      return {
-        label: 'All Students',
-        bgClass: 'bg-[#EA580C]/10 dark:bg-[#FB923C]/10',
-        textClass: 'text-[#EA580C] dark:text-[#FB923C]',
-      };
-    }
-    
-    switch (activity.programType) {
-      case 'PreDiploma':
-      case 'Diploma':
-        // Pre-Diploma/Diploma (Full-time) - Cyan
-        return {
-          label: 'Pre-Diploma/Diploma',
-          bgClass: 'bg-[#0891B2]/10 dark:bg-[#22D3EE]/10',
-          textClass: 'text-[#0891B2] dark:text-[#22D3EE]',
-        };
-      case 'DiplomaPartTime':
-      case 'BachelorPartTime':
-        // Diploma/Bachelor (Part-time) - Lime
-        return {
-          label: 'Part-Time',
-          bgClass: 'bg-[#65A30D]/10 dark:bg-[#A3E635]/10',
-          textClass: 'text-[#65A30D] dark:text-[#A3E635]',
-        };
-      case 'Bachelor':
-        // Bachelor (Full-time) - Rose Pink
-        return {
-          label: 'Bachelor',
-          bgClass: 'bg-[#DB2777]/10 dark:bg-[#F472B6]/10',
-          textClass: 'text-[#DB2777] dark:text-[#F472B6]',
-        };
-      case 'Master':
-      case 'PhD':
-        // Master/Doctorate - Cool Slate
-        return {
-          label: activity.programType === 'Master' ? 'Master' : 'PhD',
-          bgClass: 'bg-[#475569]/10 dark:bg-[#CBD5E1]/10',
-          textClass: 'text-[#475569] dark:text-[#CBD5E1]',
-        };
-      default:
-        return null;
-    }
-  };
-
   const monthOrder = ['December 2025', 'January 2026', 'February 2026', 'March 2026', 'April 2026', 'May 2026', 'June 2026', 'July 2026', 'August 2026', 'September 2026', 'October 2026', 'November 2026'];
   const sortedMonths = Object.keys(groupedByMonth).sort((a, b) => monthOrder.indexOf(a) - monthOrder.indexOf(b));
 
@@ -257,12 +210,12 @@ export const ListView = memo(function ListView({
                     {/* Activity info */}
                     <div className="flex flex-1 flex-col transition-none" suppressHydrationWarning>
                       {/* Group B with badge: dot + badge in one row above title (container fit content, left align, gap-2 like dot-title) */}
-                      {group === 'B' && getProgramBadgeColor(activity) ? (
+                      {group === 'B' && getProgramBadgeConfig(activity) ? (
                         <>
                           <div className="flex items-center gap-2 w-fit mb-1 transition-none" suppressHydrationWarning>
                             <div className={`h-2 w-2 shrink-0 rounded-full ${getActivityColor(activity)} transition-none`} suppressHydrationWarning />
-                            <div className={`inline-block py-1 rounded-full text-xs font-medium px-3 ${getProgramBadgeColor(activity)?.bgClass} ${getProgramBadgeColor(activity)?.textClass} transition-none`} suppressHydrationWarning>
-                              {getProgramBadgeColor(activity)?.label}
+                            <div className={`inline-block py-1 rounded-full text-xs font-medium px-3 ${getProgramBadgeConfig(activity)?.bgClass} ${getProgramBadgeConfig(activity)?.textClass} transition-none`} suppressHydrationWarning>
+                              {getProgramBadgeConfig(activity)?.label}
                             </div>
                           </div>
                           <h3 className={`font-medium text-base leading-6 break-words ${textClass} mb-1 transition-none`} suppressHydrationWarning>{activity.name}</h3>
@@ -275,10 +228,10 @@ export const ListView = memo(function ListView({
                             <h3 className={`font-medium text-base leading-6 break-words ${textClass} transition-none`} suppressHydrationWarning>{activity.name}</h3>
                           </div>
                           {/* Badge row for Group A (if exists) */}
-                          {getProgramBadgeColor(activity) ? (
+                          {getProgramBadgeConfig(activity) ? (
                             <div className="flex items-center mb-1 transition-none" suppressHydrationWarning>
-                              <div className={`inline-block py-1 rounded-full text-xs font-medium px-3 ${getProgramBadgeColor(activity)?.bgClass} ${getProgramBadgeColor(activity)?.textClass} transition-none`} suppressHydrationWarning>
-                                {getProgramBadgeColor(activity)?.label}
+                              <div className={`inline-block py-1 rounded-full text-xs font-medium px-3 ${getProgramBadgeConfig(activity)?.bgClass} ${getProgramBadgeConfig(activity)?.textClass} transition-none`} suppressHydrationWarning>
+                                {getProgramBadgeConfig(activity)?.label}
                               </div>
                             </div>
                           ) : null}
