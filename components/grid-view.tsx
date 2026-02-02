@@ -298,7 +298,7 @@ function MiniCalendar({ month, year, selectedProgram, showKKT, onDateClick, sele
       if (highestPriorityActivity.type === 'break') return 'bg-green-200 dark:bg-green-900/80';
       if (highestPriorityActivity.type === 'registration') return 'bg-gray-200 dark:bg-gray-900/80';
     }
-    return 'bg-gray-200 dark:bg-gray-900/80';
+    return 'bg-gray-100 dark:bg-gray-900/80';
   };
 
   // Check if current date is within the calendar range for this group
