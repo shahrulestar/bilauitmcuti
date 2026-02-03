@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Home } from 'lucide-react';
+import { Home } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 export default function NotFound() {
   const router = useRouter();
@@ -18,16 +18,6 @@ export default function NotFound() {
   return (
     <div className={`min-h-screen transition-colors duration-300 ${bgClass}`}>
       <div className="mx-auto max-w-[1000px] px-4 py-8 sm:px-6 lg:px-8">
-        {/* Back button */}
-        <Button
-          variant="ghost"
-          onClick={handleBack}
-          className="mb-6 -ml-2"
-        >
-          <ArrowLeft className="mr-2 h-4 w-4" />
-          Back
-        </Button>
-
         {/* 404 Content */}
         <div className="flex flex-col items-center justify-center min-h-[60vh] text-center">
           {/* 404 Number */}
