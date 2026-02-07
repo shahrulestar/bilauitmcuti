@@ -50,15 +50,22 @@ export default function ChatPage() {
       content: trimmed,
     };
 
-    setMessages((prev) => [...prev, userMessage]);
+    const updatedMessages = [...messages, userMessage];
+    setMessages(updatedMessages);
     setInput("");
     setIsLoading(true);
 
     try {
+      // Send conversation history (excluding the current message) for context
+      const history = messages.map((msg) => ({
+        role: msg.role,
+        content: msg.content,
+      }));
+
       const res = await fetch("/chat/api", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: trimmed, program }),
+        body: JSON.stringify({ message: trimmed, program, history }),
       });
 
       const data = await res.json();
