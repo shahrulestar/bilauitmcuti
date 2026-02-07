@@ -37,7 +37,7 @@ export async function askLlama(
   const response = await hf.chatCompletion({
     model: "meta-llama/Llama-3.1-8B-Instruct",
     messages,
-    max_tokens: 500,
+    max_tokens: 2048,
   });
 
   const content = response?.choices?.[0]?.message?.content;
