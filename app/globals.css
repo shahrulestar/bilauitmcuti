@@ -325,4 +325,30 @@ input[type="checkbox"],
       -webkit-tap-highlight-color: transparent !important;
     }
   }
+  
+  /* Chat page textarea - hide native scrollbar and resize handle */
+  .chat-textarea,
+  .chat-textarea::-webkit-scrollbar {
+    overflow: hidden !important;
+    scrollbar-width: none !important;
+  }
+  .chat-textarea::-webkit-scrollbar {
+    display: none !important;
+  }
+  .chat-textarea::-webkit-resizer {
+    display: none !important;
+  }
+  
+  /* Prevent auto-zoom on mobile when focusing textarea */
+  /* iOS Safari zooms in on inputs/textareas with font-size < 16px */
+  @media screen and (max-width: 768px) {
+    .chat-textarea {
+      font-size: 16px !important;
+    }
+  }
+  @media (hover: none) and (pointer: coarse) {
+    .chat-textarea {
+      font-size: 16px !important;
+    }
+  }
 }

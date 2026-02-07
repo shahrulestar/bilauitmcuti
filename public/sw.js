@@ -32,7 +32,16 @@ self.addEventListener('activate', (event) => {
 });
 
 // Fetch event - Network first, fallback to cache
+// Exclude API routes from caching (e.g. /chat/api) to prevent sensitive data leaks
 self.addEventListener('fetch', (event) => {
+  const url = new URL(event.request.url);
+
+  // Never cache API routes — pass through to network only
+  if (url.pathname.startsWith('/chat/api')) {
+    event.respondWith(fetch(event.request));
+    return;
+  }
+
   event.respondWith(
     fetch(event.request)
       .then((response) => {
