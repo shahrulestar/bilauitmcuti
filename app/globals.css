@@ -354,12 +354,21 @@ input[type="checkbox"],
     animation: suggestionsExit 400ms ease-out forwards !important;
   }
   @keyframes suggestionsEnter {
-    from { opacity: 0; transform: translateY(6px); }
-    to { opacity: 1; transform: translateY(0); }
+    from { opacity: 0; }
+    to { opacity: 1; }
   }
   @keyframes suggestionsExit {
-    from { opacity: 1; transform: translateY(0); }
-    to { opacity: 0; transform: translateY(-6px); }
+    from { opacity: 1; }
+    to { opacity: 0; }
+  }
+
+  /* Mobile suggestion swipe carousel */
+  .suggestions-swipe .embla__container {
+    display: flex;
+    gap: 0.5rem;
+  }
+  .suggestions-swipe .embla__slide {
+    flex: 0 0 auto;
   }
 
   /* Chat auto-growing input - hide scrollbar, limit max height */

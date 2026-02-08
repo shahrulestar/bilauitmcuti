@@ -11,6 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import useEmblaCarousel from "embla-carousel-react";
 
 
 const SUGGESTION_POOL = [
@@ -75,6 +76,7 @@ export default function ChatPage() {
   const lastScrollTop = useRef(0);
   const groupAOptions = useMemo(() => programOptions.filter(p => p.group === 'A'), []);
   const groupBOptions = useMemo(() => programOptions.filter(p => p.group === 'B'), []);
+  const [emblaRef] = useEmblaCarousel({ dragFree: true, containScroll: "trimSnaps", align: "center" });
 
   // Rotate suggestions every 5 seconds with crossfade
   useEffect(() => {
@@ -146,27 +148,44 @@ export default function ChatPage() {
         content: msg.content,
       }));
 
-      const res = await fetch("/chat/api", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: text.trim(), program, history }),
-      });
+      const body = JSON.stringify({ message: text.trim(), program, history });
+      let content: string | null = null;
 
-      const data = await res.json();
+      // Retry up to 2 times for recoverable errors (503 model loading, network issues)
+      for (let attempt = 0; attempt < 2; attempt++) {
+        try {
+          const res = await fetch("/chat/api", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body,
+          });
 
-      let content: string;
-      if (!res.ok) {
-        content =
-          data.error || "Something went wrong. Please try again.";
-      } else {
-        content =
-          data.reply || "Sorry, I could not get a response.";
+          const data = await res.json();
+
+          if (!res.ok) {
+            // Retry on 503 (model loading / busy)
+            if (res.status === 503 && attempt < 1) {
+              await new Promise((r) => setTimeout(r, 2000));
+              continue;
+            }
+            content = data.error || "Something went wrong. Please try again.";
+          } else {
+            content = data.reply || "Sorry, I could not get a response.";
+          }
+          break;
+        } catch {
+          if (attempt < 1) {
+            await new Promise((r) => setTimeout(r, 2000));
+            continue;
+          }
+          throw new Error("Network error");
+        }
       }
 
       const assistantMessage: Message = {
         id: (Date.now() + 1).toString(),
         role: "assistant",
-        content,
+        content: content || "Something went wrong. Please try again.",
       };
 
       setMessages((prev) => [...prev, assistantMessage]);
@@ -293,7 +312,7 @@ export default function ChatPage() {
                 Ask about the UiTM academic calendar. Select your program and start.
               </p>
             </div>
-            <div className={`mt-2 w-full max-w-[100px] sm:max-w-[280px] md:max-w-sm mx-auto ${suggestionAnim === "enter" ? "suggestions-enter" : "suggestions-exit"}`}>
+            <div className={`mt-2 w-full max-w-sm mx-auto hidden md:block ${suggestionAnim === "enter" ? "suggestions-enter" : "suggestions-exit"}`}>
               <div className="flex flex-col sm:flex-row gap-2 items-center justify-center">
                 {suggestions.slice(0, 2).map((suggestion) => (
                   <button
@@ -396,6 +415,28 @@ export default function ChatPage() {
       {/* Input area - prompt form like ChatGPT with dropdown inside textarea */}
       <div className="chat-input-area relative px-4 md:px-0 pt-1 lg:pt-0.5 pb-3">
         <div className="mx-auto max-w-[600px]">
+          {/* Mobile/tablet suggestion chips - swipeable row */}
+          {messages.length === 0 && (
+            <div className="md:hidden mb-2">
+              <div
+                className={`suggestions-swipe overflow-hidden ${suggestionAnim === "enter" ? "suggestions-enter" : "suggestions-exit"}`}
+                ref={emblaRef}
+              >
+                <div className="embla__container flex gap-2 px-1">
+                  {suggestions.map((suggestion) => (
+                    <button
+                      key={suggestion}
+                      type="button"
+                      onClick={() => sendMessage(suggestion)}
+                      className="embla__slide flex-none text-xs px-3 py-1.5 rounded-full border border-border bg-secondary/50 hover:bg-secondary dark:bg-[#2A2A2A] dark:hover:bg-[#333] text-foreground transition-colors whitespace-nowrap"
+                    >
+                      {suggestion}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
           <form
             onSubmit={handleSubmit}
             className="rounded-2xl border border-border bg-secondary dark:bg-[#2A2A2A] overflow-hidden"
