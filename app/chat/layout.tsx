@@ -5,16 +5,28 @@ export const metadata: Metadata = {
   description:
     "Ask AI about your UiTM academic calendar. Get instant answers about lecture dates, exam schedules, breaks, and registration periods for all programs.",
   openGraph: {
+    siteName: "Bila UiTM Cuti?",
     title: "Chat - Bila UiTM Cuti?",
     description:
       "Ask AI about your UiTM academic calendar. Get instant answers about lecture dates, exam schedules, breaks, and registration periods.",
     url: "https://cutiuitm.xyz/chat",
+    type: "website",
+    locale: "ms_MY",
+    images: [
+      {
+        url: "/chat-og.png",
+        width: 1200,
+        height: 630,
+        alt: "Chat - Bila UiTM Cuti?",
+      },
+    ],
   },
   twitter: {
     card: "summary_large_image",
     title: "Chat - Bila UiTM Cuti?",
     description:
       "Ask AI about your UiTM academic calendar. Get instant answers about lecture dates, exam schedules, breaks, and registration periods.",
+    images: ["/chat-og.png"],
   },
 };
 

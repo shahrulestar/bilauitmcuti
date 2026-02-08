@@ -268,7 +268,13 @@ export default function ChatPage() {
       <div className={`chat-header absolute top-0 left-0 right-0 z-10 px-4 md:px-0 ${headerVisible ? "translate-y-0" : "-translate-y-full"}`}>
         <header className="flex items-center gap-3 py-3 mx-auto max-w-[600px] w-full">
           <button
-            onClick={() => router.push("/")}
+            onClick={() => {
+              if (window.history.length > 1) {
+                router.back();
+              } else {
+                router.push("/");
+              }
+            }}
             className="flex items-center justify-center w-9 h-9 rounded-full bg-secondary hover:bg-secondary/80 dark:bg-[#2A2A2A] dark:hover:bg-[#333] transition-colors"
             aria-label="Back to home"
           >
@@ -284,16 +290,16 @@ export default function ChatPage() {
             <div>
               <h2 className="text-lg font-semibold mb-1">Bila UiTM Cuti?</h2>
               <p className="text-sm text-muted-foreground max-w-xs">
-                Ask me anything about your UiTM academic calendar! Select your program below and start asking.
+                Ask about the UiTM academic calendar. Select your program and start.
               </p>
             </div>
-            <div className={`mt-2 max-w-sm ${suggestionAnim === "enter" ? "suggestions-enter" : "suggestions-exit"}`}>
-              <div className="flex gap-2 justify-center">
+            <div className={`mt-2 w-full max-w-[100px] sm:max-w-[280px] md:max-w-sm mx-auto ${suggestionAnim === "enter" ? "suggestions-enter" : "suggestions-exit"}`}>
+              <div className="flex flex-col sm:flex-row gap-2 items-center justify-center">
                 {suggestions.slice(0, 2).map((suggestion) => (
                   <button
                     key={suggestion}
                     onClick={() => sendMessage(suggestion)}
-                    className="text-xs px-3 py-1.5 rounded-full border border-border bg-secondary/50 hover:bg-secondary dark:bg-[#2A2A2A] dark:hover:bg-[#333] text-foreground transition-colors"
+                    className="w-fit text-xs px-3 py-1.5 rounded-full border border-border bg-secondary/50 hover:bg-secondary dark:bg-[#2A2A2A] dark:hover:bg-[#333] text-foreground transition-colors whitespace-nowrap"
                   >
                     {suggestion}
                   </button>
@@ -303,7 +309,7 @@ export default function ChatPage() {
                 <div className="flex justify-center mt-2">
                   <button
                     onClick={() => sendMessage(suggestions[2])}
-                    className="text-xs px-3 py-1.5 rounded-full border border-border bg-secondary/50 hover:bg-secondary dark:bg-[#2A2A2A] dark:hover:bg-[#333] text-foreground transition-colors"
+                    className="w-fit text-xs px-3 py-1.5 rounded-full border border-border bg-secondary/50 hover:bg-secondary dark:bg-[#2A2A2A] dark:hover:bg-[#333] text-foreground transition-colors whitespace-nowrap"
                   >
                     {suggestions[2]}
                   </button>
@@ -388,7 +394,7 @@ export default function ChatPage() {
       </div>
 
       {/* Input area - prompt form like ChatGPT with dropdown inside textarea */}
-      <div className="bg-background px-4 md:px-0 py-3">
+      <div className="chat-input-area relative px-4 md:px-0 pt-1 lg:pt-0.5 pb-3">
         <div className="mx-auto max-w-[600px]">
           <form
             onSubmit={handleSubmit}

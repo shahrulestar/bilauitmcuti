@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import { List, Settings, Calendar, ChevronDown, ChevronUp } from 'lucide-react';
+import { List, Settings, Calendar, ChevronDown, ChevronUp, MessageCircle } from 'lucide-react';
 import {
   Select,
   SelectContent,
@@ -264,6 +264,16 @@ export function CalendarControls({
               suppressHydrationWarning
             >
               <List className="h-6 w-6" strokeWidth={2} />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => router.push('/chat')}
+              className="bg-transparent text-muted-foreground hover:!bg-transparent dark:hover:!bg-transparent hover:text-[#0A0A0A] dark:hover:text-[#FAFAFA] hover:[&_svg]:text-[#0A0A0A] dark:hover:[&_svg]:text-[#FAFAFA] active:text-[#0A0A0A] dark:active:text-[#FAFAFA] active:[&_svg]:text-[#0A0A0A] dark:active:[&_svg]:text-[#FAFAFA] transition-none !h-[38px] !w-[38px] !min-h-[38px] !max-h-[38px] !p-0 flex items-center justify-center hover:!h-[38px] hover:!min-h-[38px] hover:!max-h-[38px] hover:!p-0 active:!h-[38px] active:!min-h-[38px] active:!max-h-[38px] active:!p-0 [&:hover]:!h-[38px] [&:hover]:!bg-transparent [&:hover]:text-[#0A0A0A] dark:[&:hover]:text-[#FAFAFA] [&:hover_svg]:text-[#0A0A0A] dark:[&:hover_svg]:text-[#FAFAFA] [&:active]:!h-[38px] [&:active]:text-[#0A0A0A] dark:[&:active]:text-[#FAFAFA] [&:active_svg]:text-[#0A0A0A] dark:[&:active_svg]:text-[#FAFAFA]"
+              title="Chat"
+              suppressHydrationWarning
+            >
+              <MessageCircle className="h-6 w-6" strokeWidth={2} />
             </Button>
             <div 
               className="mx-1 w-px bg-border transition-none h-full flex items-center" 

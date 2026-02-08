@@ -326,6 +326,21 @@ input[type="checkbox"],
     }
   }
   
+  /* Chat input area - blurry gradient fade on mobile/tablet */
+  @media (max-width: 1023px) {
+    .chat-input-area::before {
+      content: "";
+      position: absolute;
+      top: -20px;
+      left: 0;
+      right: 0;
+      height: 20px;
+      pointer-events: none;
+      background: linear-gradient(to bottom, transparent, var(--background));
+      z-index: 1;
+    }
+  }
+  
   /* Chat header scroll hide/show animation */
   .chat-header {
     transition: transform 300ms ease, translate 300ms ease !important;
