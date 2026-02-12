@@ -366,7 +366,27 @@ input[type="checkbox"],
     to { opacity: 0; }
   }
 
-  /* Mobile suggestion swipe carousel */
+  /* Suggestion swipe carousel with edge fades */
+  .suggestions-carousel {
+    position: relative;
+  }
+  .suggestions-fade-left,
+  .suggestions-fade-right {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 32px;
+    pointer-events: none;
+    z-index: 2;
+  }
+  .suggestions-fade-left {
+    left: 0;
+    background: linear-gradient(to right, var(--background), transparent);
+  }
+  .suggestions-fade-right {
+    right: 0;
+    background: linear-gradient(to left, var(--background), transparent);
+  }
   .suggestions-swipe .embla__container {
     display: flex;
     gap: 0.5rem;

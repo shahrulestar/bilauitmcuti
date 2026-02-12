@@ -278,6 +278,18 @@ function getRandomSuggestions(exclude: string[]): string[] {
   return shuffled.slice(0, 5);
 }
 
+const MAX_HISTORY_CONTENT_LENGTH = 2000;
+const MAX_HISTORY_ITEMS = 4;
+
+function prepareHistory(messages: Message[]): { role: "user" | "assistant"; content: string }[] {
+  return messages
+    .slice(-MAX_HISTORY_ITEMS)
+    .map((msg) => ({
+      role: msg.role,
+      content: msg.content.slice(0, MAX_HISTORY_CONTENT_LENGTH),
+    }));
+}
+
 interface Message {
   id: string;
   role: "user" | "assistant";
@@ -402,10 +414,7 @@ export default function ChatPage() {
     setIsLoading(true);
 
     try {
-      const history = messages.map((msg) => ({
-        role: msg.role,
-        content: msg.content,
-      }));
+      const history = prepareHistory(messages);
 
       const body = JSON.stringify({ message: text.trim(), program, history });
       let content: string | null = null;
@@ -496,10 +505,7 @@ export default function ChatPage() {
     setIsLoading(true);
 
     try {
-      const history = newMessages.slice(0, -1).map((msg) => ({
-        role: msg.role,
-        content: msg.content,
-      }));
+      const history = prepareHistory(newMessages.slice(0, -1));
 
       const res = await fetch("/chat/api", {
         method: "POST",
@@ -663,36 +669,22 @@ export default function ChatPage() {
       {/* Input area - prompt form like ChatGPT with dropdown inside textarea */}
       <div className="chat-input-area relative px-4 md:px-0 pt-1 lg:pt-0.5 pb-6">
         <div className="mx-auto max-w-[600px]">
-          {/* Suggestion chips - swipeable on mobile, wrapped on desktop/tablet */}
+          {/* Suggestion chips - swipeable carousel with edge fades */}
           {messages.length === 0 && (
-            <div className="mb-2">
-              {/* Mobile: horizontal swipeable carousel */}
+            <div className={`suggestions-carousel relative -mx-4 md:mx-0 mb-2 ${suggestionAnim === "enter" ? "suggestions-enter" : "suggestions-exit"}`}>
+              <div className="suggestions-fade-left" />
+              <div className="suggestions-fade-right" />
               <div
-                className={`md:hidden suggestions-swipe overflow-hidden ${suggestionAnim === "enter" ? "suggestions-enter" : "suggestions-exit"}`}
+                className="suggestions-swipe overflow-hidden"
                 ref={emblaRef}
               >
-                <div className="embla__container flex gap-2 px-1">
+                <div className="embla__container flex gap-2 px-6">
                   {suggestions.map((suggestion) => (
                     <button
                       key={suggestion}
                       type="button"
                       onClick={() => sendMessage(suggestion)}
                       className="embla__slide flex-none text-xs px-3 py-1.5 rounded-full border border-border bg-secondary/50 hover:bg-secondary dark:bg-[#2A2A2A] dark:hover:bg-[#333] text-foreground transition-colors whitespace-nowrap"
-                    >
-                      {suggestion}
-                    </button>
-                  ))}
-                </div>
-              </div>
-              {/* Desktop/tablet: wrapped flex layout */}
-              <div className={`hidden md:block ${suggestionAnim === "enter" ? "suggestions-enter" : "suggestions-exit"}`}>
-                <div className="flex flex-wrap gap-2 items-center justify-center">
-                  {suggestions.map((suggestion) => (
-                    <button
-                      key={suggestion}
-                      type="button"
-                      onClick={() => sendMessage(suggestion)}
-                      className="w-fit text-xs px-3 py-1.5 rounded-full border border-border bg-secondary/50 hover:bg-secondary dark:bg-[#2A2A2A] dark:hover:bg-[#333] text-foreground transition-colors whitespace-nowrap"
                     >
                       {suggestion}
                     </button>

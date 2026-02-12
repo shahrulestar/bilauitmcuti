@@ -38,7 +38,7 @@ By State:
 - Negeri Sembilan: UiTM Negeri Sembilan Branch (Kuala Pilah, Seremban)
 - Melaka: UiTM Melaka Branch (Alor Gajah, Lendu, Jasin)
 - Johor: UiTM Johor Branch (Segamat, Pasir Gudang, Johor Bahru)
-- Pahang: UiTM Pahang Branch (Jengka, Raub, Kuantan)
+- Pahang: UiTM Pahang Branch (Jengka, Raub)
 - Terengganu: UiTM Terengganu (Autonomous) - Dungun, Kuala Terengganu, Bukit Besi
 - Kelantan: UiTM Kelantan Branch (Machang, Kota Bharu)
 - Sabah: UiTM Sabah Branch (Kota Kinabalu, Tawau)
