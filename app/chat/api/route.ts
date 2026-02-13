@@ -499,7 +499,7 @@ export async function POST(request: NextRequest) {
       );
     }
     if (errMsg.includes("429") || errMsg.includes("rate")) {
-      return jsonError("AI service is busy. Please try again in a moment.", 503);
+      return jsonError("AI service is busy. Please try again in a moment.", 429);
     }
     if (
       errMsg.includes("503") ||

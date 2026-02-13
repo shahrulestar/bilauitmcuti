@@ -20,18 +20,9 @@ const MAX_USER_PROMPT_CHARS = 1_000;
 const MAX_TOKENS_LLAMA = 2048;
 const MAX_TOKENS_GPT_OSS = 4096;
 
-/** Default fallback delay when we can't parse Groq's retry-after value. */
-const DEFAULT_RETRY_AFTER_MS = 8000;
-/** Cap retry wait to avoid excessively long delays for the user. */
-const MAX_RETRY_AFTER_MS = 15000;
-
 export interface ChatMessage {
   role: "user" | "assistant";
   content: string;
-}
-
-async function sleep(ms: number) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 function truncate(str: string, max: number): string {
@@ -78,27 +69,6 @@ async function callModel(
   return content;
 }
 
-function is429Error(error: unknown): boolean {
-  const msg = error instanceof Error ? error.message : String(error);
-  return msg.includes("429") || msg.includes("rate") || msg.includes("Rate limit");
-}
-
-/**
- * Parse retry delay from Groq 429 error message.
- * Example: "Please try again in 7.439999999s"
- * Returns milliseconds or the default fallback.
- */
-function parseRetryAfterMs(error: unknown): number {
-  const msg = error instanceof Error ? error.message : String(error);
-  const match = msg.match(/try again in (\d+(?:\.\d+)?)s/i);
-  if (match) {
-    const seconds = parseFloat(match[1]);
-    const ms = Math.ceil(seconds * 1000);
-    return Math.min(ms, MAX_RETRY_AFTER_MS);
-  }
-  return DEFAULT_RETRY_AFTER_MS;
-}
-
 /**
  * Try primary model, fallback to backup on error.
  * On 429 rate limit: wait Groq's suggested time, then retry once before falling back.
@@ -120,20 +90,6 @@ export async function askGroqWithFallback(
   try {
     return await tryModel(primaryModel);
   } catch (primaryError: unknown) {
-    // Retry once on 429 — wait Groq's suggested time before retrying
-    if (is429Error(primaryError)) {
-      const retryMs = parseRetryAfterMs(primaryError);
-      if (process.env.NODE_ENV === "development") {
-        console.log(`Groq [${primaryModel}] 429, retrying after ${retryMs}ms`);
-      }
-      await sleep(retryMs);
-      try {
-        return await tryModel(primaryModel);
-      } catch {
-        // Fall through to backup
-      }
-    }
-
     const errMsg = primaryError instanceof Error ? primaryError.message : String(primaryError);
     if (process.env.NODE_ENV === "development") {
       console.error(`Groq [${primaryModel}] failed, trying backup [${backupModel}]:`, errMsg);

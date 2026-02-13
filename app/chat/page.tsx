@@ -300,6 +300,12 @@ interface Message {
   id: string;
   role: "user" | "assistant";
   content: string;
+  timestamp?: number;
+}
+
+function formatTime24(timestamp: number): string {
+  const d = new Date(timestamp);
+  return d.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", hour12: false });
 }
 
 export default function ChatPage() {
@@ -409,10 +415,12 @@ export default function ChatPage() {
   const sendMessage = async (text: string) => {
     if (!text.trim() || isLoading) return;
 
+    const now = Date.now();
     const userMessage: Message = {
-      id: Date.now().toString(),
+      id: now.toString(),
       role: "user",
       content: text.trim(),
+      timestamp: now,
     };
 
     const updatedMessages = [...messages, userMessage];
@@ -457,18 +465,22 @@ export default function ChatPage() {
         }
       }
 
+      const assistantNow = Date.now();
       const assistantMessage: Message = {
-        id: (Date.now() + 1).toString(),
+        id: (assistantNow + 1).toString(),
         role: "assistant",
         content: content || "Something went wrong. Please try again.",
+        timestamp: assistantNow,
       };
 
       setMessages((prev) => [...prev, assistantMessage]);
     } catch {
+      const errorNow = Date.now();
       const errorMessage: Message = {
-        id: (Date.now() + 1).toString(),
+        id: (errorNow + 1).toString(),
         role: "assistant",
         content: "Something went wrong. Please try again.",
+        timestamp: errorNow,
       };
       setMessages((prev) => [...prev, errorMessage]);
     } finally {
@@ -528,17 +540,21 @@ export default function ChatPage() {
         content = data.reply || "Sorry, I could not get a response.";
       }
 
+      const regenNow = Date.now();
       const newAssistantMessage: Message = {
-        id: Date.now().toString(),
+        id: regenNow.toString(),
         role: "assistant",
         content,
+        timestamp: regenNow,
       };
       setMessages((prev) => [...prev, newAssistantMessage]);
     } catch {
+      const regenErrorNow = Date.now();
       const errorMessage: Message = {
-        id: Date.now().toString(),
+        id: regenErrorNow.toString(),
         role: "assistant",
         content: "Something went wrong. Please try again.",
+        timestamp: regenErrorNow,
       };
       setMessages((prev) => [...prev, errorMessage]);
     } finally {
@@ -621,7 +637,10 @@ export default function ChatPage() {
                         <div
                           className="max-w-[80%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed bg-primary text-primary-foreground rounded-br-md whitespace-pre-wrap cursor-context-menu select-none"
                         >
-                          {msg.content}
+                          <div>{msg.content}</div>
+                          <div className="text-right text-xs opacity-80 mt-1">
+                            {formatTime24((msg.timestamp ?? parseInt(msg.id, 10)) || Date.now())}
+                          </div>
                         </div>
                       </ContextMenuTrigger>
                       <ContextMenuContent className="w-fit max-w-[200px]">
@@ -646,6 +665,9 @@ export default function ChatPage() {
                       className="max-w-[80%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed bg-secondary dark:bg-[#2A2A2A] text-foreground rounded-bl-md"
                     >
                       <FormattedMessage content={msg.content} />
+                      <div className="text-right text-xs text-muted-foreground mt-1">
+                        {formatTime24((msg.timestamp ?? parseInt(msg.id, 10)) || Date.now())}
+                      </div>
                     </div>
                   )}
                 </div>
