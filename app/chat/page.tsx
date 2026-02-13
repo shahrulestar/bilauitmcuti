@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useRef, useEffect, useCallback, useMemo } from "react";
+import { useState, useRef, useEffect, useLayoutEffect, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronLeft, ChevronDown, ChevronUp, ArrowUp, ThumbsUp, ThumbsDown, Copy, Check, RefreshCw, Pencil } from "lucide-react";
+import { ChevronLeft, ChevronDown, ChevronUp, ArrowUp, ThumbsUp, ThumbsDown, Copy, Check, RefreshCw, Trash2, Pencil } from "lucide-react";
 import { programOptions } from "@/lib/data";
 import {
   Select,
@@ -313,7 +313,11 @@ export default function ChatPage() {
   const [selectOpen, setSelectOpen] = useState(false);
   const [reactions, setReactions] = useState<Record<string, "up" | "down" | null>>({});
   const [suggestions, setSuggestions] = useState<string[]>(SUGGESTION_POOL.slice(0, 5));
-  const [suggestionAnim, setSuggestionAnim] = useState<"enter" | "exit">("enter");
+
+  // Randomize suggestions once on mount (client-only) to avoid hydration mismatch
+  useLayoutEffect(() => {
+    setSuggestions(getRandomSuggestions([]));
+  }, []);
   const [loadingPhrase, setLoadingPhrase] = useState("");
   const [disclaimerIndex, setDisclaimerIndex] = useState(0);
   const [disclaimerFade, setDisclaimerFade] = useState<"in" | "out">("in");
@@ -355,23 +359,6 @@ export default function ChatPage() {
     }, 8000);
     return () => clearInterval(interval);
   }, [disclaimerTexts.length]);
-
-  // Rotate suggestions every 5 seconds with crossfade
-  useEffect(() => {
-    if (messages.length > 0) return;
-    let timeoutId: ReturnType<typeof setTimeout>;
-    const interval = setInterval(() => {
-      setSuggestionAnim("exit");
-      timeoutId = setTimeout(() => {
-        setSuggestions((prev) => getRandomSuggestions(prev));
-        setSuggestionAnim("enter");
-      }, 400);
-    }, 5000);
-    return () => {
-      clearInterval(interval);
-      clearTimeout(timeoutId);
-    };
-  }, [messages.length]);
 
   // Rotate loading phrases while waiting for AI response
   useEffect(() => {
@@ -566,6 +553,12 @@ export default function ChatPage() {
     }));
   };
 
+  const handleDelete = useCallback((msgId: string) => {
+    const msgIndex = messages.findIndex((m) => m.id === msgId);
+    if (msgIndex === -1) return;
+    setMessages(messages.slice(0, msgIndex));
+  }, [messages]);
+
   const handleEdit = useCallback((msgId: string) => {
     const msgIndex = messages.findIndex((m) => m.id === msgId);
     if (msgIndex === -1) return;
@@ -622,35 +615,37 @@ export default function ChatPage() {
                     msg.role === "user" ? "justify-end" : "justify-start"
                   }`}
                 >
-                  {msg.role === "user" && msg.id === lastUserMsgId ? (
+                  {msg.role === "user" ? (
                     <ContextMenu>
                       <ContextMenuTrigger asChild>
                         <div
-                          className="max-w-[80%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed bg-primary text-primary-foreground rounded-br-md whitespace-pre-wrap cursor-context-menu"
+                          className="max-w-[80%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed bg-primary text-primary-foreground rounded-br-md whitespace-pre-wrap cursor-context-menu select-none"
                         >
                           {msg.content}
                         </div>
                       </ContextMenuTrigger>
-                      <ContextMenuContent className="w-40">
-                        <ContextMenuItem onClick={() => handleEdit(msg.id)}>
-                          <Pencil className="w-3.5 h-3.5 mr-2" />
-                          Edit
+                      <ContextMenuContent className="w-fit max-w-[200px]">
+                        {msg.id === lastUserMsgId && (
+                          <ContextMenuItem onClick={() => handleEdit(msg.id)}>
+                            <Pencil className="w-3.5 h-3.5 mr-2" />
+                            Edit
+                          </ContextMenuItem>
+                        )}
+                        <ContextMenuItem onClick={() => handleCopy(msg.id, msg.content)}>
+                          <Copy className="w-3.5 h-3.5 mr-2" />
+                          Copy
+                        </ContextMenuItem>
+                        <ContextMenuItem onClick={() => handleDelete(msg.id)}>
+                          <Trash2 className="w-3.5 h-3.5 mr-2" />
+                          Delete
                         </ContextMenuItem>
                       </ContextMenuContent>
                     </ContextMenu>
                   ) : (
                     <div
-                      className={`max-w-[80%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${
-                        msg.role === "user"
-                          ? "bg-primary text-primary-foreground rounded-br-md whitespace-pre-wrap"
-                          : "bg-secondary dark:bg-[#2A2A2A] text-foreground rounded-bl-md"
-                      }`}
+                      className="max-w-[80%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed bg-secondary dark:bg-[#2A2A2A] text-foreground rounded-bl-md"
                     >
-                      {msg.role === "assistant" ? (
-                        <FormattedMessage content={msg.content} />
-                      ) : (
-                        msg.content
-                      )}
+                      <FormattedMessage content={msg.content} />
                     </div>
                   )}
                 </div>
@@ -721,7 +716,7 @@ export default function ChatPage() {
         <div className="mx-auto max-w-[600px]">
           {/* Suggestion chips - swipeable carousel with edge fades */}
           {messages.length === 0 && (
-            <div className={`suggestions-carousel relative -mx-4 md:mx-0 mb-2 ${suggestionAnim === "enter" ? "suggestions-enter" : "suggestions-exit"}`}>
+            <div className="suggestions-carousel relative -mx-4 md:mx-0 mb-2">
               <div className="suggestions-fade-left" />
               <div className="suggestions-fade-right" />
               <div

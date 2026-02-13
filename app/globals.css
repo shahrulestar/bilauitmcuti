@@ -350,22 +350,6 @@ input[type="checkbox"],
     transition: transform 300ms ease, translate 300ms ease !important;
   }
   
-  /* Suggestion buttons crossfade animations */
-  .suggestions-enter {
-    animation: suggestionsEnter 400ms ease-out forwards !important;
-  }
-  .suggestions-exit {
-    animation: suggestionsExit 400ms ease-out forwards !important;
-  }
-  @keyframes suggestionsEnter {
-    from { opacity: 0; }
-    to { opacity: 1; }
-  }
-  @keyframes suggestionsExit {
-    from { opacity: 1; }
-    to { opacity: 0; }
-  }
-
   /* Suggestion swipe carousel with edge fades */
   .suggestions-carousel {
     position: relative;

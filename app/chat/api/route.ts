@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { askGroq, askGroqResearch, type ChatMessage } from "@/lib/ai";
+import { askGroqWithFallback, MODEL_LLAMA, MODEL_GPT_OSS, type ChatMessage } from "@/lib/ai";
 import systemRules from "@/lib/system-rules.json";
 import {
   activitiesGroupA,
@@ -164,6 +164,15 @@ function getFilteredGroupBActivities(program: string): Activity[] {
   });
 }
 
+// --- Date helpers ---
+function getTodayISO(): string {
+  const now = new Date();
+  const y = now.getFullYear();
+  const m = String(now.getMonth() + 1).padStart(2, "0");
+  const d = String(now.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+
 function toDateFormat(dateStr: string): string {
   const match = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})$/);
   if (match) {
@@ -172,14 +181,39 @@ function toDateFormat(dateStr: string): string {
   return dateStr;
 }
 
-function formatActivitiesAsContext(activities: Activity[]): string {
-  return activities
+function toReadableDate(dateStr: string): string {
+  const months = [
+    "January", "February", "March", "April", "May", "June",
+    "July", "August", "September", "October", "November", "December",
+  ];
+  const match = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (match) {
+    const day = parseInt(match[3], 10);
+    const monthIdx = parseInt(match[2], 10) - 1;
+    return `${String(day).padStart(2, "0")} ${months[monthIdx]} ${match[1]}`;
+  }
+  return dateStr;
+}
+
+function getActivityStatus(a: Activity, todayISO: string): "PAST" | "NOW" | "UPCOMING" {
+  const end = a.endDate ?? a.startDate;
+  if (end < todayISO) return "PAST";
+  if (a.startDate <= todayISO && end >= todayISO) return "NOW";
+  return "UPCOMING";
+}
+
+function formatActivitiesAsContext(activities: Activity[], todayISO: string): string {
+  // Sort chronologically by startDate for clearer AI reasoning
+  const sorted = [...activities].sort((a, b) => a.startDate.localeCompare(b.startDate));
+
+  return sorted
     .map((a) => {
-      let line = `- ${a.name}: ${toDateFormat(a.startDate)}`;
+      const status = getActivityStatus(a, todayISO);
+      let line = `- (${status}) ${a.name}: ${toDateFormat(a.startDate)}`;
       if (a.endDate) line += ` to ${toDateFormat(a.endDate)}`;
       if (a.duration) line += ` (${a.duration})`;
       if (a.details) line += ` — ${a.details}`;
-      if (a.type) line += ` [${a.type}]`;
+      if (a.type) line += ` | type: ${a.type}`;
       if (a.regionalStartDate) {
         line += `\n  Kedah/Kelantan/Terengganu: ${toDateFormat(a.regionalStartDate)}`;
         if (a.regionalEndDate) line += ` to ${toDateFormat(a.regionalEndDate)}`;
@@ -189,9 +223,77 @@ function formatActivitiesAsContext(activities: Activity[]): string {
     .join("\n");
 }
 
-/** Aggressive limits to avoid Groq 413. Use compact template (~900 chars) + data. */
-const MAX_PRIMARY_CONTEXT_CHARS = 6_000;
-const MAX_SECONDARY_CONTEXT_CHARS = 1_000;
+/**
+ * Pre-compute context hints so LLaMA doesn't need to compare dates.
+ * This gives immediate answers for common "next break / next exam" questions.
+ */
+function computeQuickReference(activities: Activity[], todayISO: string): string {
+  const sorted = [...activities].sort((a, b) => a.startDate.localeCompare(b.startDate));
+
+  // Find current activities (happening right now)
+  const currentActivities = sorted.filter(
+    (a) => a.startDate <= todayISO && (a.endDate ?? a.startDate) >= todayISO
+  );
+
+  // Find next upcoming break (type=break, starts after today)
+  const nextBreak = sorted.find(
+    (a) => a.type === "break" && a.startDate > todayISO
+  );
+
+  // Find next upcoming exam
+  const nextExam = sorted.find(
+    (a) => a.type === "examination" && a.startDate > todayISO
+  );
+
+  // Find semester break (Cuti Semester)
+  const semesterBreak = sorted.find(
+    (a) => a.name.includes("Cuti Semester") && a.startDate > todayISO
+  );
+
+  const lines: string[] = [];
+
+  if (currentActivities.length > 0) {
+    const current = currentActivities
+      .map((a) => {
+        let s = `${a.name} (${toReadableDate(a.startDate)}`;
+        if (a.endDate) s += ` to ${toReadableDate(a.endDate)}`;
+        s += `)`;
+        return s;
+      })
+      .join(", ");
+    lines.push(`CURRENTLY HAPPENING: ${current}`);
+  } else {
+    lines.push("CURRENTLY HAPPENING: No active event right now");
+  }
+
+  if (nextBreak) {
+    let s = `NEXT BREAK: ${nextBreak.name} (${toReadableDate(nextBreak.startDate)}`;
+    if (nextBreak.endDate) s += ` to ${toReadableDate(nextBreak.endDate)}`;
+    s += `)`;
+    if (nextBreak.details) s += ` — ${nextBreak.details}`;
+    lines.push(s);
+  }
+
+  if (nextExam) {
+    let s = `NEXT EXAM: ${nextExam.name} (${toReadableDate(nextExam.startDate)}`;
+    if (nextExam.endDate) s += ` to ${toReadableDate(nextExam.endDate)}`;
+    s += `)`;
+    lines.push(s);
+  }
+
+  if (semesterBreak && semesterBreak !== nextBreak) {
+    let s = `SEMESTER BREAK: ${semesterBreak.name} (${toReadableDate(semesterBreak.startDate)}`;
+    if (semesterBreak.endDate) s += ` to ${toReadableDate(semesterBreak.endDate)}`;
+    s += `)`;
+    lines.push(s);
+  }
+
+  return lines.join("\n");
+}
+
+/** Context char limits to avoid Groq 413. */
+const MAX_PRIMARY_CONTEXT_CHARS = 8_000;
+const MAX_SECONDARY_CONTEXT_CHARS = 1_500;
 
 function buildCalendarSystemPrompt(
   programLabel: string,
@@ -200,7 +302,9 @@ function buildCalendarSystemPrompt(
   primaryContext: string,
   secondaryContext: string,
   primaryDesc: string,
-  secondaryDesc: string
+  secondaryDesc: string,
+  todayFormatted: string,
+  quickReference: string
 ): string {
   const truncatedPrimary =
     primaryContext.length > MAX_PRIMARY_CONTEXT_CHARS
@@ -220,20 +324,24 @@ function buildCalendarSystemPrompt(
     .replace(/\{\{primaryContext\}\}/g, truncatedPrimary)
     .replace(/\{\{secondaryContext\}\}/g, truncatedSecondary)
     .replace(/\{\{primaryDesc\}\}/g, primaryDesc)
-    .replace(/\{\{secondaryDesc\}\}/g, secondaryDesc);
+    .replace(/\{\{secondaryDesc\}\}/g, secondaryDesc)
+    .replace(/\{\{today\}\}/g, todayFormatted)
+    .replace(/\{\{quickReference\}\}/g, quickReference);
 }
 
 /** Max chars for UiTM info context to avoid Groq 413. */
-const MAX_UITM_INFO_CHARS = 4_000;
+const MAX_UITM_INFO_CHARS = 5_000;
 
-function buildResearchSystemPrompt(): string {
+function buildResearchSystemPrompt(todayFormatted: string): string {
   const rules = systemRules as { researchPrompt: string };
   const truncatedInfo =
     UITM_GENERAL_INFO.length > MAX_UITM_INFO_CHARS
       ? UITM_GENERAL_INFO.slice(0, MAX_UITM_INFO_CHARS) + "\n...[truncated]"
       : UITM_GENERAL_INFO;
 
-  return rules.researchPrompt.replace(/\{\{uitmInfo\}\}/g, truncatedInfo);
+  return rules.researchPrompt
+    .replace(/\{\{uitmInfo\}\}/g, truncatedInfo)
+    .replace(/\{\{today\}\}/g, todayFormatted);
 }
 
 function jsonError(message: string, status: number) {
@@ -299,10 +407,15 @@ export async function POST(request: NextRequest) {
     const primaryGroup = programMeta?.group || "B";
     const secondaryGroup = primaryGroup === "A" ? "B" : "A";
 
-    const groupAContext = formatActivitiesAsContext(activitiesGroupA);
-    const groupBActivities = getFilteredGroupBActivities(selectedProgram);
-    const groupBContext = formatActivitiesAsContext(groupBActivities);
+    const todayISO = getTodayISO();
+    const todayFormatted = toReadableDate(todayISO);
 
+    const groupBActivities = getFilteredGroupBActivities(selectedProgram);
+
+    const groupAContext = formatActivitiesAsContext(activitiesGroupA, todayISO);
+    const groupBContext = formatActivitiesAsContext(groupBActivities, todayISO);
+
+    const primaryActivities = primaryGroup === "A" ? activitiesGroupA : groupBActivities;
     const primaryContext = primaryGroup === "A" ? groupAContext : groupBContext;
     const secondaryContext = primaryGroup === "A" ? groupBContext : groupAContext;
     const primaryDesc =
@@ -313,6 +426,9 @@ export async function POST(request: NextRequest) {
       primaryGroup === "A"
         ? "Pre-Diploma, Diploma, Bachelor's Degree, Master's & PhD - Semester March to August 2026"
         : "Foundation/Professional - Semester December 2025 to May 2026";
+
+    // Pre-compute quick reference for the AI (next break, current activity, etc.)
+    const quickReference = computeQuickReference(primaryActivities, todayISO);
 
     const sanitizedHistory: ChatMessage[] = (history ?? [])
       .slice(-2)
@@ -331,13 +447,19 @@ export async function POST(request: NextRequest) {
           primaryContext,
           secondaryContext,
           primaryDesc,
-          secondaryDesc
+          secondaryDesc,
+          todayFormatted,
+          quickReference
         )
-      : buildResearchSystemPrompt();
+      : buildResearchSystemPrompt(todayFormatted);
 
-    const rawReply = useCalendarPrompt
-      ? await askGroq(sanitizedMessage, systemPrompt, sanitizedHistory)
-      : await askGroqResearch(sanitizedMessage, systemPrompt, sanitizedHistory);
+    const rawReply = await askGroqWithFallback(
+      sanitizedMessage,
+      systemPrompt,
+      sanitizedHistory,
+      MODEL_LLAMA,
+      MODEL_GPT_OSS
+    );
 
     const reply = rawReply
       .replace(/\*\*([^*]+)\*\*/g, "$1")
