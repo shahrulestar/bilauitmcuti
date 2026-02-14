@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, useMemo, useTransition } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { List, Settings, Calendar, ChevronDown, ChevronUp, MessageCircle } from 'lucide-react';
 import {
@@ -71,9 +71,7 @@ export function CalendarControls({
   currentMonth = 'Academic Calendar',
 }: CalendarControlsProps) {
   const router = useRouter();
-  const [isPending, startTransition] = useTransition();
   const [isOpen, setIsOpen] = useState(false);
-  const [scrolling, setScrolling] = useState(false);
   const [selectOpen, setSelectOpen] = useState(false);
   const [isPWAInstalled, setIsPWAInstalled] = useState(false);
   const [currentFooterText, setCurrentFooterText] = useState(0);
@@ -131,8 +129,10 @@ export function CalendarControls({
   
   // Theme-aware classes
   const bgClass = 'bg-background';
-  const borderClass = 'border-border bg-secondary dark:bg-[#2A2A2A]';
   const textClass = 'text-foreground';
+  const iconInactiveClass = 'text-muted-foreground [&_svg]:text-muted-foreground';
+  const iconActiveClass = 'text-foreground [&_svg]:text-foreground';
+  const iconBaseClass = 'bg-transparent hover:!bg-transparent dark:hover:!bg-transparent transition-none !h-[38px] !w-[38px] !min-h-[38px] !max-h-[38px] !p-0 flex items-center justify-center hover:!h-[38px] hover:!min-h-[38px] hover:!max-h-[38px] hover:!p-0 active:!h-[38px] active:!min-h-[38px] active:!max-h-[38px] active:!p-0 [&:hover]:!h-[38px] [&:hover]:!bg-transparent [&:active]:!h-[38px] hover:text-foreground hover:[&_svg]:text-foreground active:text-foreground active:[&_svg]:text-foreground [&:hover]:text-foreground [&:hover_svg]:text-foreground [&:active]:text-foreground [&:active_svg]:text-foreground';
 
   // Memoize current group determination
   const currentGroup = useMemo(() => 
@@ -157,7 +157,6 @@ export function CalendarControls({
 
   useEffect(() => {
     const handleScroll = () => {
-      setScrolling(window.scrollY > 0);
       if (window.scrollY > 0) {
         setIsOpen(false);
       }
@@ -249,7 +248,7 @@ export function CalendarControls({
               variant={viewMode === 'grid' ? 'secondary' : 'ghost'}
               size="icon"
               onClick={() => handleViewModeChange('grid')}
-              className={`bg-transparent ${viewMode === 'grid' ? 'text-[#0A0A0A] dark:text-[#FAFAFA] [&_svg]:text-[#0A0A0A] dark:[&_svg]:text-[#FAFAFA]' : 'text-muted-foreground'} hover:!bg-transparent dark:hover:!bg-transparent hover:text-[#0A0A0A] dark:hover:text-[#FAFAFA] hover:[&_svg]:text-[#0A0A0A] dark:hover:[&_svg]:text-[#FAFAFA] active:text-[#0A0A0A] dark:active:text-[#FAFAFA] active:[&_svg]:text-[#0A0A0A] dark:active:[&_svg]:text-[#FAFAFA] transition-none !h-[38px] !w-[38px] !min-h-[38px] !max-h-[38px] !p-0 flex items-center justify-center hover:!h-[38px] hover:!min-h-[38px] hover:!max-h-[38px] hover:!p-0 active:!h-[38px] active:!min-h-[38px] active:!max-h-[38px] active:!p-0 [&:hover]:!h-[38px] [&:hover]:!bg-transparent [&:hover]:text-[#0A0A0A] dark:[&:hover]:text-[#FAFAFA] [&:hover_svg]:text-[#0A0A0A] dark:[&:hover_svg]:text-[#FAFAFA] [&:active]:!h-[38px] [&:active]:text-[#0A0A0A] dark:[&:active]:text-[#FAFAFA] [&:active_svg]:text-[#0A0A0A] dark:[&:active_svg]:text-[#FAFAFA]`}
+              className={`${iconBaseClass} ${viewMode === 'grid' ? iconActiveClass : iconInactiveClass}`}
               title="Grid View"
               suppressHydrationWarning
             >
@@ -259,7 +258,7 @@ export function CalendarControls({
               variant={viewMode === 'list' ? 'secondary' : 'ghost'}
               size="icon"
               onClick={() => handleViewModeChange('list')}
-              className={`bg-transparent ${viewMode === 'list' ? 'text-[#0A0A0A] dark:text-[#FAFAFA] [&_svg]:text-[#0A0A0A] dark:[&_svg]:text-[#FAFAFA]' : 'text-muted-foreground'} hover:!bg-transparent dark:hover:!bg-transparent hover:text-[#0A0A0A] dark:hover:text-[#FAFAFA] hover:[&_svg]:text-[#0A0A0A] dark:hover:[&_svg]:text-[#FAFAFA] active:text-[#0A0A0A] dark:active:text-[#FAFAFA] active:[&_svg]:text-[#0A0A0A] dark:active:[&_svg]:text-[#FAFAFA] transition-none !h-[38px] !w-[38px] !min-h-[38px] !max-h-[38px] !p-0 flex items-center justify-center hover:!h-[38px] hover:!min-h-[38px] hover:!max-h-[38px] hover:!p-0 active:!h-[38px] active:!min-h-[38px] active:!max-h-[38px] active:!p-0 [&:hover]:!h-[38px] [&:hover]:!bg-transparent [&:hover]:text-[#0A0A0A] dark:[&:hover]:text-[#FAFAFA] [&:hover_svg]:text-[#0A0A0A] dark:[&:hover_svg]:text-[#FAFAFA] [&:active]:!h-[38px] [&:active]:text-[#0A0A0A] dark:[&:active]:text-[#FAFAFA] [&:active_svg]:text-[#0A0A0A] dark:[&:active_svg]:text-[#FAFAFA]`}
+              className={`${iconBaseClass} ${viewMode === 'list' ? iconActiveClass : iconInactiveClass}`}
               title="List View"
               suppressHydrationWarning
             >
@@ -269,7 +268,7 @@ export function CalendarControls({
               variant="ghost"
               size="icon"
               onClick={() => router.push('/chat')}
-              className="bg-transparent text-muted-foreground hover:!bg-transparent dark:hover:!bg-transparent hover:text-[#0A0A0A] dark:hover:text-[#FAFAFA] hover:[&_svg]:text-[#0A0A0A] dark:hover:[&_svg]:text-[#FAFAFA] active:text-[#0A0A0A] dark:active:text-[#FAFAFA] active:[&_svg]:text-[#0A0A0A] dark:active:[&_svg]:text-[#FAFAFA] transition-none !h-[38px] !w-[38px] !min-h-[38px] !max-h-[38px] !p-0 flex items-center justify-center hover:!h-[38px] hover:!min-h-[38px] hover:!max-h-[38px] hover:!p-0 active:!h-[38px] active:!min-h-[38px] active:!max-h-[38px] active:!p-0 [&:hover]:!h-[38px] [&:hover]:!bg-transparent [&:hover]:text-[#0A0A0A] dark:[&:hover]:text-[#FAFAFA] [&:hover_svg]:text-[#0A0A0A] dark:[&:hover_svg]:text-[#FAFAFA] [&:active]:!h-[38px] [&:active]:text-[#0A0A0A] dark:[&:active]:text-[#FAFAFA] [&:active_svg]:text-[#0A0A0A] dark:[&:active_svg]:text-[#FAFAFA]"
+              className={`${iconBaseClass} ${iconInactiveClass}`}
               title="Chat"
               suppressHydrationWarning
             >
@@ -284,7 +283,7 @@ export function CalendarControls({
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="bg-transparent text-muted-foreground hover:!bg-transparent dark:hover:!bg-transparent hover:text-[#0A0A0A] dark:hover:text-[#FAFAFA] hover:[&_svg]:text-[#0A0A0A] dark:hover:[&_svg]:text-[#FAFAFA] active:text-[#0A0A0A] dark:active:text-[#FAFAFA] active:[&_svg]:text-[#0A0A0A] dark:active:[&_svg]:text-[#FAFAFA] transition-none !h-[38px] !w-[38px] !min-h-[38px] !max-h-[38px] !p-0 flex items-center justify-center hover:!h-[38px] hover:!min-h-[38px] hover:!max-h-[38px] hover:!p-0 active:!h-[38px] active:!min-h-[38px] active:!max-h-[38px] active:!p-0 [&:hover]:!h-[38px] [&:hover]:!bg-transparent [&:hover]:text-[#0A0A0A] dark:[&:hover]:text-[#FAFAFA] [&:hover_svg]:text-[#0A0A0A] dark:[&:hover_svg]:text-[#FAFAFA] [&:active]:!h-[38px] [&:active]:text-[#0A0A0A] dark:[&:active]:text-[#FAFAFA] [&:active_svg]:text-[#0A0A0A] dark:[&:active_svg]:text-[#FAFAFA]"
+                  className={`${iconBaseClass} ${iconInactiveClass}`}
                   title="Settings"
                   suppressHydrationWarning
                 >
@@ -306,11 +305,11 @@ export function CalendarControls({
                         <div className="h-2 w-2 rounded-full bg-[#d1d5db]" />
                         <span className="text-sm font-medium text-foreground">Registration</span>
                       </div>
-                      <div className={`relative inline-flex h-6 w-11 items-center rounded-full transition-none ${showRegistration ? 'bg-primary' : 'bg-muted'}`}
+                      <div className={`relative inline-flex h-6 w-11 items-center rounded-full transition-none ${showRegistration ? 'bg-muted-foreground' : 'bg-muted'}`}
                         style={{ transition: 'none' }}
                       >
                         <span
-                          className={`inline-block h-4 w-4 transform rounded-full transition-none shadow-sm ${showRegistration ? 'bg-primary-foreground' : 'bg-background dark:bg-foreground'}`}
+                          className={`inline-block h-4 w-4 transform rounded-full transition-none shadow-sm ${showRegistration ? 'bg-background' : 'bg-background dark:bg-foreground'}`}
                           style={{ transform: showRegistration ? 'translateX(20px)' : 'translateX(2px)', transition: 'none' }}
                         />
                         <input
@@ -328,11 +327,11 @@ export function CalendarControls({
                         <div className="h-2 w-2 rounded-full bg-[#8b5cf6]" />
                         <span className="text-sm font-medium text-foreground">Lecture</span>
                       </div>
-                      <div className={`relative inline-flex h-6 w-11 items-center rounded-full transition-none ${showLecture ? 'bg-primary' : 'bg-muted'}`}
+                      <div className={`relative inline-flex h-6 w-11 items-center rounded-full transition-none ${showLecture ? 'bg-muted-foreground' : 'bg-muted'}`}
                         style={{ transition: 'none' }}
                       >
                         <span
-                          className={`inline-block h-4 w-4 transform rounded-full transition-none shadow-sm ${showLecture ? 'bg-primary-foreground' : 'bg-background dark:bg-foreground'}`}
+                          className={`inline-block h-4 w-4 transform rounded-full transition-none shadow-sm ${showLecture ? 'bg-background' : 'bg-background dark:bg-foreground'}`}
                           style={{ transform: showLecture ? 'translateX(20px)' : 'translateX(2px)', transition: 'none' }}
                         />
                         <input
@@ -350,11 +349,11 @@ export function CalendarControls({
                       <div className="flex items-center gap-2">
                         <span className="text-xs font-medium text-muted-foreground">Semester Pendek</span>
                       </div>
-                      <div className={`relative inline-flex h-6 w-11 items-center rounded-full transition-none ${showSemesterPendek ? 'bg-primary' : 'bg-muted'}`}
+                      <div className={`relative inline-flex h-6 w-11 items-center rounded-full transition-none ${showSemesterPendek ? 'bg-muted-foreground' : 'bg-muted'}`}
                         style={{ transition: 'none' }}
                       >
                         <span
-                          className={`inline-block h-4 w-4 transform rounded-full transition-none shadow-sm ${showSemesterPendek ? 'bg-primary-foreground' : 'bg-background dark:bg-foreground'}`}
+                          className={`inline-block h-4 w-4 transform rounded-full transition-none shadow-sm ${showSemesterPendek ? 'bg-background' : 'bg-background dark:bg-foreground'}`}
                           style={{ transform: showSemesterPendek ? 'translateX(20px)' : 'translateX(2px)', transition: 'none' }}
                         />
                         <input
@@ -373,11 +372,11 @@ export function CalendarControls({
                       <div className="flex items-center gap-2">
                         <span className="text-xs font-medium text-muted-foreground">Kuliah Intersesi</span>
                       </div>
-                      <div className={`relative inline-flex h-6 w-11 items-center rounded-full transition-none ${showKuliahIntersesi ? 'bg-primary' : 'bg-muted'}`}
+                      <div className={`relative inline-flex h-6 w-11 items-center rounded-full transition-none ${showKuliahIntersesi ? 'bg-muted-foreground' : 'bg-muted'}`}
                         style={{ transition: 'none' }}
                       >
                         <span
-                          className={`inline-block h-4 w-4 transform rounded-full transition-none shadow-sm ${showKuliahIntersesi ? 'bg-primary-foreground' : 'bg-background dark:bg-foreground'}`}
+                          className={`inline-block h-4 w-4 transform rounded-full transition-none shadow-sm ${showKuliahIntersesi ? 'bg-background' : 'bg-background dark:bg-foreground'}`}
                           style={{ transform: showKuliahIntersesi ? 'translateX(20px)' : 'translateX(2px)', transition: 'none' }}
                         />
                         <input
@@ -396,11 +395,11 @@ export function CalendarControls({
                         <div className="h-2 w-2 rounded-full bg-[#dc2626]" />
                         <span className="text-sm font-medium text-foreground">Examination</span>
                       </div>
-                      <div className={`relative inline-flex h-6 w-11 items-center rounded-full transition-none ${showExamination ? 'bg-primary' : 'bg-muted'}`}
+                      <div className={`relative inline-flex h-6 w-11 items-center rounded-full transition-none ${showExamination ? 'bg-muted-foreground' : 'bg-muted'}`}
                         style={{ transition: 'none' }}
                       >
                         <span
-                          className={`inline-block h-4 w-4 transform rounded-full transition-none shadow-sm ${showExamination ? 'bg-primary-foreground' : 'bg-background dark:bg-foreground'}`}
+                          className={`inline-block h-4 w-4 transform rounded-full transition-none shadow-sm ${showExamination ? 'bg-background' : 'bg-background dark:bg-foreground'}`}
                           style={{ transform: showExamination ? 'translateX(20px)' : 'translateX(2px)', transition: 'none' }}
                         />
                         <input
@@ -418,11 +417,11 @@ export function CalendarControls({
                       <div className="flex items-center gap-2">
                         <span className="text-xs font-medium text-muted-foreground">Others Exams</span>
                       </div>
-                      <div className={`relative inline-flex h-6 w-11 items-center rounded-full transition-none ${showOthersExams ? 'bg-primary' : 'bg-muted'}`}
+                      <div className={`relative inline-flex h-6 w-11 items-center rounded-full transition-none ${showOthersExams ? 'bg-muted-foreground' : 'bg-muted'}`}
                         style={{ transition: 'none' }}
                       >
                         <span
-                          className={`inline-block h-4 w-4 transform rounded-full transition-none shadow-sm ${showOthersExams ? 'bg-primary-foreground' : 'bg-background dark:bg-foreground'}`}
+                          className={`inline-block h-4 w-4 transform rounded-full transition-none shadow-sm ${showOthersExams ? 'bg-background' : 'bg-background dark:bg-foreground'}`}
                           style={{ transform: showOthersExams ? 'translateX(20px)' : 'translateX(2px)', transition: 'none' }}
                         />
                         <input
@@ -441,11 +440,11 @@ export function CalendarControls({
                         <div className="h-2 w-2 rounded-full bg-[#10b981]" />
                         <span className="text-sm font-medium text-foreground">Break</span>
                       </div>
-                      <div className={`relative inline-flex h-6 w-11 items-center rounded-full transition-none ${showBreak ? 'bg-primary' : 'bg-muted'}`}
+                      <div className={`relative inline-flex h-6 w-11 items-center rounded-full transition-none ${showBreak ? 'bg-muted-foreground' : 'bg-muted'}`}
                         style={{ transition: 'none' }}
                       >
                         <span
-                          className={`inline-block h-4 w-4 transform rounded-full transition-none shadow-sm ${showBreak ? 'bg-primary-foreground' : 'bg-background dark:bg-foreground'}`}
+                          className={`inline-block h-4 w-4 transform rounded-full transition-none shadow-sm ${showBreak ? 'bg-background' : 'bg-background dark:bg-foreground'}`}
                           style={{ transform: showBreak ? 'translateX(20px)' : 'translateX(2px)', transition: 'none' }}
                         />
                         <input
@@ -462,11 +461,11 @@ export function CalendarControls({
                       <div className="flex items-center gap-2">
                         <span className="text-sm font-medium text-foreground">Show countdown</span>
                       </div>
-                      <div className={`relative inline-flex h-6 w-11 items-center rounded-full transition-none ${showCountdown ? 'bg-primary' : 'bg-muted'}`}
+                      <div className={`relative inline-flex h-6 w-11 items-center rounded-full transition-none ${showCountdown ? 'bg-muted-foreground' : 'bg-muted'}`}
                         style={{ transition: 'none' }}
                       >
                         <span
-                          className={`inline-block h-4 w-4 transform rounded-full transition-none shadow-sm ${showCountdown ? 'bg-primary-foreground' : 'bg-background dark:bg-foreground'}`}
+                          className={`inline-block h-4 w-4 transform rounded-full transition-none shadow-sm ${showCountdown ? 'bg-background' : 'bg-background dark:bg-foreground'}`}
                           style={{ transform: showCountdown ? 'translateX(20px)' : 'translateX(2px)', transition: 'none' }}
                         />
                         <input
@@ -498,11 +497,11 @@ export function CalendarControls({
                         </Avatar>
                       </div>
                     </div>
-                    <div className={`relative inline-flex h-6 w-11 items-center rounded-full transition-none ${showKKT ? 'bg-primary' : 'bg-muted'}`}
+                    <div className={`relative inline-flex h-6 w-11 items-center rounded-full transition-none ${showKKT ? 'bg-muted-foreground' : 'bg-muted'}`}
                       style={{ transition: 'none' }}
                     >
                       <span
-                        className={`inline-block h-4 w-4 transform rounded-full transition-none shadow-sm ${showKKT ? 'bg-primary-foreground' : 'bg-background dark:bg-foreground'}`}
+                        className={`inline-block h-4 w-4 transform rounded-full transition-none shadow-sm ${showKKT ? 'bg-background' : 'bg-background dark:bg-foreground'}`}
                         style={{ transform: showKKT ? 'translateX(20px)' : 'translateX(2px)', transition: 'none' }}
                       />
                       <input
@@ -616,6 +615,7 @@ export function CalendarControls({
           </div>
         </div>
       </div>
+      <div className="calendar-controls-fade pointer-events-none" />
     </div>
   );
 }

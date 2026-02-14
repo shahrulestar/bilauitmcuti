@@ -74,11 +74,11 @@ export function ThemeToggle() {
         <span className="text-sm font-medium text-foreground">Theme</span>
       </div>
       <div
-        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-none ${isDark ? 'bg-primary' : 'bg-muted'}`}
+        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-none ${isDark ? 'bg-muted-foreground' : 'bg-muted'}`}
         style={{ transition: 'none' }}
       >
         <span
-          className={`inline-block h-4 w-4 transform rounded-full transition-none shadow-sm ${isDark ? 'bg-primary-foreground' : 'bg-background dark:bg-foreground'}`}
+          className={`inline-block h-4 w-4 transform rounded-full transition-none shadow-sm ${isDark ? 'bg-background' : 'bg-background dark:bg-foreground'}`}
           style={{ transform: isDark ? 'translateX(20px)' : 'translateX(2px)', transition: 'none' }}
         />
         <input

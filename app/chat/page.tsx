@@ -228,25 +228,43 @@ function FormattedMessage({ content }: { content: string }) {
   return <>{elements}</>;
 }
 
-const SUGGESTION_POOL = [
-  // Calendar questions (English)
-  "When is the next break?",
-  "When does lecture start?",
-  "When is mid-semester test?",
-  "When is Hari Raya break?",
-  "When is revision week?",
-  "When is final exam?",
-  "When is add/drop period?",
-  "When is semester break?",
+const SUGGESTIONS_GROUP_A = [
+  "When does Group A lecture start?",
+  "When is Group A mid-semester test?",
+  "When is Group A final exam?",
+  "When is Group A revision week?",
+  "When is Group A semester break?",
+  "When is Group A add/drop period?",
+  "Bila kuliah Group A bermula?",
+  "Bila peperiksaan akhir Group A?",
+  "Bila minggu ulangkaji Group A?",
+  "Bila cuti semester Group A?",
+  "When is entrance survey for Group A?",
+  "When is Group A convocation?",
   "What is Group A schedule?",
-  // Calendar questions (Malay)
-  "Bila peperiksaan akhir?",
-  "Bila cuti semester bermula?",
-  "Bila pendaftaran kursus dibuka?",
-  "Bila tarikh bayar yuran?",
-  "Bila cuti pertengahan semester?",
-  "Bila kuliah bermula Group B?",
-  // UiTM general questions
+  "Bila cuti pertengahan semester Group A?",
+  "Bila tarikh bayar yuran Group A?",
+];
+
+const SUGGESTIONS_GROUP_B = [
+  "When does Group B lecture start?",
+  "When is Group B mid-semester test?",
+  "When is Group B final exam?",
+  "When is Group B revision week?",
+  "When is Group B semester break?",
+  "When is Group B add/drop period?",
+  "Bila kuliah Group B bermula?",
+  "Bila peperiksaan akhir Group B?",
+  "Bila minggu ulangkaji Group B?",
+  "Bila cuti semester Group B?",
+  "When is Diploma registration?",
+  "When is semester pendek for Group B?",
+  "What is Group B schedule?",
+  "Bila cuti pertengahan semester Group B?",
+  "When is Bachelor registration?",
+];
+
+const SUGGESTIONS_GENERAL = [
   "List all UiTM campuses",
   "What courses does UiTM offer?",
   "Apa itu program Asasi UiTM?",
@@ -255,8 +273,12 @@ const SUGGESTION_POOL = [
   "Apa syarat masuk Diploma?",
   "Tell me about UiTM Shah Alam",
   "Apa itu e-PJJ UiTM?",
-  "What programs are in Group A?",
   "Senarai fakulti UiTM",
+  "When is the next public holiday?",
+  "When is Hari Raya break?",
+  "Bila pendaftaran kursus dibuka?",
+  "What programs are in Group A?",
+  "What programs are in Group B?",
 ];
 
 const LOADING_PHRASES = [
@@ -277,9 +299,16 @@ function getRandomLoadingPhrase(exclude?: string): string {
   return available[Math.floor(Math.random() * available.length)];
 }
 
-function getRandomSuggestions(exclude: string[]): string[] {
-  const available = SUGGESTION_POOL.filter((s) => !exclude.includes(s));
-  const pool = available.length >= 5 ? available : SUGGESTION_POOL;
+function getProgramGroup(program: string): "A" | "B" {
+  if (program === "Foundation/Professional") return "A";
+  return "B";
+}
+
+function getRandomSuggestions(group: "A" | "B", exclude: string[]): string[] {
+  const groupPool = group === "A" ? SUGGESTIONS_GROUP_A : SUGGESTIONS_GROUP_B;
+  const combined = [...groupPool, ...SUGGESTIONS_GENERAL];
+  const available = combined.filter((s) => !exclude.includes(s));
+  const pool = available.length >= 5 ? available : combined;
   const shuffled = [...pool].sort(() => Math.random() - 0.5);
   return shuffled.slice(0, 5);
 }
@@ -318,12 +347,13 @@ export default function ChatPage() {
   const [headerVisible, setHeaderVisible] = useState(true);
   const [selectOpen, setSelectOpen] = useState(false);
   const [reactions, setReactions] = useState<Record<string, "up" | "down" | null>>({});
-  const [suggestions, setSuggestions] = useState<string[]>(SUGGESTION_POOL.slice(0, 5));
+  const currentGroup = getProgramGroup(program);
+  const [suggestions, setSuggestions] = useState<string[]>([]);
 
-  // Randomize suggestions once on mount (client-only) to avoid hydration mismatch
+  // Randomize suggestions on mount and when program/group changes
   useLayoutEffect(() => {
-    setSuggestions(getRandomSuggestions([]));
-  }, []);
+    setSuggestions(getRandomSuggestions(currentGroup, []));
+  }, [currentGroup]);
   const [loadingPhrase, setLoadingPhrase] = useState("");
   const [disclaimerIndex, setDisclaimerIndex] = useState(0);
   const [disclaimerFade, setDisclaimerFade] = useState<"in" | "out">("in");
@@ -616,7 +646,7 @@ export default function ChatPage() {
         {messages.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full gap-4 text-center mx-auto max-w-[600px]">
             <div>
-              <h2 className="text-lg font-semibold mb-1">Bila UiTM Cuti?</h2>
+              <h2 className="text-2xl font-semibold mb-1">Bila UiTM Cuti?</h2>
               <p className="text-sm text-muted-foreground max-w-xs">
                 Ask about the UiTM academic calendar. Select your program and start.
               </p>

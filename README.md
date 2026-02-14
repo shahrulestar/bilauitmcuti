@@ -89,7 +89,6 @@ app/
     page.tsx            # AI chat interface
     api/route.ts        # Chat API (rate limiting, validation, AI)
   list/                 # List view page
-  changelog/            # Changelog page
 components/
   ui/                   # shadcn/ui components
   calendar-wrapper.tsx  # Calendar display logic

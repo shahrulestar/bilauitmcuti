@@ -2,133 +2,176 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { ChevronLeft, Monitor, Smartphone, TabletSmartphone, Sparkles, CalendarDays, LayoutGrid, List, Moon, Sun, MessageCircle, MapPin } from 'lucide-react';
+
 export default function PWAPage() {
   const router = useRouter();
   const [isInstalled, setIsInstalled] = useState(false);
 
-  // Check if already installed as PWA
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    
-    const isInStandaloneMode = window.matchMedia('(display-mode: standalone)').matches;
-    const isInFullScreenMode = document.fullscreenElement !== null;
-    const isInMinimalUIMode = (window.navigator as any).standalone === true;
-    
-    if (isInStandaloneMode || isInFullScreenMode || isInMinimalUIMode) {
+
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
+    const isMinimalUI = (window.navigator as { standalone?: boolean }).standalone === true;
+
+    if (isStandalone || isMinimalUI) {
       setIsInstalled(true);
     }
   }, []);
 
-  const textClass = 'text-foreground';
-  const bgClass = 'bg-background text-foreground';
-  const mutedClass = 'text-muted-foreground';
-
-  const handleBack = () => {
-    router.push('/');
-  };
-
   return (
-    <div className={`min-h-screen transition-colors duration-300 ${bgClass}`}>
-      <div className="mx-auto max-w-[1000px] px-4 py-8 sm:px-6 lg:px-8">
-        {/* Back button */}
-        <Button 
-          variant="ghost" 
-          onClick={handleBack}
-          className="mb-6 -ml-2"
+    <div className="min-h-screen bg-background text-foreground">
+      <div className="mx-auto max-w-2xl px-4 py-8 sm:px-6">
+        {/* Back */}
+        <button
+          onClick={() => {
+            if (window.history.length > 1) {
+              router.back();
+            } else {
+              router.push('/');
+            }
+          }}
+          className="mb-8 flex items-center justify-center w-9 h-9 rounded-full bg-secondary hover:bg-secondary/80 dark:bg-[#2A2A2A] dark:hover:bg-[#333] transition-colors"
+          aria-label="Back to home"
         >
-          <ArrowLeft className="mr-2 h-4 w-4" />
-          Back
-        </Button>
+          <ChevronLeft className="w-5 h-5" />
+        </button>
 
-        {/* Main Content */}
+        {/* Hero */}
+        <div className="mb-10">
+          <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
+            Install <span className="text-[#8b5cf6]">Bila UiTM Cuti?</span>
+          </h1>
+          <p className="mt-2 text-muted-foreground">
+            Add this web app to your home screen for a faster, app-like experience.
+          </p>
+        </div>
+
+        {/* Already installed banner */}
+        {isInstalled && (
+          <div className="mb-8 rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-4 text-sm text-emerald-700 dark:text-emerald-400">
+            You&apos;re already using Bila UiTM Cuti? as an installed app.
+          </div>
+        )}
+
+        {/* Installation Instructions */}
         <div className="space-y-8">
-          {/* Title */}
-          <div>
-            <h1 className={`text-4xl font-bold mb-2 ${textClass}`}>
-              Install <span className="text-[#8b5cf6]">Cuti UiTM</span>
-            </h1>
-            <p className={mutedClass}>
-              Get offline access and install the app on your device
-            </p>
-          </div>
-
-          {/* Installation Instructions */}
-          <div className="space-y-6">
-            {/* Desktop */}
-            <div>
-              <h2 className={`text-xl font-semibold mb-4 ${textClass}`}>
-                Desktop & Laptop
-              </h2>
-              <div className={`space-y-3 ${mutedClass} text-sm`}>
-                <p>
-                  <strong>Chrome:</strong> Click the install icon in the address bar or go to Settings &gt; More &gt; Install app.
-                </p>
-                <p>
-                  <strong>Edge:</strong> Click the install icon in the address bar or go to Settings &gt; Apps &gt; Install this site as an app.
-                </p>
-                <p>
-                  <strong>Safari:</strong> Share &gt; Add to Dock (macOS) or Share &gt; Add to Home Screen (iOS).
-                </p>
-              </div>
+          {/* iOS */}
+          <section>
+            <div className="mb-4 flex items-center gap-2">
+              <Smartphone className="h-5 w-5 text-muted-foreground" />
+              <h2 className="text-lg font-semibold">iPhone &amp; iPad</h2>
             </div>
+            <ol className="space-y-2 text-sm text-muted-foreground">
+              <li className="flex gap-3">
+                <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-medium">1</span>
+                Open <strong className="font-semibold text-foreground">Safari</strong> and go to <strong className="font-semibold text-foreground">cutiuitm.xyz</strong>
+              </li>
+              <li className="flex gap-3">
+                <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-medium">2</span>
+                Tap the <strong className="font-semibold text-foreground">Share</strong> button (arrow pointing up)
+              </li>
+              <li className="flex gap-3">
+                <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-medium">3</span>
+                Select <strong className="font-semibold text-foreground">&ldquo;Add to Home Screen&rdquo;</strong>
+              </li>
+              <li className="flex gap-3">
+                <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-medium">4</span>
+                Tap <strong className="font-semibold text-foreground">Add</strong> to confirm
+              </li>
+            </ol>
+          </section>
 
-            {/* iOS */}
-            <div>
-              <h2 className={`text-xl font-semibold mb-4 ${textClass}`}>
-                iPhone & iPad (iOS)
-              </h2>
-              <div className={`space-y-3 ${mutedClass} text-sm`}>
-                <ol className="list-decimal list-inside space-y-2">
-                  <li>Open Safari browser</li>
-                  <li>Go to the Cuti UiTM website</li>
-                  <li>Tap the Share button (arrow pointing up)</li>
-                  <li>Select "Add to Home Screen"</li>
-                  <li>Tap "Add" to confirm</li>
-                </ol>
-              </div>
+          {/* Android */}
+          <section>
+            <div className="mb-4 flex items-center gap-2">
+              <TabletSmartphone className="h-5 w-5 text-muted-foreground" />
+              <h2 className="text-lg font-semibold">Android</h2>
             </div>
+            <ol className="space-y-2 text-sm text-muted-foreground">
+              <li className="flex gap-3">
+                <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-medium">1</span>
+                Open <strong className="font-semibold text-foreground">Chrome</strong> and go to <strong className="font-semibold text-foreground">cutiuitm.xyz</strong>
+              </li>
+              <li className="flex gap-3">
+                <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-medium">2</span>
+                Tap the <strong className="font-semibold text-foreground">menu</strong> (three dots)
+              </li>
+              <li className="flex gap-3">
+                <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-medium">3</span>
+                Select <strong className="font-semibold text-foreground">&ldquo;Install app&rdquo;</strong> or <strong className="font-semibold text-foreground">&ldquo;Add to Home Screen&rdquo;</strong>
+              </li>
+              <li className="flex gap-3">
+                <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-medium">4</span>
+                Confirm the installation
+              </li>
+            </ol>
+          </section>
 
-            {/* Android */}
-            <div>
-              <h2 className={`text-xl font-semibold mb-4 ${textClass}`}>
-                Android Devices
-              </h2>
-              <div className={`space-y-3 ${mutedClass} text-sm`}>
-                <ol className="list-decimal list-inside space-y-2">
-                  <li>Open Chrome or any browser</li>
-                  <li>Go to the Cuti UiTM website</li>
-                  <li>Tap the menu icon (three dots)</li>
-                  <li>Select "Install app" or "Add to Home Screen"</li>
-                  <li>Confirm the installation</li>
-                </ol>
-              </div>
+          {/* Desktop */}
+          <section>
+            <div className="mb-4 flex items-center gap-2">
+              <Monitor className="h-5 w-5 text-muted-foreground" />
+              <h2 className="text-lg font-semibold">Desktop &amp; Laptop</h2>
             </div>
-          </div>
+            <div className="space-y-2 text-sm text-muted-foreground">
+              <p>
+                <strong className="font-semibold text-foreground">Chrome / Edge:</strong> Click the install icon in the address bar, or go to the browser menu and select &ldquo;Install app&rdquo;.
+              </p>
+              <p>
+                <strong className="font-semibold text-foreground">Safari (macOS):</strong> Share &rarr; Add to Dock.
+              </p>
+            </div>
+          </section>
+
+          {/* Divider */}
+          <hr className="border-border" />
 
           {/* Features */}
-          <div>
-            <h3 className={`text-lg font-semibold mb-4 ${textClass}`}>Features</h3>
-            <ul className={`space-y-2 ${mutedClass} text-sm`}>
-              <li>✓ Offline access to academic calendar</li>
-              <li>✓ Installable as native app</li>
-              <li>✓ Fast loading and responsive design</li>
-              <li>✓ Light theme</li>
-              <li>✓ Regional schedule variations (KKT states)</li>
-              <li>✓ Group-specific calendars (Group A & B)</li>
-            </ul>
-          </div>
+          <section>
+            <h2 className="mb-4 text-lg font-semibold">What you get</h2>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <FeatureItem icon={<CalendarDays className="h-4 w-4" />} label="Academic calendar 2026" />
+              <FeatureItem icon={<LayoutGrid className="h-4 w-4" />} label="Grid & list views" />
+              <FeatureItem icon={<Sparkles className="h-4 w-4" />} label="Group A & B schedules" />
+              <FeatureItem icon={<MapPin className="h-4 w-4" />} label="Kedah, Kelantan & Terengganu" />
+              <FeatureItem icon={<MessageCircle className="h-4 w-4" />} label="AI chat assistant" />
+              <FeatureItem icon={<ThemeIcon />} label="Dark & light themes" />
+              <FeatureItem icon={<List className="h-4 w-4" />} label="Fast & responsive design" />
+              <FeatureItem icon={<Smartphone className="h-4 w-4" />} label="Installable as native app" />
+            </div>
+          </section>
+
+          {/* Divider */}
+          <hr className="border-border" />
 
           {/* Disclaimer */}
-          <div>
-            <h3 className={`text-lg font-semibold mb-3 ${textClass}`}>Disclaimer</h3>
-            <p className={`${mutedClass} text-sm leading-relaxed`}>
-              This app is <strong>not affiliated with UiTM</strong> (Universiti Teknologi MARA). This project is created for educational and informational purposes only. The calendar data is sourced from publicly available HEA UiTM academic calendar information. Please verify important dates directly with official UiTM sources.
+          <section className="pb-8">
+            <h2 className="mb-3 text-lg font-semibold">Disclaimer</h2>
+            <p className="text-sm leading-relaxed text-muted-foreground">
+              This app is <strong className="font-semibold text-foreground">not affiliated with UiTM</strong> (Universiti Teknologi MARA). It is created for educational and informational purposes only. Calendar data is sourced from publicly available HEA UiTM academic calendar information. Please verify important dates directly with official UiTM sources.
             </p>
-          </div>
+          </section>
         </div>
       </div>
     </div>
+  );
+}
+
+function FeatureItem({ icon, label }: { icon: React.ReactNode; label: string }) {
+  return (
+    <div className="flex items-center gap-3 rounded-lg border bg-card p-3 text-sm">
+      <span className="text-muted-foreground">{icon}</span>
+      <span>{label}</span>
+    </div>
+  );
+}
+
+function ThemeIcon() {
+  return (
+    <>
+      <Sun className="h-4 w-4 dark:hidden" />
+      <Moon className="hidden h-4 w-4 dark:block" />
+    </>
   );
 }

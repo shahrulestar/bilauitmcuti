@@ -339,6 +339,17 @@ input[type="checkbox"],
     z-index: 1;
   }
 
+  /* Calendar controls - bottom fade below sticky header */
+  .calendar-controls-fade {
+    position: absolute;
+    bottom: -16px;
+    left: 0;
+    right: 0;
+    height: 16px;
+    background: linear-gradient(to bottom, var(--background), transparent);
+    z-index: 1;
+  }
+
   /* Top fade - always visible regardless of header scroll state */
   .chat-top-fade {
     height: 24px;

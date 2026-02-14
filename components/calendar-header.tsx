@@ -1,15 +1,10 @@
 export function CalendarHeader() {
   const textColor = 'text-foreground';
   const mutedColor = 'text-muted-foreground';
-  
-  // Get current year in Malaysia timezone (UTC+8)
-  const currentYear = new Date(new Date().toLocaleString("en-US", {timeZone: "Asia/Kuala_Lumpur"})).getFullYear();
 
   return (
     <div suppressHydrationWarning className="flex flex-col justify-center items-start gap-[2px] transition-none" style={{ transition: 'none' }}>
-      {/* Year label */}
-      <div className={`mb-2 text-sm ${mutedColor} transition-none`} suppressHydrationWarning style={{ transition: 'none' }}>{currentYear}</div>
-
+      <span className="mb-2 text-xs px-3 py-1.5 rounded-full border border-border bg-secondary/50 dark:bg-[#2A2A2A] text-foreground transition-none whitespace-nowrap" suppressHydrationWarning style={{ transition: 'none' }}>2026</span>
       {/* Main heading with custom typography */}
       <h1 className={`mb-2 font-semibold leading-[2.5rem] tracking-tight text-5xl ${textColor} transition-none`} suppressHydrationWarning style={{ transition: 'none' }}>
         Bila <span className="text-[#8b5cf6]">UiTM</span> Cuti?

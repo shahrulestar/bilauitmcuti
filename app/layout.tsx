@@ -9,9 +9,9 @@ import './globals.css'
 export const metadata: Metadata = {
   metadataBase: new URL('https://cutiuitm.xyz'),
   title: 'Bila UiTM Cuti? - Academic Calendar 2026',
-  description: 'Interactive UiTM academic calendar for 2026. View registration dates, lecture schedules, examination periods, and breaks. Includes regional schedule variations for Kedah, Kelantan, and Terengganu. Supports dark/light themes and offline access.',
-  keywords: ['UiTM', 'academic calendar', '2026', 'registration', 'examination', 'lectures', 'holidays', 'Malaysia', 'Universiti Teknologi MARA', 'student app'],
-  generator: 'v0.app',
+  description: 'Kalendar akademik UiTM 2026 interaktif. Lihat jadual pendaftaran, kuliah, peperiksaan, dan cuti semester. Interactive UiTM academic calendar for 2026 with registration dates, lecture schedules, examination periods, and breaks. Includes regional variations for Kedah, Kelantan, and Terengganu.',
+  keywords: ['UiTM', 'academic calendar', '2026', 'registration', 'examination', 'lectures', 'holidays', 'Malaysia', 'Universiti Teknologi MARA', 'student app', 'Bila UiTM Cuti', 'Cuti UiTM', 'Jadual UiTM', 'Kalendar UiTM', 'Kalendar Akademik UiTM', 'Academic Calendar UiTM', 'jadual akademik UiTM', 'cuti semester UiTM', 'tarikh peperiksaan UiTM', 'tarikh pendaftaran UiTM', 'kuliah UiTM 2026'],
+  generator: 'Next.js',
   manifest: '/manifest.json',
   authors: [
     {
@@ -23,7 +23,7 @@ export const metadata: Metadata = {
   openGraph: {
     siteName: 'Bila UiTM Cuti?',
     title: 'Bila UiTM Cuti? - Academic Calendar 2026',
-    description: 'Interactive calendar showing UiTM academic schedules, registration dates, lecture periods, and examination dates for 2026.',
+    description: 'Kalendar akademik UiTM 2026. Jadual pendaftaran, kuliah, peperiksaan, dan cuti semester. Interactive UiTM academic calendar with schedules and examination dates.',
     type: 'website',
     url: 'https://cutiuitm.xyz',
     locale: 'ms_MY',
@@ -39,7 +39,7 @@ export const metadata: Metadata = {
   twitter: {
     card: 'summary_large_image',
     title: 'Bila UiTM Cuti? - Academic Calendar 2026',
-    description: 'Interactive UiTM academic calendar with support for all program groups and regional variations.',
+    description: 'Kalendar akademik UiTM 2026. Jadual pendaftaran, kuliah, peperiksaan, dan cuti semester untuk semua program.',
   },
   icons: {
     icon: [
@@ -88,6 +88,56 @@ export default function RootLayout({
         <meta name="theme-color" content="#1a1a1a" media="(prefers-color-scheme: dark)" />
         <link rel="manifest" href="/manifest.json" />
         <link rel="canonical" href="https://cutiuitm.xyz" />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              "@context": "https://schema.org",
+              "@graph": [
+                {
+                  "@type": "WebSite",
+                  "name": "Bila UiTM Cuti?",
+                  "alternateName": "Bila UiTM Cuti",
+                  "url": "https://cutiuitm.xyz",
+                  "description": "Kalendar akademik UiTM 2026 interaktif. Jadual pendaftaran, kuliah, peperiksaan, dan cuti semester. Interactive UiTM academic calendar with registration dates, lecture schedules, examination periods, and breaks.",
+                  "inLanguage": ["ms", "en"],
+                },
+                {
+                  "@type": "WebApplication",
+                  "name": "Bila UiTM Cuti?",
+                  "url": "https://cutiuitm.xyz",
+                  "applicationCategory": "EducationalApplication",
+                  "operatingSystem": "All",
+                  "offers": {
+                    "@type": "Offer",
+                    "price": "0",
+                    "priceCurrency": "MYR",
+                  },
+                },
+                {
+                  "@type": "SiteNavigationElement",
+                  "name": "Calendar",
+                  "url": "https://cutiuitm.xyz",
+                },
+                {
+                  "@type": "SiteNavigationElement",
+                  "name": "List View",
+                  "url": "https://cutiuitm.xyz/list",
+                },
+                {
+                  "@type": "SiteNavigationElement",
+                  "name": "Chat Assistant",
+                  "url": "https://cutiuitm.xyz/chat",
+                },
+                {
+                  "@type": "SiteNavigationElement",
+                  "name": "Install App",
+                  "url": "https://cutiuitm.xyz/pwa",
+                },
+              ],
+            }),
+          }}
+        />
         <script
           dangerouslySetInnerHTML={{
             __html: `

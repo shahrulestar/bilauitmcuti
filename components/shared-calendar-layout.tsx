@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { usePathname } from 'next/navigation';
 import { CalendarHeader } from '@/components/calendar-header';
 import { CalendarControls } from '@/components/calendar-controls';
+import { PwaPromptAlert } from '@/components/pwa-prompt-alert';
 import { ListView } from '@/components/list-view';
 import { GridView } from '@/components/grid-view';
 import { getProgramFromRoute } from '@/lib/route-utils';
@@ -12,7 +13,6 @@ import { setFiltersToCookie, type FilterStates } from '@/lib/cookie-utils';
 import type { ViewMode } from '@/app/page';
 
 interface SharedCalendarLayoutProps {
-  children?: React.ReactNode;
   viewMode: ViewMode;
   programFromRoute: string;
   initialFilters?: FilterStates; // Optional: passed from server component that reads cookies
@@ -176,6 +176,9 @@ export function SharedCalendarLayout({
       <div className="mx-auto max-w-[1000px] px-4 py-8 sm:px-6 lg:px-4 transition-none" style={{ transition: 'none' }}>
         {/* Header */}
         <CalendarHeader />
+
+        {/* PWA prompt - only on homepage when opened in browser (not PWA) */}
+        <PwaPromptAlert />
 
         {/* Controls */}
         <CalendarControls

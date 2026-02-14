@@ -29,7 +29,6 @@ This file (llm.txt) is intended for crawlers and LLMs to understand the site str
 - **/list** — All programs, list view. Chronological list of activities.
 - **/[program]** — Calendar grid for one program. Valid slugs: foundation-professional, pre-diploma, diploma, diploma-part-time, bachelor, bachelor-part-time, master, phd.
 - **/[program]/list** — Calendar list view for one program. Same slugs as above.
-- **/changelog** — Changelog: list of updates and improvements to the app, grouped by month.
 - **/pwa** — How to install the app as PWA (Desktop, iOS, Android), offline features, and disclaimer that the app is not affiliated with UiTM.
 
 ## Data Structure

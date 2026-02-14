@@ -1,12 +1,12 @@
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Install PWA | Bila UiTM Cuti?',
-  description: 'Install Bila UiTM Cuti? as an app for offline access to the UiTM academic calendar.',
+  title: 'Install App | Bila UiTM Cuti?',
+  description: 'Add Bila UiTM Cuti? to your home screen for faster access to the UiTM academic calendar.',
   openGraph: {
     siteName: 'Bila UiTM Cuti?',
-    title: 'Install PWA | Bila UiTM Cuti?',
-    description: 'Install Bila UiTM Cuti? as an app for offline access.',
+    title: 'Install App | Bila UiTM Cuti?',
+    description: 'Add Bila UiTM Cuti? to your home screen for a faster, app-like experience.',
     type: 'website',
     url: 'https://cutiuitm.xyz/pwa',
     locale: 'ms_MY',
@@ -14,8 +14,8 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Install PWA | Bila UiTM Cuti?',
-    description: 'Install Bila UiTM Cuti? as an app for offline access.',
+    title: 'Install App | Bila UiTM Cuti?',
+    description: 'Add Bila UiTM Cuti? to your home screen for a faster, app-like experience.',
   },
 };
 
