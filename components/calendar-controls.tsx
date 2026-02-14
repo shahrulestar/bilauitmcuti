@@ -192,7 +192,7 @@ export function CalendarControls({
 
   return (
       <div 
-        className={`${positionClass} ${bgClass} -mx-4 sm:-mx-6 lg:-mx-4 px-4 sm:px-6 lg:px-4 transition-none isolate [contain:paint]`} 
+        className={`${positionClass} ${bgClass} -mx-4 sm:-mx-6 lg:-mx-4 px-4 sm:px-6 lg:px-4 transition-none isolate overflow-visible`} 
         suppressHydrationWarning
         style={{ transition: 'none', transform: 'translateZ(0)' }}
       >
@@ -631,7 +631,7 @@ export function CalendarControls({
           </div>
         </div>
       </div>
-      <div className="calendar-controls-fade pointer-events-none" />
+      <div className="calendar-controls-fade" />
     </div>
   );
 }

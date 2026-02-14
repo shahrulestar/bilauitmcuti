@@ -366,13 +366,14 @@ input[type="checkbox"],
     pointer-events: none;
   }
 
-  /* Calendar controls - bottom fade below sticky header */
+  /* Calendar controls - smooth linear gradient below sticky header (like chat page) */
   .calendar-controls-fade {
     position: absolute;
-    bottom: -16px;
+    bottom: -24px;
     left: 0;
     right: 0;
-    height: 16px;
+    height: 24px;
+    pointer-events: none;
     background: linear-gradient(to bottom, var(--background), transparent);
     z-index: 1;
   }

@@ -70,10 +70,8 @@ export const viewport: Viewport = {
   minimumScale: 1,
   userScalable: false,
   viewportFit: 'cover',
-  themeColor: [
-    { media: '(prefers-color-scheme: light)', color: '#ffffff' },
-    { media: '(prefers-color-scheme: dark)', color: '#1a1a1a' }
-  ],
+  // Single themeColor - updated dynamically by theme-toggle when user changes theme (PWA status bar sync)
+  themeColor: '#ffffff',
 }
 
 export default function RootLayout({
@@ -84,8 +82,8 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${GeistSans.variable} ${GeistMono.variable}`} suppressHydrationWarning>
       <head>
-        <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
-        <meta name="theme-color" content="#1a1a1a" media="(prefers-color-scheme: dark)" />
+        <meta name="theme-color" content="#ffffff" />
+        <meta name="apple-mobile-web-app-title" content="Bila UiTM Cuti?" />
         <link rel="manifest" href="/manifest.json" />
         <link rel="canonical" href="https://cutiuitm.xyz" />
         <script
