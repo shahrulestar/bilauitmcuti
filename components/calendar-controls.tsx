@@ -26,6 +26,8 @@ import type { ProgramValue } from '@/lib/route-utils';
 interface CalendarControlsProps {
   selectedProgram: string;
   viewMode: ViewMode;
+  /** When true, use fixed positioning so controls appear at top from first paint (scroll restore) */
+  forceFixed?: boolean;
   showKKT: boolean;
   onShowKKTChange: (show: boolean) => void;
   showRegistration: boolean;
@@ -50,6 +52,7 @@ interface CalendarControlsProps {
 export function CalendarControls({
   selectedProgram,
   viewMode,
+  forceFixed = false,
   showKKT,
   onShowKKTChange,
   showRegistration,
@@ -132,7 +135,7 @@ export function CalendarControls({
   const textClass = 'text-foreground';
   const iconInactiveClass = 'text-muted-foreground [&_svg]:text-muted-foreground';
   const iconActiveClass = 'text-foreground [&_svg]:text-foreground';
-  const iconBaseClass = 'bg-transparent hover:!bg-transparent dark:hover:!bg-transparent transition-none !h-[38px] !w-[38px] !min-h-[38px] !max-h-[38px] !p-0 flex items-center justify-center hover:!h-[38px] hover:!min-h-[38px] hover:!max-h-[38px] hover:!p-0 active:!h-[38px] active:!min-h-[38px] active:!max-h-[38px] active:!p-0 [&:hover]:!h-[38px] [&:hover]:!bg-transparent [&:active]:!h-[38px] hover:text-foreground hover:[&_svg]:text-foreground active:text-foreground active:[&_svg]:text-foreground [&:hover]:text-foreground [&:hover_svg]:text-foreground [&:active]:text-foreground [&:active_svg]:text-foreground';
+  const iconBaseClass = 'nav-icon-btn bg-transparent hover:!bg-transparent dark:hover:!bg-transparent transition-none !h-[38px] !w-[38px] !min-h-[38px] !max-h-[38px] !p-0 flex items-center justify-center hover:!h-[38px] hover:!min-h-[38px] hover:!max-h-[38px] hover:!p-0 active:!h-[38px] active:!min-h-[38px] active:!max-h-[38px] active:!p-0 [&:hover]:!h-[38px] [&:hover]:!bg-transparent [&:active]:!h-[38px]';
 
   // Memoize current group determination
   const currentGroup = useMemo(() => 
@@ -174,9 +177,13 @@ export function CalendarControls({
     return () => clearInterval(interval);
   }, []);
 
+  const positionClass = forceFixed
+    ? 'fixed top-0 left-1/2 -translate-x-1/2 z-[60] w-full max-w-[1000px]'
+    : 'sticky top-0 z-40';
+
   return (
       <div 
-        className={`sticky top-0 z-40 ${bgClass} -mx-4 sm:-mx-6 lg:-mx-4 px-4 sm:px-6 lg:px-4 transition-none`} 
+        className={`${positionClass} ${bgClass} -mx-4 sm:-mx-6 lg:-mx-4 px-4 sm:px-6 lg:px-4 transition-none`} 
         suppressHydrationWarning
         style={{ transition: 'none' }}
       >

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useLayoutEffect } from 'react';
 import { usePathname } from 'next/navigation';
 import { CalendarHeader } from '@/components/calendar-header';
 import { CalendarControls } from '@/components/calendar-controls';
@@ -43,7 +43,61 @@ export function SharedCalendarLayout({
   // Use routeSegment if available, otherwise fall back to programFromRoute
   // programFromRoute is passed from the page component and should be the program slug
   const selectedProgram = getProgramFromRoute(routeSegment || (programFromRoute && programFromRoute !== 'All' ? programFromRoute : null));
-  
+
+  // Check if we have stored scroll to restore (client-only, sync read before first paint)
+  const hasStoredScroll =
+    typeof window !== 'undefined' &&
+    !!sessionStorage.getItem('calendar-scroll-y') &&
+    sessionStorage.getItem('calendar-scroll-path') === pathname;
+
+  const [scrollRestoreDone, setScrollRestoreDone] = useState(false);
+
+  // Restore scroll before paint to prevent flicker when navigating back from chat
+  // Hide header during restore: on mobile/PWA, useLayoutEffect can run after first paint,
+  // so we hide the header in the initial render when we have stored scroll
+  useLayoutEffect(() => {
+    const stored = sessionStorage.getItem('calendar-scroll-y');
+    const storedPath = sessionStorage.getItem('calendar-scroll-path');
+    if (stored && storedPath && pathname === storedPath) {
+      const scrollY = parseInt(stored, 10);
+      if (!Number.isNaN(scrollY) && scrollY > 0) {
+        const prevRestoration = history.scrollRestoration;
+        history.scrollRestoration = 'manual';
+        window.scrollTo(0, scrollY);
+        history.scrollRestoration = prevRestoration;
+      }
+      sessionStorage.removeItem('calendar-scroll-y');
+      sessionStorage.removeItem('calendar-scroll-path');
+      setScrollRestoreDone(true);
+    }
+  }, [pathname]);
+
+  // Save scroll position when leaving calendar page (e.g. navigating to chat)
+  useEffect(() => {
+    return () => {
+      sessionStorage.setItem('calendar-scroll-y', String(window.scrollY));
+      sessionStorage.setItem('calendar-scroll-path', pathname ?? '');
+    };
+  }, [pathname]);
+
+  // Handle bfcache restore (mobile Safari/PWA) - restore scroll when page resurrected from cache
+  useEffect(() => {
+    const handlePageShow = (e: PageTransitionEvent) => {
+      if (e.persisted) {
+        const stored = sessionStorage.getItem('calendar-scroll-y');
+        const storedPath = sessionStorage.getItem('calendar-scroll-path');
+        if (stored && storedPath && pathname === storedPath) {
+          const scrollY = parseInt(stored, 10);
+          if (!Number.isNaN(scrollY) && scrollY > 0) {
+            window.scrollTo(0, scrollY);
+          }
+        }
+      }
+    };
+    window.addEventListener('pageshow', handlePageShow);
+    return () => window.removeEventListener('pageshow', handlePageShow);
+  }, [pathname]);
+
   // Initialize filter states
   // Priority: 1) Props from server (cookie-based), 2) DOM data attribute (client), 3) Defaults
   const getInitialFilterState = (): FilterStates => {
@@ -170,20 +224,57 @@ export function SharedCalendarLayout({
 
   // Theme-aware classes
   const bgClass = 'bg-background text-foreground';
+  const isRestoring = hasStoredScroll && !scrollRestoreDone;
 
+  // Solution 1: Render ONLY controls during scroll restore - no content to show behind
+  if (isRestoring) {
+    return (
+      <div className={`min-h-screen ${bgClass} transition-none`} style={{ transition: 'none' }}>
+        <div className="mx-auto max-w-[1000px] px-4 py-8 sm:px-6 lg:px-4">
+          <CalendarControls
+            selectedProgram={selectedProgram}
+            viewMode={viewMode}
+            forceFixed
+            showKKT={showKKT}
+            onShowKKTChange={setShowKKT}
+            showRegistration={showRegistration}
+            onShowRegistrationChange={setShowRegistration}
+            showLecture={showLecture}
+            onShowLectureChange={setShowLecture}
+            showSemesterPendek={showSemesterPendek}
+            onShowSemesterPendekChange={setShowSemesterPendek}
+            showKuliahIntersesi={showKuliahIntersesi}
+            onShowKuliahIntersesiChange={setShowKuliahIntersesi}
+            showExamination={showExamination}
+            onShowExaminationChange={setShowExamination}
+            showOthersExams={showOthersExams}
+            onShowOthersExamsChange={setShowOthersExams}
+            showBreak={showBreak}
+            onShowBreakChange={setShowBreak}
+            showCountdown={showCountdown}
+            onShowCountdownChange={setShowCountdown}
+            currentMonth={currentMonth}
+          />
+        </div>
+      </div>
+    );
+  }
+
+  // Solution 2: Normal layout with display:none on content during restore (when not using Solution 1 early return)
+  // (When not using early return, this hides content to prevent paint behind controls)
   return (
     <div className={`min-h-screen ${bgClass} transition-none`} style={{ transition: 'none' }}>
       <div className="mx-auto max-w-[1000px] px-4 py-8 sm:px-6 lg:px-4 transition-none" style={{ transition: 'none' }}>
-        {/* Header */}
-        <CalendarHeader />
+        {/* Solution 2: Hide header + PWA during restore */}
+        <div className={isRestoring ? 'hidden' : ''}>
+          <CalendarHeader />
+          <PwaPromptAlert />
+        </div>
 
-        {/* PWA prompt - only on homepage when opened in browser (not PWA) */}
-        <PwaPromptAlert />
-
-        {/* Controls */}
         <CalendarControls
           selectedProgram={selectedProgram}
           viewMode={viewMode}
+          forceFixed={isRestoring}
           showKKT={showKKT}
           onShowKKTChange={setShowKKT}
           showRegistration={showRegistration}
@@ -205,8 +296,8 @@ export function SharedCalendarLayout({
           currentMonth={currentMonth}
         />
 
-        {/* Views - Use key to maintain component identity during route transitions */}
-        <div className="mt-0 min-h-[400px]">
+        {/* Solution 2: Hide calendar content during restore */}
+        <div className={`mt-0 min-h-[400px] ${isRestoring ? 'hidden' : ''}`}>
           {viewMode === 'list' ? (
             <ListView 
               key={`list-${selectedProgram}`}

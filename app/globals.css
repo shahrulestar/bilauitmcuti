@@ -325,6 +325,18 @@ input[type="checkbox"],
       -webkit-tap-highlight-color: transparent !important;
     }
   }
+
+  /* Hover text color on nav icon buttons - desktop only */
+  @media (hover: hover) {
+    .nav-icon-btn:hover,
+    .nav-icon-btn:active {
+      color: var(--foreground) !important;
+    }
+    .nav-icon-btn:hover svg,
+    .nav-icon-btn:active svg {
+      color: var(--foreground) !important;
+    }
+  }
   
   /* Chat input area - smooth gradient fade above the input (all devices) */
   .chat-input-area::before {
@@ -337,6 +349,21 @@ input[type="checkbox"],
     pointer-events: none;
     background: linear-gradient(to bottom, transparent, var(--background));
     z-index: 1;
+  }
+
+  /* Hide calendar header during scroll restore to prevent flash on mobile/PWA */
+  .calendar-header-restore-hide {
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  /* Full-viewport overlay during scroll restore - behind fixed controls (z-40) */
+  .calendar-scroll-restore-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 40;
+    background-color: var(--background);
+    pointer-events: none;
   }
 
   /* Calendar controls - bottom fade below sticky header */
