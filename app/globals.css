@@ -357,11 +357,11 @@ input[type="checkbox"],
     pointer-events: none;
   }
 
-  /* Full-viewport overlay during scroll restore - behind fixed controls (z-40) */
+  /* Full-viewport overlay during scroll restore - below controls (z-40) so controls stay on top */
   .calendar-scroll-restore-overlay {
     position: fixed;
     inset: 0;
-    z-index: 40;
+    z-index: 35;
     background-color: var(--background);
     pointer-events: none;
   }

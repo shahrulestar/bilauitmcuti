@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useLayoutEffect } from 'react';
+import { useState, useEffect, useLayoutEffect, useRef } from 'react';
 import { usePathname } from 'next/navigation';
 import { CalendarHeader } from '@/components/calendar-header';
 import { CalendarControls } from '@/components/calendar-controls';
@@ -51,6 +51,8 @@ export function SharedCalendarLayout({
     sessionStorage.getItem('calendar-scroll-path') === pathname;
 
   const [scrollRestoreDone, setScrollRestoreDone] = useState(false);
+  const didRestoreRef = useRef(false);
+  const [contentReady, setContentReady] = useState(() => !hasStoredScroll);
 
   // Restore scroll before paint to prevent flicker when navigating back from chat
   // Hide header during restore: on mobile/PWA, useLayoutEffect can run after first paint,
@@ -68,9 +70,20 @@ export function SharedCalendarLayout({
       }
       sessionStorage.removeItem('calendar-scroll-y');
       sessionStorage.removeItem('calendar-scroll-path');
+      didRestoreRef.current = true;
       setScrollRestoreDone(true);
     }
   }, [pathname]);
+
+  // Defer content visibility until sticky has painted (prevents flash on back from chat)
+  useEffect(() => {
+    if (scrollRestoreDone && didRestoreRef.current) {
+      const id1 = requestAnimationFrame(() => {
+        requestAnimationFrame(() => setContentReady(true));
+      });
+      return () => cancelAnimationFrame(id1);
+    }
+  }, [scrollRestoreDone]);
 
   // Save scroll position when leaving calendar page (e.g. navigating to chat)
   useEffect(() => {
@@ -260,10 +273,14 @@ export function SharedCalendarLayout({
     );
   }
 
-  // Solution 2: Normal layout with display:none on content during restore (when not using Solution 1 early return)
-  // (When not using early return, this hides content to prevent paint behind controls)
+  // Solution 2: Normal layout with overlay + deferred content during restore (when not using Solution 1 early return)
+  // Overlay and hidden content prevent paint behind controls during settling period
   return (
-    <div className={`min-h-screen ${bgClass} transition-none`} style={{ transition: 'none' }}>
+    <div className={`min-h-screen ${bgClass} transition-none relative`} style={{ transition: 'none' }}>
+      {/* Overlay during settling period after scroll restore - prevents content flash */}
+      {!contentReady && (
+        <div className="calendar-scroll-restore-overlay" aria-hidden="true" />
+      )}
       <div className="mx-auto max-w-[1000px] px-4 py-8 sm:px-6 lg:px-4 transition-none" style={{ transition: 'none' }}>
         {/* Solution 2: Hide header + PWA during restore */}
         <div className={isRestoring ? 'hidden' : ''}>
@@ -296,8 +313,14 @@ export function SharedCalendarLayout({
           currentMonth={currentMonth}
         />
 
-        {/* Solution 2: Hide calendar content during restore */}
-        <div className={`mt-0 min-h-[400px] ${isRestoring ? 'hidden' : ''}`}>
+        {/* Solution 2: Defer content visibility until sticky has painted (prevents flash) */}
+        <div
+          className={`mt-0 min-h-[400px] transition-none ${isRestoring ? 'hidden' : ''}`}
+          style={{
+            visibility: contentReady ? 'visible' : 'hidden',
+            transition: 'none',
+          }}
+        >
           {viewMode === 'list' ? (
             <ListView 
               key={`list-${selectedProgram}`}

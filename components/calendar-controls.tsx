@@ -183,7 +183,7 @@ export function CalendarControls({
 
   return (
       <div 
-        className={`${positionClass} ${bgClass} -mx-4 sm:-mx-6 lg:-mx-4 px-4 sm:px-6 lg:px-4 transition-none`} 
+        className={`${positionClass} ${bgClass} -mx-4 sm:-mx-6 lg:-mx-4 px-4 sm:px-6 lg:px-4 transition-none isolate [contain:paint]`} 
         suppressHydrationWarning
         style={{ transition: 'none' }}
       >
