@@ -1,17 +1,6 @@
-'use client';
-
-import { useEffect, useState } from 'react';
-
 export function CalendarHeader() {
   const textColor = 'text-foreground';
   const mutedColor = 'text-muted-foreground';
-  const [isPWA, setIsPWA] = useState(false);
-
-  useEffect(() => {
-    const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
-    const isMinimalUI = (window.navigator as { standalone?: boolean }).standalone === true;
-    setIsPWA(isStandalone || isMinimalUI);
-  }, []);
 
   return (
     <div suppressHydrationWarning className="flex flex-col justify-center items-start gap-[2px] transition-none" style={{ transition: 'none' }}>
@@ -20,26 +9,24 @@ export function CalendarHeader() {
         Bila <span className="text-[#8b5cf6]">UiTM</span> Cuti?
       </h1>
 
-      {!isPWA && (
-        <div className="flex flex-wrap gap-2 justify-start text-sm transition-none" role="list" aria-label="Activity type legend" suppressHydrationWarning style={{ transition: 'none' }}>
-          <div className="flex items-center gap-2" role="listitem">
-            <div className="h-2 w-2 rounded-full bg-[#d1d5db]" aria-hidden="true" />
-            <span className={mutedColor} suppressHydrationWarning>Registration</span>
-          </div>
-          <div className="flex items-center gap-2" role="listitem">
-            <div className="h-2 w-2 rounded-full bg-[#8b5cf6]" aria-hidden="true" />
-            <span className={mutedColor} suppressHydrationWarning>Lecture</span>
-          </div>
-          <div className="flex items-center gap-2" role="listitem">
-            <div className="h-2 w-2 rounded-full bg-[#dc2626]" aria-hidden="true" />
-            <span className={mutedColor} suppressHydrationWarning>Examination</span>
-          </div>
-          <div className="flex items-center gap-2" role="listitem">
-            <div className="h-2 w-2 rounded-full bg-[#10b981]" aria-hidden="true" />
-            <span className={mutedColor} suppressHydrationWarning>Break</span>
-          </div>
+      <div className="flex flex-wrap gap-2 justify-start text-sm transition-none" role="list" aria-label="Activity type legend" suppressHydrationWarning style={{ transition: 'none' }}>
+        <div className="flex items-center gap-2" role="listitem">
+          <div className="h-2 w-2 rounded-full bg-[#d1d5db]" aria-hidden="true" />
+          <span className={mutedColor} suppressHydrationWarning>Registration</span>
         </div>
-      )}
+        <div className="flex items-center gap-2" role="listitem">
+          <div className="h-2 w-2 rounded-full bg-[#8b5cf6]" aria-hidden="true" />
+          <span className={mutedColor} suppressHydrationWarning>Lecture</span>
+        </div>
+        <div className="flex items-center gap-2" role="listitem">
+          <div className="h-2 w-2 rounded-full bg-[#dc2626]" aria-hidden="true" />
+          <span className={mutedColor} suppressHydrationWarning>Examination</span>
+        </div>
+        <div className="flex items-center gap-2" role="listitem">
+          <div className="h-2 w-2 rounded-full bg-[#10b981]" aria-hidden="true" />
+          <span className={mutedColor} suppressHydrationWarning>Break</span>
+        </div>
+      </div>
     </div>
   );
 }
