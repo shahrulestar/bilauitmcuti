@@ -1,7 +1,6 @@
 'use client';
 
 import { useTheme } from 'next-themes';
-import { Sun, Moon } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 type Theme = 'light' | 'dark';
@@ -44,7 +43,6 @@ export function ThemeToggle() {
     return (
       <label className="flex items-center justify-between cursor-pointer py-0.5">
         <div className="flex items-center gap-2">
-          <Sun className="h-4 w-4 opacity-50 text-foreground" />
           <span className="text-sm font-medium text-foreground">Theme</span>
         </div>
         <div className="relative inline-flex h-6 w-11 items-center rounded-full transition-none bg-muted"
@@ -66,15 +64,10 @@ export function ThemeToggle() {
   return (
     <label className="flex items-center justify-between cursor-pointer py-0.5">
       <div className="flex items-center gap-2">
-        {isDark ? (
-          <Moon className="h-4 w-4 text-foreground" />
-        ) : (
-          <Sun className="h-4 w-4 text-foreground" />
-        )}
         <span className="text-sm font-medium text-foreground">Theme</span>
       </div>
       <div
-        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-none ${isDark ? 'bg-muted-foreground' : 'bg-muted'}`}
+        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-none ${isDark ? 'bg-primary' : 'bg-muted'}`}
         style={{ transition: 'none' }}
       >
         <span

@@ -322,7 +322,7 @@ export function CalendarControls({
                         <div className="h-2 w-2 rounded-full bg-[#d1d5db]" />
                         <span className="text-sm font-medium text-foreground">Registration</span>
                       </div>
-                      <div className={`relative inline-flex h-6 w-11 items-center rounded-full transition-none ${showRegistration ? 'bg-muted-foreground' : 'bg-muted'}`}
+                      <div className={`relative inline-flex h-6 w-11 items-center rounded-full transition-none ${showRegistration ? 'bg-primary' : 'bg-muted'}`}
                         style={{ transition: 'none' }}
                       >
                         <span
@@ -344,7 +344,7 @@ export function CalendarControls({
                         <div className="h-2 w-2 rounded-full bg-[#8b5cf6]" />
                         <span className="text-sm font-medium text-foreground">Lecture</span>
                       </div>
-                      <div className={`relative inline-flex h-6 w-11 items-center rounded-full transition-none ${showLecture ? 'bg-muted-foreground' : 'bg-muted'}`}
+                      <div className={`relative inline-flex h-6 w-11 items-center rounded-full transition-none ${showLecture ? 'bg-primary' : 'bg-muted'}`}
                         style={{ transition: 'none' }}
                       >
                         <span
@@ -366,7 +366,7 @@ export function CalendarControls({
                       <div className="flex items-center gap-2">
                         <span className="text-xs font-medium text-muted-foreground">Semester Pendek</span>
                       </div>
-                      <div className={`relative inline-flex h-6 w-11 items-center rounded-full transition-none ${showSemesterPendek ? 'bg-muted-foreground' : 'bg-muted'}`}
+                      <div className={`relative inline-flex h-6 w-11 items-center rounded-full transition-none ${showSemesterPendek ? 'bg-primary' : 'bg-muted'}`}
                         style={{ transition: 'none' }}
                       >
                         <span
@@ -389,7 +389,7 @@ export function CalendarControls({
                       <div className="flex items-center gap-2">
                         <span className="text-xs font-medium text-muted-foreground">Kuliah Intersesi</span>
                       </div>
-                      <div className={`relative inline-flex h-6 w-11 items-center rounded-full transition-none ${showKuliahIntersesi ? 'bg-muted-foreground' : 'bg-muted'}`}
+                      <div className={`relative inline-flex h-6 w-11 items-center rounded-full transition-none ${showKuliahIntersesi ? 'bg-primary' : 'bg-muted'}`}
                         style={{ transition: 'none' }}
                       >
                         <span
@@ -412,7 +412,7 @@ export function CalendarControls({
                         <div className="h-2 w-2 rounded-full bg-[#dc2626]" />
                         <span className="text-sm font-medium text-foreground">Examination</span>
                       </div>
-                      <div className={`relative inline-flex h-6 w-11 items-center rounded-full transition-none ${showExamination ? 'bg-muted-foreground' : 'bg-muted'}`}
+                      <div className={`relative inline-flex h-6 w-11 items-center rounded-full transition-none ${showExamination ? 'bg-primary' : 'bg-muted'}`}
                         style={{ transition: 'none' }}
                       >
                         <span
@@ -434,7 +434,7 @@ export function CalendarControls({
                       <div className="flex items-center gap-2">
                         <span className="text-xs font-medium text-muted-foreground">Others Exams</span>
                       </div>
-                      <div className={`relative inline-flex h-6 w-11 items-center rounded-full transition-none ${showOthersExams ? 'bg-muted-foreground' : 'bg-muted'}`}
+                      <div className={`relative inline-flex h-6 w-11 items-center rounded-full transition-none ${showOthersExams ? 'bg-primary' : 'bg-muted'}`}
                         style={{ transition: 'none' }}
                       >
                         <span
@@ -457,7 +457,7 @@ export function CalendarControls({
                         <div className="h-2 w-2 rounded-full bg-[#10b981]" />
                         <span className="text-sm font-medium text-foreground">Break</span>
                       </div>
-                      <div className={`relative inline-flex h-6 w-11 items-center rounded-full transition-none ${showBreak ? 'bg-muted-foreground' : 'bg-muted'}`}
+                      <div className={`relative inline-flex h-6 w-11 items-center rounded-full transition-none ${showBreak ? 'bg-primary' : 'bg-muted'}`}
                         style={{ transition: 'none' }}
                       >
                         <span
@@ -478,7 +478,7 @@ export function CalendarControls({
                       <div className="flex items-center gap-2">
                         <span className="text-sm font-medium text-foreground">Show countdown</span>
                       </div>
-                      <div className={`relative inline-flex h-6 w-11 items-center rounded-full transition-none ${showCountdown ? 'bg-muted-foreground' : 'bg-muted'}`}
+                      <div className={`relative inline-flex h-6 w-11 items-center rounded-full transition-none ${showCountdown ? 'bg-primary' : 'bg-muted'}`}
                         style={{ transition: 'none' }}
                       >
                         <span
@@ -514,7 +514,7 @@ export function CalendarControls({
                         </Avatar>
                       </div>
                     </div>
-                    <div className={`relative inline-flex h-6 w-11 items-center rounded-full transition-none ${showKKT ? 'bg-muted-foreground' : 'bg-muted'}`}
+                    <div className={`relative inline-flex h-6 w-11 items-center rounded-full transition-none ${showKKT ? 'bg-primary' : 'bg-muted'}`}
                       style={{ transition: 'none' }}
                     >
                       <span

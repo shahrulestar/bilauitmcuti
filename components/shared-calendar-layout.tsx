@@ -45,13 +45,17 @@ export function SharedCalendarLayout({
   // programFromRoute is passed from the page component and should be the program slug
   const selectedProgram = getProgramFromRoute(routeSegment || (programFromRoute && programFromRoute !== 'All' ? programFromRoute : null));
 
+  // Disable browser's automatic scroll restoration so back-navigation
+  // doesn't fight with our own scroll-to-top, preventing sticky header jump
+  useEffect(() => {
+    if ('scrollRestoration' in history) {
+      history.scrollRestoration = 'manual';
+    }
+  }, []);
+
   // Scroll to top when mounting or returning from chat/PWA (consistent with grid/list view switch)
-  // Defer to next frame to prevent CalendarControls sticky flicker during scroll
   useLayoutEffect(() => {
-    const id = requestAnimationFrame(() => {
-      window.scrollTo(0, 0);
-    });
-    return () => cancelAnimationFrame(id);
+    window.scrollTo(0, 0);
   }, [pathname]);
 
   // Handle bfcache restore (mobile Safari/PWA) - scroll to top when page resurrected from cache
