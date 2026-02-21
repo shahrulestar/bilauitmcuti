@@ -4,6 +4,7 @@ import { GeistSans } from 'geist/font/sans'
 import { GeistMono } from 'geist/font/mono'
 import { Analytics } from '@vercel/analytics/next'
 import { ThemeProvider } from '@/components/theme-provider'
+import { VersionBanner } from '@/components/version-banner'
 import './globals.css'
 
 export const metadata: Metadata = {
@@ -253,6 +254,7 @@ export default function RootLayout({
         />
       </head>
       <body className={`${GeistSans.className} antialiased`} suppressHydrationWarning>
+        <VersionBanner />
         <ThemeProvider
           attribute="class"
           defaultTheme="light"
