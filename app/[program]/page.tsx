@@ -3,6 +3,8 @@ import { notFound } from 'next/navigation';
 import { isValidProgramRoute, getProgramDisplayName, getOgImageForRoute } from '@/lib/route-utils';
 import type { Metadata } from 'next';
 
+export const runtime = 'edge';
+
 interface ProgramPageProps {
   params: Promise<{
     program: string;

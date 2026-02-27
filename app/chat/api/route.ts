@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
+
+export const runtime = 'edge';
 import { z } from "zod";
 import { askGroqWithFallback, MODEL_LLAMA, MODEL_GPT_OSS, type ChatMessage } from "@/lib/ai";
 import systemRules from "@/lib/system-rules.json";
@@ -42,8 +44,9 @@ const RATE_LIMIT_GLOBAL_MAX_PER_DAY = 500; // max 500 total requests across all 
 const rateLimitMap = new Map<string, number[]>();
 let globalDailyTimestamps: number[] = [];
 
-// Clean up stale entries every 5 minutes to prevent memory leaks
-setInterval(() => {
+const CLEANUP_THRESHOLD = 500; // Run cleanup when map exceeds this size
+
+function cleanupStaleEntries() {
   const now = Date.now();
   for (const [key, timestamps] of rateLimitMap.entries()) {
     const valid = timestamps.filter((t) => now - t < RATE_LIMIT_DAILY_MS);
@@ -54,14 +57,19 @@ setInterval(() => {
     }
   }
   globalDailyTimestamps = globalDailyTimestamps.filter((t) => now - t < RATE_LIMIT_DAILY_MS);
-}, 5 * 60 * 1000);
+}
 
 function getRateLimitKey(ip: string, request: NextRequest): string {
   if (ip !== "unknown") return ip;
-  // When IP is unknown, use a fingerprint to avoid shared bucket abuse
+  // Edge-compatible fingerprint (no Buffer)
   const ua = request.headers.get("user-agent") ?? "";
   const lang = request.headers.get("accept-language") ?? "";
-  return `unknown:${Buffer.from(ua + lang).toString("base64").slice(0, 32)}`;
+  const raw = (ua + lang).replace(/\s/g, "").slice(0, 48);
+  try {
+    return `unknown:${btoa(encodeURIComponent(raw)).slice(0, 32)}`;
+  } catch {
+    return `unknown:${raw.slice(0, 32)}`;
+  }
 }
 
 interface RateLimitResult {
@@ -71,6 +79,11 @@ interface RateLimitResult {
 
 function checkRateLimit(ip: string, request: NextRequest): RateLimitResult {
   const now = Date.now();
+
+  // On-demand cleanup when map grows (Edge has no setInterval)
+  if (rateLimitMap.size > CLEANUP_THRESHOLD) {
+    cleanupStaleEntries();
+  }
 
   // 1. Global daily limit
   const globalValid = globalDailyTimestamps.filter((t) => now - t < RATE_LIMIT_DAILY_MS);
