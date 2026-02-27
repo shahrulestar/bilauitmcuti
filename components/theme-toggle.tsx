@@ -2,6 +2,7 @@
 
 import { useTheme } from 'next-themes';
 import { useEffect, useState } from 'react';
+import { Kbd } from '@/components/ui/kbd';
 
 type Theme = 'light' | 'dark';
 
@@ -44,6 +45,7 @@ export function ThemeToggle() {
       <label className="flex items-center justify-between cursor-pointer py-0.5">
         <div className="flex items-center gap-2">
           <span className="text-sm font-medium text-foreground">Theme</span>
+          <Kbd className="hidden md:inline-flex">D</Kbd>
         </div>
         <div className="relative inline-flex h-6 w-11 items-center rounded-full transition-none bg-muted"
           style={{ transition: 'none' }}
@@ -65,6 +67,7 @@ export function ThemeToggle() {
     <label className="flex items-center justify-between cursor-pointer py-0.5">
       <div className="flex items-center gap-2">
         <span className="text-sm font-medium text-foreground">Theme</span>
+        <Kbd className="hidden md:inline-flex">D</Kbd>
       </div>
       <div
         className={`relative inline-flex h-6 w-11 items-center rounded-full transition-none ${isDark ? 'bg-primary' : 'bg-muted'}`}
