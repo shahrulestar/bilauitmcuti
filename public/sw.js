@@ -1,4 +1,4 @@
-const CACHE_NAME = 'cuti-uitm-v1';
+const CACHE_NAME = 'bilauitmcuti-v1';
 const urlsToCache = [
   '/',
   '/favicon.ico',

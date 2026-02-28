@@ -1,11 +1,11 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "cuti-ui-tm",
+  "name": "bilauitmcuti",
   "main": ".open-next/worker.js",
   "compatibility_date": "2025-11-01",
   "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
   "assets": { "directory": ".open-next/assets", "binding": "ASSETS" },
-  "services": [{ "binding": "WORKER_SELF_REFERENCE", "service": "cuti-ui-tm" }]
+  "services": [{ "binding": "WORKER_SELF_REFERENCE", "service": "bilauitmcuti" }]
   // Optional: add KV for distributed rate limiting (create: wrangler kv namespace create RATE_LIMIT_KV)
   // "kv_namespaces": [{ "binding": "RATE_LIMIT_KV", "id": "YOUR_NAMESPACE_ID" }]
 }

@@ -45,8 +45,8 @@ Academic calendar web app for Universiti Teknologi MARA (UiTM) — Malaysia's la
 ### Installation
 
 ```bash
-git clone https://github.com/your-username/cuti-ui-tm.git
-cd cuti-ui-tm
+git clone https://github.com/your-username/bilauitmcuti.git
+cd bilauitmcuti
 pnpm install
 ```
 

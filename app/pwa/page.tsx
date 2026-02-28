@@ -41,6 +41,28 @@ export default function PWAPage() {
           </p>
         </div>
 
+        {/* Reinstall guide for old app icons */}
+        <section id="reinstall" className="mb-8 rounded-lg border border-amber-500/30 bg-amber-500/10 p-4">
+          <h2 className="text-base font-semibold text-foreground">How to reinstall Bila UiTM Cuti?</h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            If you are using an older home screen version, delete that app icon first, then reinstall from your browser.
+          </p>
+          <ol className="mt-3 space-y-2 text-sm text-muted-foreground">
+            <li className="flex gap-3">
+              <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-medium">1</span>
+              Delete/remove the old app icon from your home screen.
+            </li>
+            <li className="flex gap-3">
+              <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-medium">2</span>
+              Open <strong className="font-semibold text-foreground">cutiuitm.xyz</strong> in your browser (Safari / Chrome / Edge).
+            </li>
+            <li className="flex gap-3">
+              <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-medium">3</span>
+              Install again using <strong className="font-semibold text-foreground">Add to Home Screen</strong> or <strong className="font-semibold text-foreground">Install app</strong>.
+            </li>
+          </ol>
+        </section>
+
         {/* Already installed banner */}
         {isInstalled && (
           <div className="mb-8 rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-4 text-sm text-emerald-700 dark:text-emerald-400">
