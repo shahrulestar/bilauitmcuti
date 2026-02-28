@@ -91,6 +91,14 @@ export const ListView = memo(function ListView({
   };
 
   const group = getProgramGroup(selectedProgram);
+  const shouldMergePartTimeForAllList = group === 'B' && selectedProgram === 'All';
+
+  function getNormalizedProgramType(programType?: string): string {
+    if (!programType) return '';
+    if (!shouldMergePartTimeForAllList) return programType;
+    if (programType === 'DiplomaPartTime' || programType === 'BachelorPartTime') return 'PartTime';
+    return programType;
+  }
   
   // Group A: Dec 2025 - May 2026
   // Group B: Mar 2026 - Sep 2026
@@ -112,9 +120,26 @@ export const ListView = memo(function ListView({
   // Filter activities by program type BEFORE deduplication to ensure correct filtering
   const filteredActivities = activities.filter(a => shouldShowActivity(a.type, a));
 
-  // Filter out duplicate activities - use name, startDate, and programType as key to distinguish between different program types
+  // Filter out duplicate activities.
+  // For Group B "All" list, merge Diploma/Bachelor Part-Time duplicates into one row.
   const uniqueActivities = Array.from(
-    new Map(filteredActivities.map(a => [`${a.name}|${a.startDate}|${a.programType || ''}|${a.endDate || ''}`, a])).values()
+    new Map(
+      filteredActivities.map((activity) => {
+        const dedupeKey = [
+          activity.name,
+          activity.startDate,
+          activity.endDate || '',
+          activity.type,
+          activity.details || '',
+          activity.duration || '',
+          activity.regionalStartDate || '',
+          activity.regionalEndDate || '',
+          getNormalizedProgramType(activity.programType),
+        ].join('|');
+
+        return [dedupeKey, activity] as const;
+      })
+    ).values()
   ).sort((a, b) => {
     // Sort by start date first
     const dateCompare = new Date(a.startDate).getTime() - new Date(b.startDate).getTime();
