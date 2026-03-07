@@ -688,11 +688,11 @@ function MiniCalendar({ month, year, selectedProgram, showKKT, onDateClick, sele
                 return (
                   <TooltipContent suppressHydrationWarning 
                     side="top" 
-                    className="max-w-xs px-3 py-2 mx-2 rounded-lg shadow-lg border border-border bg-popover text-popover-foreground [&[data-side='top']]:before:content-none transition-none"
+                    className="w-auto max-w-[300px] sm:max-w-[330px] px-3 py-2 mx-2 rounded-lg shadow-lg border border-border bg-popover text-popover-foreground [&[data-side='top']]:before:content-none transition-none"
                     sideOffset={8}
                     style={{ pointerEvents: 'auto' } as React.CSSProperties & { '--radix-tooltip-content-transform-origin'?: string }}
                   >
-                    <div className="space-y-2">
+                    <div className="w-full space-y-2">
                       {uniqueDayActivities.map((activity, idx) => {
                         const dotColor = 
                           activity.type === 'registration' ? 'bg-[#d1d5db]' :
@@ -705,9 +705,9 @@ function MiniCalendar({ month, year, selectedProgram, showKKT, onDateClick, sele
                           : null;
                         const displayName = days != null ? `${activity.name} (${formatCountdown(days)})` : activity.name;
                         return (
-                          <div key={idx} className="flex items-start gap-2 transition-none" style={{ transition: 'none' }}>
+                          <div key={idx} className="grid grid-cols-[auto_minmax(0,1fr)] items-start gap-2 transition-none" style={{ transition: 'none' }}>
                             <div className={`h-2 w-2 rounded-full mt-1 flex-shrink-0 ${dotColor} transition-none`} style={{ transition: 'none' }} />
-                            <p className="text-xs leading-relaxed transition-none">{displayName}</p>
+                            <p className="min-w-0 text-xs leading-relaxed whitespace-normal text-wrap break-words [overflow-wrap:anywhere] line-clamp-3 transition-none">{displayName}</p>
                           </div>
                         );
                       })}
