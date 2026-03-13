@@ -137,16 +137,6 @@ export default function PWAPage() {
             </div>
           </section>
 
-          {/* Divider */}
-          <hr className="border-border" />
-
-          {/* Disclaimer */}
-          <section className="pb-8">
-            <h2 className="mb-3 text-lg font-semibold">Disclaimer</h2>
-            <p className="text-sm leading-relaxed text-muted-foreground">
-              This app is <strong className="font-semibold text-foreground">not affiliated with UiTM</strong> (Universiti Teknologi MARA). It is created for educational and informational purposes only. Calendar data is sourced from publicly available HEA UiTM academic calendar information. Please verify important dates directly with official UiTM sources.
-            </p>
-          </section>
         </div>
       </div>
     </div>

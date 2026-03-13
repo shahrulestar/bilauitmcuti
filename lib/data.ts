@@ -104,6 +104,90 @@ export function getProgramBadgeConfig(activity: Activity): ProgramBadgeConfig | 
 
 export type ProgramGroup = 'A' | 'B';
 
+/**
+ * Single source of truth for date matching.
+ * When showKKT=true and activity has regional dates, use regional range only.
+ * Otherwise use standard start/end dates.
+ */
+export function matchesActivityDate(
+  activity: Activity,
+  dateStr: string,
+  showKKT: boolean
+): boolean {
+  const targetDate = new Date(dateStr);
+  let startDate: Date;
+  let endDate: Date;
+  if (showKKT && activity.regionalStartDate) {
+    startDate = new Date(activity.regionalStartDate);
+    endDate = activity.regionalEndDate ? new Date(activity.regionalEndDate) : startDate;
+  } else {
+    startDate = new Date(activity.startDate);
+    endDate = activity.endDate ? new Date(activity.endDate) : startDate;
+  }
+  return targetDate >= startDate && targetDate <= endDate;
+}
+
+export interface ActivityFilterOptions {
+  selectedProgram: string;
+  showRegistration?: boolean;
+  showLecture?: boolean;
+  showSemesterPendek?: boolean;
+  showKuliahIntersesi?: boolean;
+  showExamination?: boolean;
+  showOthersExams?: boolean;
+  showBreak?: boolean;
+}
+
+/**
+ * Single source of truth for activity visibility based on filter toggles and program.
+ */
+export function shouldIncludeActivity(
+  activity: Activity,
+  filters: ActivityFilterOptions
+): boolean {
+  const {
+    selectedProgram,
+    showRegistration = true,
+    showLecture = true,
+    showSemesterPendek = true,
+    showKuliahIntersesi = true,
+    showExamination = true,
+    showOthersExams = true,
+    showBreak = true,
+  } = filters;
+
+  if (activity.type === 'registration' && !showRegistration) return false;
+  if (activity.type === 'lecture' && !showLecture) return false;
+  if (activity.type === 'examination' && !showExamination) return false;
+  if (activity.type === 'break' && !showBreak) return false;
+
+  if (activity.type === 'lecture' && activity.name.includes('Semester Pendek') && !showSemesterPendek) return false;
+  if (activity.type === 'lecture' && activity.name.includes('Intersesi') && !showKuliahIntersesi) return false;
+  if (activity.type === 'examination' && (activity.name.includes('Khas') || activity.name.includes('English Exit Test') || activity.name.includes('EET Lisan')) && !showOthersExams) return false;
+
+  if (selectedProgram === 'All') return true;
+  if (activity.programType && activity.programType !== selectedProgram) return false;
+  return true;
+}
+
+/**
+ * Get activities for a date, filtered and date-matched via shared helpers.
+ * Single source for tooltip, day color, dots, ring/border.
+ */
+export function getActivitiesForDate(
+  dateStr: string,
+  group: ProgramGroup,
+  showKKT: boolean,
+  filters: ActivityFilterOptions
+): Activity[] {
+  return allActivities.filter(
+    (a) =>
+      a.group === group &&
+      matchesActivityDate(a, dateStr, showKKT) &&
+      shouldIncludeActivity(a, filters)
+  );
+}
+
 // Get all activities for a specific month
 export function getActivitiesForMonth(year: number, month: number, group: ProgramGroup): Activity[] {
   return allActivities.filter(activity => {
@@ -120,18 +204,9 @@ export function getActivitiesForMonth(year: number, month: number, group: Progra
   });
 }
 
-// Get activity for a specific date
+// Get activity for a specific date (first match; for backward compatibility)
 export function getActivityForDate(dateStr: string, group: ProgramGroup, showKKT: boolean = false): Activity | undefined {
-  return allActivities.find(activity => {
-    if (activity.group !== group) return false;
-    
-    // Use regional dates if KKT filter is on and regional dates exist
-    const startDate = showKKT && activity.regionalStartDate ? new Date(activity.regionalStartDate) : new Date(activity.startDate);
-    const endDate = showKKT && activity.regionalEndDate ? new Date(activity.regionalEndDate) : (activity.endDate ? new Date(activity.endDate) : startDate);
-    
-    const targetDate = new Date(dateStr);
-    return targetDate >= startDate && targetDate <= endDate;
-  });
+  return allActivities.find((a) => a.group === group && matchesActivityDate(a, dateStr, showKKT));
 }
 
 // Format date range in English
@@ -210,41 +285,22 @@ export function getMonthsForGroup(
     showKKT = false,
   } = options;
 
-  // Helper function to check if activity should be shown (same logic as shouldShowActivity in grid-view)
-  const shouldShowActivity = (activity: Activity): boolean => {
-    if (activity.type === 'registration' && !showRegistration) return false;
-    if (activity.type === 'lecture' && !showLecture) return false;
-    if (activity.type === 'examination' && !showExamination) return false;
-    if (activity.type === 'break' && !showBreak) return false;
-    
-    // Filter out Semester Pendek if toggle is off
-    if (activity.type === 'lecture' && activity.name.includes('Semester Pendek') && !showSemesterPendek) return false;
-    
-    // Filter out Kuliah Intersesi if toggle is off
-    if (activity.type === 'lecture' && activity.name.includes('Intersesi') && !showKuliahIntersesi) return false;
-    
-    // Filter out Others Exams (Peperiksaan/Penilaian Khas/Intersesi/Semester Pendek + English Exit Test) if toggle is off
-    if (activity.type === 'examination' && (activity.name.includes('Khas') || activity.name.includes('English Exit Test') || activity.name.includes('EET Lisan')) && !showOthersExams) return false;
-    
-    // Handle "All" option - show all Group B activities (semua and every programType)
-    if (selectedProgram === 'All') {
-      return true;
-    }
-    
-    // Filter by program type - check if activity has programType and if it matches selectedProgram
-    if (activity.programType) {
-      if (activity.programType !== selectedProgram) return false;
-    }
-    
-    return true;
+  const filters: ActivityFilterOptions = {
+    selectedProgram,
+    showRegistration,
+    showLecture,
+    showSemesterPendek,
+    showKuliahIntersesi,
+    showExamination,
+    showOthersExams,
+    showBreak,
   };
 
-  // Collect all relevant dates from activities
   const relevantDates: Date[] = [];
 
   for (const activity of allActivities) {
     if (activity.group !== group) continue;
-    if (!shouldShowActivity(activity)) continue;
+    if (!shouldIncludeActivity(activity, filters)) continue;
 
     // Use regional dates if KKT filter is on and regional dates exist
     let startDate: Date;

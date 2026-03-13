@@ -9,8 +9,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
-import { getActivitiesForMonth, getActivityForDate, getMonthsForGroup, getDaysUntilStart, formatCountdown, type ProgramGroup, type Activity, type ActivityType } from '@/lib/data';
-import { allActivities } from '@/lib/data';
+import { getActivitiesForDate, getMonthsForGroup, getDaysUntilStart, formatCountdown, type ProgramGroup, type Activity, type ActivityType } from '@/lib/data';
 
 interface GridViewProps {
   selectedProgram: string;
@@ -97,37 +96,47 @@ function MiniCalendar({ month, year, selectedProgram, showKKT, onDateClick, sele
     return 'B';
   };
 
-  const shouldShowActivity = (activity: Activity | undefined): boolean => {
-    if (!activity) return false;
-    if (activity.type === 'registration' && !showRegistration) return false;
-    if (activity.type === 'lecture' && !showLecture) return false;
-    if (activity.type === 'examination' && !showExamination) return false;
-    if (activity.type === 'break' && !showBreak) return false;
-    
-    // Filter out Semester Pendek if toggle is off
-    if (activity.type === 'lecture' && activity.name.includes('Semester Pendek') && !showSemesterPendek) return false;
-    
-    // Filter out Kuliah Intersesi if toggle is off
-    if (activity.type === 'lecture' && activity.name.includes('Intersesi') && !showKuliahIntersesi) return false;
-    
-    // Filter out Others Exams (Peperiksaan/Penilaian Khas/Intersesi/Semester Pendek + English Exit Test) if toggle is off
-    if (activity.type === 'examination' && (activity.name.includes('Khas') || activity.name.includes('English Exit Test') || activity.name.includes('EET Lisan')) && !showOthersExams) return false;
-    
-    // Handle "All" option - show all Group B activities (semua and every programType)
-    if (selectedProgram === 'All') {
-      return true;
-    }
-    
-    // Filter by program type - check if activity has programType and if it matches selectedProgram
-    if (activity.programType) {
-      if (activity.programType !== selectedProgram) return false;
-    }
-    
-    // Always show all activities (toggle filtering is handled by type filters above)
-    return true;
+  const group = getProgramGroup(selectedProgram);
+
+  const filterOptions = {
+    selectedProgram,
+    showRegistration,
+    showLecture,
+    showSemesterPendek,
+    showKuliahIntersesi,
+    showExamination,
+    showOthersExams,
+    showBreak,
   };
 
-  const group = getProgramGroup(selectedProgram);
+  const getActivityPriority = (activity: Activity, allDayActivities?: Activity[]): number => {
+    const { type, name } = activity;
+    if (type === 'examination') return 0;
+    if (type === 'break') return 1;
+    if (type === 'lecture') {
+      if (/^Lecture\s+\d+$/.test(name)) return 2;
+      if (name.includes('Semester Pendek') && allDayActivities) {
+        const hasSemesterPendek = allDayActivities.some(a => a.name.includes('Semester Pendek'));
+        const hasLectureIntersesi = allDayActivities.some(a => a.name.includes('Intersesi'));
+        const hasCutiSemester = allDayActivities.some(a => a.name.includes('Cuti Semester'));
+        if (hasSemesterPendek && (hasLectureIntersesi || hasCutiSemester)) return 1;
+      }
+      if (name.includes('Semester Pendek')) return 3;
+      if (name.includes('Intersesi')) return 4;
+      return 5;
+    }
+    if (type === 'registration') return 6;
+    return 7;
+  };
+
+  // Single source for day activities - used by tooltip, colors, dots, ring/border
+  const getDayActivities = (day: number | null): Activity[] => {
+    if (!day) return [];
+    const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    const activities = getActivitiesForDate(dateStr, group, showKKT, filterOptions);
+    activities.sort((a, b) => getActivityPriority(a, activities) - getActivityPriority(b, activities));
+    return activities;
+  };
 
   const daysInMonth = new Date(year, month, 0).getDate();
   const firstDayOfMonth = new Date(year, month - 1, 1).getDay();
@@ -164,136 +173,35 @@ function MiniCalendar({ month, year, selectedProgram, showKKT, onDateClick, sele
   };
   
   const getDayColor = (day: number | null) => {
-    if (!day) return '';
-    
-    const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-    
-    // Find the highest priority activity for this date
-    let highestPriorityActivity: Activity | null = null;
-    const priorityMap: { [key in ActivityType]: number } = {
-      lecture: 3,
-      examination: 2,
-      break: 2,
-      registration: 1,
-      other: 0,
-    };
-    
-    for (const activity of allActivities) {
-      if (activity.group !== group) continue;
-      
-      // Check against both standard and regional dates based on filter
-      let matchesDate = false;
-      const startDate = new Date(activity.startDate);
-      const endDate = activity.endDate ? new Date(activity.endDate) : startDate;
-      const targetDate = new Date(dateStr);
-      
-      // If regional dates exist and KKT is enabled, use only regional dates
-      if (showKKT && activity.regionalStartDate) {
-        const regionalStart = new Date(activity.regionalStartDate);
-        const regionalEnd = activity.regionalEndDate ? new Date(activity.regionalEndDate) : regionalStart;
-        if (targetDate >= regionalStart && targetDate <= regionalEnd) {
-          matchesDate = true;
-        }
-      } else {
-        // Use standard dates when regional dates are not available or KKT is disabled
-        if (targetDate >= startDate && targetDate <= endDate) {
-          matchesDate = true;
-        }
-      }
-      
-      const shouldShow = shouldShowActivity(activity);
-      
-      if (matchesDate && shouldShow) {
-        if (!highestPriorityActivity || priorityMap[activity.type] > priorityMap[highestPriorityActivity.type]) {
-          highestPriorityActivity = activity;
-        }
-      }
-    }
-    
-    if (highestPriorityActivity) {
-      if (highestPriorityActivity.type === 'lecture') return 'bg-purple-100 dark:bg-purple-900/30';
-      if (highestPriorityActivity.type === 'examination') return 'bg-red-100 dark:bg-red-900/30';
-      if (highestPriorityActivity.type === 'break') return 'bg-green-100 dark:bg-green-900/30';
-      if (highestPriorityActivity.type === 'registration') return 'bg-gray-100 dark:bg-gray-800/30';
-    }
-    
+    const activities = getDayActivities(day);
+    const highest = activities[0];
+    if (!highest) return '';
+    if (highest.type === 'lecture') return 'bg-purple-100 dark:bg-purple-900/30';
+    if (highest.type === 'examination') return 'bg-red-100 dark:bg-red-900/30';
+    if (highest.type === 'break') return 'bg-green-100 dark:bg-green-900/30';
+    if (highest.type === 'registration') return 'bg-gray-100 dark:bg-gray-800/30';
     return '';
   };
 
   const getRingColor = (day: number | null) => {
-    if (!day) return '';
-    
-    const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-    const targetDate = new Date(dateStr);
-    
-    // Check both standard and regional dates
-    for (const activity of allActivities) {
-      if (activity.group !== group) continue;
-      if (!shouldShowActivity(activity)) continue;
-      
-      const startDate = new Date(activity.startDate);
-      const endDate = activity.endDate ? new Date(activity.endDate) : startDate;
-      
-      let matches = false;
-      
-      // If regional dates exist and KKT is enabled, use only regional dates
-      if (showKKT && activity.regionalStartDate) {
-        const regionalStart = new Date(activity.regionalStartDate);
-        const regionalEnd = activity.regionalEndDate ? new Date(activity.regionalEndDate) : regionalStart;
-        matches = targetDate >= regionalStart && targetDate <= regionalEnd;
-      } else {
-        // Use standard dates when regional dates are not available or KKT is disabled
-        matches = targetDate >= startDate && targetDate <= endDate;
-      }
-      
-      if (matches) {
-        if (activity.type === 'registration') return 'ring-[#d1d5db]';
-        if (activity.type === 'lecture') return 'ring-[#8b5cf6]';
-        if (activity.type === 'examination') return 'ring-[#dc2626]';
-        if (activity.type === 'break') return 'ring-[#10b981]';
-      }
-    }
-    
+    const activities = getDayActivities(day);
+    const highest = activities[0];
+    if (!highest) return '';
+    if (highest.type === 'registration') return 'ring-[#d1d5db]';
+    if (highest.type === 'lecture') return 'ring-[#8b5cf6]';
+    if (highest.type === 'examination') return 'ring-[#dc2626]';
+    if (highest.type === 'break') return 'ring-[#10b981]';
     return '';
   };
 
-  // Highlight background when hovered or tooltip open: darker (light theme) / lighter (dark theme) than base event color
   const getDayHighlightColor = (day: number | null): string => {
-    if (!day) return '';
-    const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-    let highestPriorityActivity: Activity | null = null;
-    const priorityMap: { [key in ActivityType]: number } = {
-      lecture: 3,
-      examination: 2,
-      break: 2,
-      registration: 1,
-      other: 0,
-    };
-    for (const activity of allActivities) {
-      if (activity.group !== group) continue;
-      let matchesDate = false;
-      const startDate = new Date(activity.startDate);
-      const endDate = activity.endDate ? new Date(activity.endDate) : startDate;
-      const targetDate = new Date(dateStr);
-      if (showKKT && activity.regionalStartDate) {
-        const regionalStart = new Date(activity.regionalStartDate);
-        const regionalEnd = activity.regionalEndDate ? new Date(activity.regionalEndDate) : regionalStart;
-        if (targetDate >= regionalStart && targetDate <= regionalEnd) matchesDate = true;
-      } else {
-        if (targetDate >= startDate && targetDate <= endDate) matchesDate = true;
-      }
-      if (matchesDate && shouldShowActivity(activity)) {
-        if (!highestPriorityActivity || priorityMap[activity.type] > priorityMap[highestPriorityActivity.type]) {
-          highestPriorityActivity = activity;
-        }
-      }
-    }
-    if (highestPriorityActivity) {
-      if (highestPriorityActivity.type === 'lecture') return 'bg-purple-200 dark:bg-purple-900/80';
-      if (highestPriorityActivity.type === 'examination') return 'bg-red-200 dark:bg-red-900/80';
-      if (highestPriorityActivity.type === 'break') return 'bg-green-200 dark:bg-green-900/80';
-      if (highestPriorityActivity.type === 'registration') return 'bg-gray-200 dark:bg-gray-900/80';
-    }
+    const activities = getDayActivities(day);
+    const highest = activities[0];
+    if (!highest) return 'bg-gray-100 dark:bg-gray-900/80';
+    if (highest.type === 'lecture') return 'bg-purple-200 dark:bg-purple-900/80';
+    if (highest.type === 'examination') return 'bg-red-200 dark:bg-red-900/80';
+    if (highest.type === 'break') return 'bg-green-200 dark:bg-green-900/80';
+    if (highest.type === 'registration') return 'bg-gray-200 dark:bg-gray-900/80';
     return 'bg-gray-100 dark:bg-gray-900/80';
   };
 
@@ -327,66 +235,18 @@ function MiniCalendar({ month, year, selectedProgram, showKKT, onDateClick, sele
     return currentDate >= minDate && currentDate <= maxDate;
   };
 
-  // Get current date outline color (same logic as getRingColor but for current date)
-  // Using border instead of ring to avoid conflict with focus ring removal
   const getCurrentDateBorderColor = (day: number | null): string => {
     if (!day || !currentDateStr) return '';
-    
     const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-    
-    // Only show outline if it's the current date
     if (dateStr !== currentDateStr) return '';
-    
-    // Check if current date is in range
     if (!isCurrentDateInRange()) return '';
-    
-    const targetDate = new Date(dateStr);
-    
-    // Find the highest priority activity for this date (same priority logic as getDayColor)
-    let highestPriorityActivity: Activity | null = null;
-    const priorityMap: { [key in ActivityType]: number } = {
-      lecture: 3,
-      examination: 2,
-      break: 2,
-      registration: 1,
-      other: 0,
-    };
-    
-    for (const activity of allActivities) {
-      if (activity.group !== group) continue;
-      if (!shouldShowActivity(activity)) continue;
-      
-      const startDate = new Date(activity.startDate);
-      const endDate = activity.endDate ? new Date(activity.endDate) : startDate;
-      
-      let matches = false;
-      
-      // If regional dates exist and KKT is enabled, use only regional dates
-      if (showKKT && activity.regionalStartDate) {
-        const regionalStart = new Date(activity.regionalStartDate);
-        const regionalEnd = activity.regionalEndDate ? new Date(activity.regionalEndDate) : regionalStart;
-        matches = targetDate >= regionalStart && targetDate <= regionalEnd;
-      } else {
-        // Use standard dates when regional dates are not available or KKT is disabled
-        matches = targetDate >= startDate && targetDate <= endDate;
-      }
-      
-      if (matches) {
-        if (!highestPriorityActivity || priorityMap[activity.type] > priorityMap[highestPriorityActivity.type]) {
-          highestPriorityActivity = activity;
-        }
-      }
-    }
-    
-    // Return border color based on highest priority activity (1px border)
-    if (highestPriorityActivity) {
-      if (highestPriorityActivity.type === 'registration') return 'border border-[#d1d5db]';
-      if (highestPriorityActivity.type === 'lecture') return 'border border-[#8b5cf6]';
-      if (highestPriorityActivity.type === 'examination') return 'border border-[#dc2626]';
-      if (highestPriorityActivity.type === 'break') return 'border border-[#10b981]';
-    }
-    
-    // If no activity, use subtle grey
+    const activities = getDayActivities(day);
+    const highest = activities[0];
+    if (!highest) return 'border border-gray-400/50';
+    if (highest.type === 'registration') return 'border border-[#d1d5db]';
+    if (highest.type === 'lecture') return 'border border-[#8b5cf6]';
+    if (highest.type === 'examination') return 'border border-[#dc2626]';
+    if (highest.type === 'break') return 'border border-[#10b981]';
     return 'border border-gray-400/50';
   };
 
@@ -398,92 +258,8 @@ function MiniCalendar({ month, year, selectedProgram, showKKT, onDateClick, sele
     return dateStr === currentDateStr;
   };
 
-  // Priority order for activity types - higher priority shows first
-  const getActivityPriority = (activity: Activity, allDayActivities?: Activity[]): number => {
-    const { type, name } = activity;
-    
-    // Examination - highest priority
-    if (type === 'examination') return 0;
-    
-    // Break/Cuti - second priority
-    if (type === 'break') return 1;
-    
-    // Lecture subtypes - third tier with internal priorities
-    if (type === 'lecture') {
-      // Lecture 1, 2, 3, etc. - highest lecture priority
-      if (/^Lecture\s+\d+$/.test(name)) return 2;
-      
-      // Special case: Semester Pendek with specific combinations
-      if (name.includes('Semester Pendek') && allDayActivities) {
-        // Check if Semester Pendek is combined with Lecture Intersesi or Cuti Semester
-        const hasSemesterPendek = allDayActivities.some(a => a.name.includes('Semester Pendek'));
-        const hasLectureIntersesi = allDayActivities.some(a => a.name.includes('Intersesi'));
-        const hasCutiSemester = allDayActivities.some(a => a.name.includes('Cuti Semester'));
-        
-        // If Semester Pendek is with Intersesi or Cuti Semester, treat as break priority
-        if (hasSemesterPendek && (hasLectureIntersesi || hasCutiSemester)) {
-          return 1; // Break priority
-        }
-      }
-      
-      // Lecture Semester Pendek - lower lecture priority
-      if (name.includes('Semester Pendek')) return 3;
-      // Lecture Intersesi - lowest lecture priority
-      if (name.includes('Intersesi')) return 4;
-      // Other lecture types
-      return 5;
-    }
-    
-    // Registration - fourth priority
-    if (type === 'registration') return 6;
-    
-    // Other - lowest priority
-    return 7;
-  };
-
-  // Get activities sorted by priority for a given date (max 3)
   const getPriorityActivitiesForDay = (day: number | null): Activity[] => {
-    if (!day) return [];
-    
-    const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-    
-    // Get all activities for this date
-    const activitiesForDay: Activity[] = [];
-    for (const activity of allActivities) {
-      if (activity.group !== group) continue;
-      
-      // Check against both standard and regional dates
-      let matchesDate = false;
-      const startDate = new Date(activity.startDate);
-      const endDate = activity.endDate ? new Date(activity.endDate) : startDate;
-      const targetDate = new Date(dateStr);
-      
-      // If regional dates exist and KKT is enabled, use only regional dates
-      if (showKKT && activity.regionalStartDate) {
-        const regionalStart = new Date(activity.regionalStartDate);
-        const regionalEnd = activity.regionalEndDate ? new Date(activity.regionalEndDate) : regionalStart;
-        if (targetDate >= regionalStart && targetDate <= regionalEnd) {
-          matchesDate = true;
-        }
-      } else {
-        // Use standard dates when regional dates are not available or KKT is disabled
-        if (targetDate >= startDate && targetDate <= endDate) {
-          matchesDate = true;
-        }
-      }
-      
-      const shouldShow = shouldShowActivity(activity);
-      
-      if (matchesDate && shouldShow) {
-        activitiesForDay.push(activity);
-      }
-    }
-    
-    // Sort by priority using combination-aware logic
-    activitiesForDay.sort((a, b) => getActivityPriority(a, activitiesForDay) - getActivityPriority(b, activitiesForDay));
-    const result = activitiesForDay.slice(0, 3);
-    
-    return result;
+    return getDayActivities(day).slice(0, 3);
   };
 
   const getIndicatorDots = (day: number | null) => {
@@ -532,10 +308,9 @@ function MiniCalendar({ month, year, selectedProgram, showKKT, onDateClick, sele
   const mutedClass = 'text-muted-foreground';
   
   const getTooltip = (day: number | null) => {
-    if (!day) return '';
-    const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-    const activity = getActivityForDate(dateStr, group, showKKT);
-    if (!activity || !shouldShowActivity(activity)) return '';
+    const activities = getDayActivities(day);
+    const activity = activities[0];
+    if (!activity) return '';
     const countdownTypes: ActivityType[] = ['lecture', 'examination', 'break'];
     if (showCountdown && countdownTypes.includes(activity.type) && currentDateStr) {
       const days = getDaysUntilStart(activity, currentDateStr, showKKT);
@@ -646,35 +421,7 @@ function MiniCalendar({ month, year, selectedProgram, showKKT, onDateClick, sele
                   {calendarCell}
                 </TooltipTrigger>
               {dateStr && (() => {
-                const group = getProgramGroup(selectedProgram);
-                const dayActivities: Activity[] = [];
-                for (const activity of allActivities) {
-                  if (activity.group !== group) continue;
-                  
-                  // Check against both standard and regional dates
-                  let matchesDate = false;
-                  const startDate = new Date(activity.startDate);
-                  const endDate = activity.endDate ? new Date(activity.endDate) : startDate;
-                  const targetDate = new Date(dateStr);
-                  
-                  if (targetDate >= startDate && targetDate <= endDate) {
-                    matchesDate = true;
-                  }
-                  
-                  if (showKKT && activity.regionalStartDate) {
-                    const regionalStart = new Date(activity.regionalStartDate);
-                    const regionalEnd = activity.regionalEndDate ? new Date(activity.regionalEndDate) : regionalStart;
-                    if (targetDate >= regionalStart && targetDate <= regionalEnd) {
-                      matchesDate = true;
-                    }
-                  }
-                  
-                  if (matchesDate && shouldShowActivity(activity)) {
-                    dayActivities.push(activity);
-                  }
-                }
-                
-                // Deduplicate by name + dates so "All" does not show same activity text per program
+                const dayActivities = getDayActivities(day!);
                 const seenKey = new Set<string>();
                 const uniqueDayActivities = dayActivities.filter((a) => {
                   const key = `${a.name}|${a.startDate}|${a.endDate ?? ''}`;
@@ -682,7 +429,6 @@ function MiniCalendar({ month, year, selectedProgram, showKKT, onDateClick, sele
                   seenKey.add(key);
                   return true;
                 });
-                
                 if (uniqueDayActivities.length === 0) return null;
                 
                 return (
