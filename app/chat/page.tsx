@@ -258,6 +258,7 @@ function FormattedMessage({ content }: { content: string }) {
 
 const SUGGESTIONS_GROUP_A = [
   "When does Group A lecture start for this session?",
+  "When do Group A classes start for this session?",
   "When is Group A course registration for this session?",
   "When is Group A mid-semester test for this session?",
   "When is Group A final exam period for this session?",
@@ -266,7 +267,7 @@ const SUGGESTIONS_GROUP_A = [
   "When is Group A semester break for this session?",
   "What are the key dates for Group A this session?",
   "What is the full Group A schedule for this session?",
-  "Bila kuliah Group A bermula untuk sesi ini?",
+  "Bila kelas (kuliah) Group A bermula untuk sesi ini?",
   "Bila pendaftaran kursus Group A untuk sesi ini?",
   "Bila ujian pertengahan semester Group A untuk sesi ini?",
   "Bila peperiksaan akhir Group A untuk sesi ini?",
@@ -276,6 +277,7 @@ const SUGGESTIONS_GROUP_A = [
 
 const SUGGESTIONS_GROUP_B = [
   "When does Group B lecture start for this session?",
+  "When do Group B classes start for this session?",
   "When is Group B course registration for this session?",
   "When is Group B mid-semester test for this session?",
   "When is Group B final exam period for this session?",
@@ -284,7 +286,7 @@ const SUGGESTIONS_GROUP_B = [
   "When is Group B semester break for this session?",
   "What are the key dates for Group B this session?",
   "What is the full Group B schedule for this session?",
-  "Bila kuliah Group B bermula untuk sesi ini?",
+  "Bila kelas (kuliah) Group B bermula untuk sesi ini?",
   "Bila pendaftaran kursus Group B untuk sesi ini?",
   "Bila ujian pertengahan semester Group B untuk sesi ini?",
   "Bila peperiksaan akhir Group B untuk sesi ini?",

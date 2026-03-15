@@ -253,14 +253,14 @@ function MiniCalendar({ month, year, selectedProgram, selectedSessions, showKKT,
     if (type === 'break') return 1;
     if (type === 'lecture') {
       if (/^(Lecture|Kuliah)\s+\d+$/.test(name)) return 2;
-      if (name.includes('Semester Pendek') && allDayActivities) {
-        const hasSemesterPendek = allDayActivities.some(a => a.name.includes('Semester Pendek'));
-        const hasLectureIntersesi = allDayActivities.some(a => a.name.includes('Intersesi'));
+      if ((name.includes('Short Semester') || name.includes('Semester Pendek')) && allDayActivities) {
+        const hasSemesterPendek = allDayActivities.some(a => a.name.includes('Short Semester') || a.name.includes('Semester Pendek'));
+        const hasLectureIntersesi = allDayActivities.some(a => a.name.includes('Intersession Classes') || a.name.includes('Intersesi'));
         const hasCutiSemester = allDayActivities.some(a => a.name.includes('Cuti Semester'));
         if (hasSemesterPendek && (hasLectureIntersesi || hasCutiSemester)) return 1;
       }
-      if (name.includes('Semester Pendek')) return 3;
-      if (name.includes('Intersesi')) return 4;
+      if (name.includes('Short Semester') || name.includes('Semester Pendek')) return 3;
+      if (name.includes('Intersession Classes') || name.includes('Intersesi')) return 4;
       return 5;
     }
     if (type === 'registration') return 6;

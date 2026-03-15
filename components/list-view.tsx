@@ -72,13 +72,21 @@ export const ListView = memo(function ListView({
     if (type === 'examination' && !showExamination) return false;
     if (type === 'break' && !showBreak) return false;
     
-    // Filter out Semester Pendek if toggle is off
-    if (type === 'lecture' && activity?.name?.includes('Semester Pendek') && !showSemesterPendek) return false;
+    // Filter out Short Semester if toggle is off
+    if (
+      type === 'lecture' &&
+      (activity?.name?.includes('Short Semester') || activity?.name?.includes('Semester Pendek')) &&
+      !showSemesterPendek
+    ) return false;
     
-    // Filter out Kuliah Intersesi if toggle is off
-    if (type === 'lecture' && activity?.name?.includes('Intersesi') && !showKuliahIntersesi) return false;
+    // Filter out Intersession Classes if toggle is off
+    if (
+      type === 'lecture' &&
+      (activity?.name?.includes('Intersession Classes') || activity?.name?.includes('Intersesi')) &&
+      !showKuliahIntersesi
+    ) return false;
     
-    // Filter out Others Exams (Peperiksaan/Penilaian Khas/Intersesi/Semester Pendek + English Exit Test) if toggle is off
+    // Filter out Others Exams (Khas + English Exit Test) if toggle is off
     if (type === 'examination' && (activity?.name?.includes('Khas') || activity?.name?.includes('English Exit Test') || activity?.name?.includes('EET Lisan')) && !showOthersExams) return false;
     
     // Handle "All" option - show all Group B activities (semua and every programType)

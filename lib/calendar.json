@@ -192,7 +192,7 @@
           "group": "A"
         },
         {
-          "name": "Kuliah 1",
+          "name": "Lecture 1",
           "startDate": "2025-12-22",
           "endDate": "2025-12-28",
           "duration": "1 Minggu",
@@ -209,7 +209,7 @@
           "group": "A"
         },
         {
-          "name": "Kuliah 2",
+          "name": "Lecture 2",
           "startDate": "2025-12-29",
           "endDate": "2026-02-08",
           "duration": "6 Minggu",
@@ -233,7 +233,7 @@
           "group": "A"
         },
         {
-          "name": "Kuliah 3",
+          "name": "Lecture 3",
           "startDate": "2026-02-23",
           "endDate": "2026-03-19",
           "duration": "4 Minggu",
@@ -250,7 +250,7 @@
           "group": "A"
         },
         {
-          "name": "Kuliah 4",
+          "name": "Lecture 4",
           "startDate": "2026-03-30",
           "endDate": "2026-04-19",
           "duration": "3 Minggu",
@@ -479,7 +479,7 @@
           "group": "A"
         },
         {
-          "name": "Kuliah 1",
+          "name": "Lecture 1",
           "startDate": "2026-06-15",
           "endDate": "2026-08-02",
           "duration": "7 Minggu",
@@ -511,7 +511,7 @@
           "group": "A"
         },
         {
-          "name": "Kuliah 2",
+          "name": "Lecture 2",
           "startDate": "2026-08-17",
           "endDate": "2026-10-04",
           "duration": "7 Minggu",
@@ -717,7 +717,7 @@
           "group": "A"
         },
         {
-          "name": "Kuliah 1",
+          "name": "Lecture 1",
           "startDate": "2026-11-23",
           "endDate": "2026-12-20",
           "duration": "4 Minggu",
@@ -733,7 +733,7 @@
           "group": "A"
         },
         {
-          "name": "Kuliah 2",
+          "name": "Lecture 2",
           "startDate": "2026-12-21",
           "endDate": "2026-12-27",
           "duration": "1 Minggu",
@@ -742,7 +742,7 @@
           "details": "Secara Online. Krismas - 25 Disember"
         },
         {
-          "name": "Kuliah 3",
+          "name": "Lecture 3",
           "startDate": "2026-12-28",
           "endDate": "2027-01-10",
           "duration": "2 Minggu",
@@ -766,7 +766,7 @@
           "group": "A"
         },
         {
-          "name": "Kuliah 4",
+          "name": "Lecture 4",
           "startDate": "2027-01-25",
           "endDate": "2027-03-07",
           "duration": "6 Minggu",
@@ -783,7 +783,7 @@
           "details": "Aidil Fitri - 10 & 11 Mac"
         },
         {
-          "name": "Kuliah 5",
+          "name": "Lecture 5",
           "startDate": "2027-03-15",
           "endDate": "2027-03-21",
           "duration": "1 Minggu",
@@ -835,7 +835,7 @@
     "B-20263": {
       "activities": [
         {
-          "name": "Kuliah 1",
+          "name": "Lecture 1",
           "startDate": "2026-03-30",
           "endDate": "2026-04-05",
           "duration": "1 Minggu",
@@ -866,7 +866,7 @@
           "semua": true
         },
         {
-          "name": "Kuliah 2",
+          "name": "Lecture 2",
           "startDate": "2026-04-06",
           "endDate": "2026-05-24",
           "duration": "7 Minggu",
@@ -877,7 +877,7 @@
           "semua": true
         },
         {
-          "name": "Kuliah 3",
+          "name": "Lecture 3",
           "startDate": "2026-06-03",
           "endDate": "2026-07-12",
           "duration": "6 Minggu",
@@ -933,7 +933,7 @@
           "semua": true
         },
         {
-          "name": "Semester Pendek (202633)",
+          "name": "Short Semester (202633)",
           "startDate": "2026-08-03",
           "endDate": "2026-09-20",
           "duration": "7 Minggu",
@@ -942,7 +942,7 @@
           "semua": true
         },
         {
-          "name": "Kuliah Intersesi (20263)",
+          "name": "Intersession Classes (20263)",
           "startDate": "2026-08-17",
           "endDate": "2026-09-20",
           "duration": "5 Minggu",
@@ -951,7 +951,7 @@
           "semua": true
         },
         {
-          "name": "Peperiksaan/Penilaian Khas/Intersesi/Semester Pendek",
+          "name": "Peperiksaan/Penilaian Khas/Intersesi/Short Semester",
           "startDate": "2026-09-21",
           "endDate": "2026-09-27",
           "duration": "1 Minggu",
@@ -1837,7 +1837,7 @@
           "semua": true
         },
         {
-          "name": "Kuliah 1",
+          "name": "Lecture 1",
           "startDate": "2026-09-28",
           "endDate": "2026-12-20",
           "duration": "12 Minggu",
@@ -1867,7 +1867,7 @@
           "details": "Krismas - 25 Disember"
         },
         {
-          "name": "Kuliah 2",
+          "name": "Lecture 2",
           "startDate": "2026-12-28",
           "endDate": "2027-01-10",
           "duration": "2 Minggu",
@@ -2331,7 +2331,7 @@
           "semua": true
         },
         {
-          "name": "Kuliah 1",
+          "name": "Lecture 1",
           "startDate": "2027-03-15",
           "endDate": "2027-05-16",
           "duration": "9 Minggu",
@@ -2349,7 +2349,7 @@
           "semua": true
         },
         {
-          "name": "Kuliah 2",
+          "name": "Lecture 2",
           "startDate": "2027-05-17",
           "endDate": "2027-05-29",
           "duration": "2 Minggu",
@@ -2369,7 +2369,7 @@
           "details": "Hari Perayaan Tadau Kaamatan - 30 & 31 Mei, Hari Gawai - 1 & 2 Jun"
         },
         {
-          "name": "Kuliah 3",
+          "name": "Lecture 3",
           "startDate": "2027-06-07",
           "endDate": "2027-06-27",
           "duration": "3 Minggu",
@@ -2426,7 +2426,7 @@
           "semua": true
         },
         {
-          "name": "Semester Pendek (202733)",
+          "name": "Short Semester (202733)",
           "startDate": "2027-07-19",
           "endDate": "2027-09-05",
           "duration": "7 Minggu",
@@ -2435,7 +2435,7 @@
           "semua": true
         },
         {
-          "name": "Kuliah Intersesi (20273)",
+          "name": "Intersession Classes (20273)",
           "startDate": "2027-08-02",
           "endDate": "2027-09-05",
           "duration": "5 Minggu",
@@ -2444,7 +2444,7 @@
           "semua": true
         },
         {
-          "name": "Peperiksaan/Penilaian Khas/Intersesi/Semester Pendek",
+          "name": "Peperiksaan/Penilaian Khas/Intersesi/Short Semester",
           "startDate": "2027-09-06",
           "endDate": "2027-09-12",
           "duration": "1 Minggu",

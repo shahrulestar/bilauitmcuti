@@ -11,7 +11,7 @@ Base URL: https://cutiuitm.xyz
 - **View Modes**: List view and Grid view for browsing the calendar
 - **Program Selection**: All programs, or by program: Foundation/Professional, Pre-Diploma, Diploma, Diploma (Part-Time), Bachelor, Bachelor (Part-Time), Master, PhD
 - **Group-based Schedules**: Group A (Foundation/Professional) and Group B (Pre-Diploma onwards) with different schedules
-- **Activity Filters**: Toggle visibility of Registration, Lecture, Semester Pendek, Kuliah Intersesi, Examination, Others Exams, and Break
+- **Activity Filters**: Toggle visibility of Registration, Lecture, Short Semester, Intersession Classes, Examination, Others Exams, and Break
 - **KKT State Support**: Special dates for Kedah, Kelantan, and Terengganu
 - **Theme**: Light and Dark mode
 - **Responsive Design**: Works on desktop and mobile
@@ -65,7 +65,7 @@ Layari cutiuitm.xyz, pilih program anda (Foundation, Diploma, Bachelor, dll), da
 Cuti semester UiTM berbeza mengikut kumpulan program dan sesi. Semak tarikh cuti semester lengkap di cutiuitm.xyz dengan memilih program anda.
 
 ## Data Structure
-Activities are defined by: month/year, program group (A or B), activity type (registration, lecture, examination, break, other), start and end dates, optional KKT state variants. Types include Semester Pendek and Kuliah Intersesi where applicable. Each activity may have a programType (PreDiploma, Diploma, DiplomaPartTime, Bachelor, BachelorPartTime, Master, PhD) or semua flag for all students.
+Activities are defined by: month/year, program group (A or B), activity type (registration, lecture, examination, break, other), start and end dates, optional KKT state variants. Types include Short Semester and Intersession Classes where applicable. Each activity may have a programType (PreDiploma, Diploma, DiplomaPartTime, Bachelor, BachelorPartTime, Master, PhD) or semua flag for all students.
 
 ## Structured Data (JSON-LD)
 The site uses the following Schema.org types:

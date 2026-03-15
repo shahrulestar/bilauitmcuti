@@ -207,10 +207,10 @@ export function CalendarControls({
   }, [selectedSessions]);
   const activityChecks = useMemo(() => ({
     hasSemesterPendek: sessionActivities.some(
-      a => a.type === 'lecture' && a.name.includes('Semester Pendek')
+      a => a.type === 'lecture' && (a.name.includes('Short Semester') || a.name.includes('Semester Pendek'))
     ),
     hasKuliahIntersesi: sessionActivities.some(
-      a => a.type === 'lecture' && a.name.includes('Intersesi')
+      a => a.type === 'lecture' && (a.name.includes('Intersession Classes') || a.name.includes('Intersesi'))
     ),
     hasOthersExams: sessionActivities.some(
       a => a.type === 'examination' && a.name.includes('Khas')
@@ -526,7 +526,7 @@ export function CalendarControls({
                     {hasSemesterPendek && (
                     <label className="flex items-center justify-between cursor-pointer py-0.5 pl-4 transition-none">
                       <div className="flex items-center gap-2">
-                        <span className="text-xs font-medium text-muted-foreground">Semester Pendek</span>
+                        <span className="text-xs font-medium text-muted-foreground">Short Semester</span>
                       </div>
                       <div className={`relative inline-flex h-6 w-11 items-center rounded-full transition-none ${showSemesterPendek ? 'bg-primary' : 'bg-muted'}`}
                         style={{ transition: 'none' }}
@@ -540,7 +540,7 @@ export function CalendarControls({
                           checked={showSemesterPendek}
                           onChange={(e) => onShowSemesterPendekChange(e.target.checked)}
                           className="sr-only"
-                          aria-label="Toggle Semester Pendek events"
+                          aria-label="Toggle Short Semester events"
                         />
                       </div>
                     </label>
@@ -549,7 +549,7 @@ export function CalendarControls({
                     {hasKuliahIntersesi && (
                     <label className="flex items-center justify-between cursor-pointer py-0.5 pl-4 transition-none">
                       <div className="flex items-center gap-2">
-                        <span className="text-xs font-medium text-muted-foreground">Kuliah Intersesi</span>
+                        <span className="text-xs font-medium text-muted-foreground">Intersession Classes</span>
                       </div>
                       <div className={`relative inline-flex h-6 w-11 items-center rounded-full transition-none ${showKuliahIntersesi ? 'bg-primary' : 'bg-muted'}`}
                         style={{ transition: 'none' }}
@@ -563,7 +563,7 @@ export function CalendarControls({
                           checked={showKuliahIntersesi}
                           onChange={(e) => onShowKuliahIntersesiChange(e.target.checked)}
                           className="sr-only"
-                          aria-label="Toggle Kuliah Intersesi events"
+                          aria-label="Toggle Intersession Classes events"
                         />
                       </div>
                     </label>

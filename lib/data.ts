@@ -270,8 +270,16 @@ export function shouldIncludeActivity(
   if (activity.type === 'examination' && !showExamination) return false;
   if (activity.type === 'break' && !showBreak) return false;
 
-  if (activity.type === 'lecture' && activity.name.includes('Semester Pendek') && !showSemesterPendek) return false;
-  if (activity.type === 'lecture' && activity.name.includes('Intersesi') && !showKuliahIntersesi) return false;
+  if (
+    activity.type === 'lecture' &&
+    (activity.name.includes('Short Semester') || activity.name.includes('Semester Pendek')) &&
+    !showSemesterPendek
+  ) return false;
+  if (
+    activity.type === 'lecture' &&
+    (activity.name.includes('Intersession Classes') || activity.name.includes('Intersesi')) &&
+    !showKuliahIntersesi
+  ) return false;
   if (activity.type === 'examination' && (activity.name.includes('Khas') || activity.name.includes('English Exit Test') || activity.name.includes('EET Lisan') || activity.name.includes('EET Speaking')) && !showOthersExams) return false;
 
   if (selectedProgram === 'All') return true;

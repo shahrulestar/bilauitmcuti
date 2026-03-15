@@ -77,6 +77,9 @@ const CALENDAR_KEYWORDS = [
   "break",
   "kuliah",
   "lecture",
+  "lectures",
+  "class",
+  "classes",
   "pendaftaran",
   "registration",
   "minggu ulangkaji",
@@ -94,6 +97,8 @@ const CALENDAR_KEYWORDS = [
   "hari raya",
   "aidil",
   "mds",
+  "short semester",
+  "intersession classes",
 ];
 
 function isCalendarQuestion(message: string): boolean {
