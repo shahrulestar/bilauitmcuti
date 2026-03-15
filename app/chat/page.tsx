@@ -10,6 +10,7 @@ import {
   getGroupFromSession,
 } from "@/lib/data";
 import type { SessionId } from "@/lib/data";
+import { getRoutePath } from "@/lib/route-utils";
 import type { ProgramValue } from "@/lib/route-utils";
 import {
   DropdownMenu,
@@ -548,17 +549,8 @@ export default function ChatPage() {
 
   const currentProgramLabel = useMemo(() => {
     const opt = programOptions.find((p) => p.value === selectedProgram);
-    if (!opt) return "All";
-    const sessionLabels = selectedSessions
-      .map((sid) => {
-        const sess = getSessionOptionsForGroup(getGroupFromSession(sid)).find((s) => s.id === sid);
-        return sess?.label.replace(/^Group [AB]:\s*/, "") ?? sid;
-      })
-      .filter(Boolean);
-    if (sessionLabels.length === 0) return opt.label;
-    if (sessionLabels.length === 1) return `${opt.label} · ${sessionLabels[0]}`;
-    return `${opt.label} · ${sessionLabels.length} sessions`;
-  }, [selectedProgram, selectedSessions]);
+    return opt?.label ?? "All";
+  }, [selectedProgram]);
   const [disclaimerIndex, setDisclaimerIndex] = useState(0);
   const [disclaimerFade, setDisclaimerFade] = useState<"in" | "out">("in");
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -570,6 +562,18 @@ export default function ChatPage() {
   const groupBProgramForSessions = groupBOptions.some((p) => p.value === selectedProgram)
     ? selectedProgram
     : ("All" as ProgramValue);
+  const groupBSessionLabel = useMemo(() => {
+    if (currentGroup === "A") return "";
+    const labels = selectedSessions
+      .filter((sessionId) => sessionId.startsWith("B-"))
+      .map((sessionId) => {
+        const session = getSessionOptionsForGroup("B").find((item) => item.id === sessionId);
+        return session?.label.replace(/^Group B:\s*/, "") ?? sessionId;
+      });
+    if (labels.length === 0) return "Select sessions";
+    if (labels.length === 1) return labels[0];
+    return `${labels.length} Selected`;
+  }, [currentGroup, selectedSessions]);
   const [emblaRef] = useEmblaCarousel({ dragFree: true, containScroll: "trimSnaps", align: "center" });
 
   const lastAssistantId = useMemo(() => {
@@ -847,7 +851,7 @@ export default function ChatPage() {
       <div className={`chat-header absolute top-0 left-0 right-0 z-10 px-4 md:px-0 ${headerVisible ? "translate-y-0" : "-translate-y-full"}`}>
         <header className="flex items-center gap-3 py-3 mx-auto max-w-[600px] w-full">
           <button
-            onClick={() => router.push("/")}
+            onClick={() => router.push(getRoutePath(selectedProgram, "grid"))}
             className="flex items-center justify-center w-9 h-9 rounded-full bg-secondary hover:bg-secondary/80 dark:bg-[#2A2A2A] dark:hover:bg-[#333] transition-colors"
             aria-label="Back to home"
           >
@@ -1112,40 +1116,60 @@ export default function ChatPage() {
                   <div className="-mx-1 px-1">
                     <div>
                       <div className="text-xs font-semibold text-muted-foreground mb-2 px-2">GROUP B</div>
-                      {/* Session list - direct click */}
-                      {getSessionOptionsForGroup("B").map((sess) => {
-                        const isSelected = selectedSessions.includes(sess.id);
-                        return (
-                          <DropdownMenuItem
-                            key={sess.id}
-                            className={`relative cursor-pointer pl-8 bg-transparent data-[highlighted]:bg-transparent ${isSelected ? "text-primary data-[highlighted]:text-primary" : "data-[highlighted]:text-foreground"}`}
-                            onSelect={(event) => {
-                              keepDropdownOpenRef.current = true;
-                              event.preventDefault();
-                            }}
-                            onClick={() =>
-                              handleSessionToggle(groupBProgramForSessions, sess.id, "B")
-                            }
-                          >
-                            <span
-                              className={`pointer-events-none absolute left-2 flex size-3.5 shrink-0 items-center justify-center rounded-full border ${isSelected ? "border-primary bg-primary" : "border-muted-foreground"}`}
-                              aria-hidden
-                            />
-                            {sess.label.replace(/^Group B:\s*/, "")}
-                          </DropdownMenuItem>
-                        );
-                      })}
+                      <DropdownMenuSub
+                        open={activeSubmenu === "group-b-sessions"}
+                        onOpenChange={(open) => setActiveSubmenu(open ? "group-b-sessions" : null)}
+                      >
+                        <DropdownMenuSubTrigger
+                          className="cursor-pointer"
+                          onSelect={(event) => {
+                            keepDropdownOpenRef.current = true;
+                            event.preventDefault();
+                          }}
+                        >
+                          <div className="flex w-full items-center justify-between gap-3">
+                            <span className="font-medium text-sm">Sessions</span>
+                            <span className="text-xs text-muted-foreground">{groupBSessionLabel}</span>
+                          </div>
+                        </DropdownMenuSubTrigger>
+                        <DropdownMenuPortal>
+                          <DropdownMenuSubContent className="min-w-[220px] bg-popover dark:bg-[#2A2A2A] border border-border">
+                            {getSessionOptionsForGroup("B").map((sess) => {
+                              const isSelected = selectedSessions.includes(sess.id);
+                              return (
+                                <DropdownMenuItem
+                                  key={sess.id}
+                                  className={`relative cursor-pointer pl-8 bg-transparent data-[highlighted]:bg-transparent ${isSelected ? "text-primary data-[highlighted]:text-primary" : "data-[highlighted]:text-foreground"}`}
+                                  onSelect={(event) => {
+                                    keepDropdownOpenRef.current = true;
+                                    event.preventDefault();
+                                  }}
+                                  onClick={() =>
+                                    handleSessionToggle(groupBProgramForSessions, sess.id, "B")
+                                  }
+                                >
+                                  <span
+                                    className={`pointer-events-none absolute left-2 flex size-3.5 shrink-0 items-center justify-center rounded-full border ${isSelected ? "border-primary bg-primary" : "border-muted-foreground"}`}
+                                    aria-hidden
+                                  />
+                                  {sess.label.replace(/^Group B:\s*/, "")}
+                                </DropdownMenuItem>
+                              );
+                            })}
+                          </DropdownMenuSubContent>
+                        </DropdownMenuPortal>
+                      </DropdownMenuSub>
                       <div className="my-2 h-px bg-border -mx-3 w-[calc(100%+1.5rem)]" />
                       {/* Program list - direct click */}
                       {groupBOptions.map((opt) => (
                         <DropdownMenuItem
                           key={opt.value}
                           className={`cursor-pointer bg-transparent data-[highlighted]:bg-transparent ${opt.value === selectedProgram ? "text-primary data-[highlighted]:text-primary font-medium" : "data-[highlighted]:text-foreground"}`}
-                          onSelect={(event) => {
-                            keepDropdownOpenRef.current = true;
-                            event.preventDefault();
+                          onClick={() => {
+                            setActiveSubmenu(null);
+                            setDropdownOpen(false);
+                            handleProgramSelect(opt.value as ProgramValue);
                           }}
-                          onClick={() => handleProgramSelect(opt.value as ProgramValue)}
                         >
                           {opt.label}
                         </DropdownMenuItem>

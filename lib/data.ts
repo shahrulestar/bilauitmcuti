@@ -39,16 +39,65 @@ export const defaultSession: SessionId = (calendarData as { defaultSession?: str
 export const programOptions = (calendarData as { programOptions: Array<{ label: string; value: string; group: "A" | "B" }> }).programOptions;
 
 const sessionsData = (calendarData as { sessions?: Record<string, { activities: Activity[] }> }).sessions ?? {};
+const sessionGroupById = new Map(sessionOptions.map((session) => [session.id, session.group] as const));
+
+function normalizeDateString(dateStr: string): string {
+  const ymd = /^(\d{4})-(\d{2})-(\d{2})$/;
+  const dmy = /^(\d{2})-(\d{2})-(\d{4})$/;
+  const ymdMatch = dateStr.match(ymd);
+  if (ymdMatch) return dateStr;
+  const dmyMatch = dateStr.match(dmy);
+  if (dmyMatch) {
+    const [, day, month, year] = dmyMatch;
+    return `${year}-${month}-${day}`;
+  }
+  return dateStr;
+}
+
+function toDateOrNull(dateStr: string | undefined): Date | null {
+  if (!dateStr) return null;
+  const normalized = normalizeDateString(dateStr);
+  const date = new Date(normalized);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function getDefaultMonthsWindow(count: number = 6): Array<{ month: number; year: number }> {
+  const now = new Date();
+  const months: Array<{ month: number; year: number }> = [];
+  const cursor = new Date(now.getFullYear(), now.getMonth(), 1);
+  for (let i = 0; i < count; i += 1) {
+    months.push({ month: cursor.getMonth() + 1, year: cursor.getFullYear() });
+    cursor.setMonth(cursor.getMonth() + 1);
+  }
+  return months;
+}
+
+function getMonthsBetweenDates(startDate: Date, endDate: Date): Array<{ month: number; year: number }> {
+  const months: Array<{ month: number; year: number }> = [];
+  const cursor = new Date(startDate.getFullYear(), startDate.getMonth(), 1);
+  const endMonth = new Date(endDate.getFullYear(), endDate.getMonth(), 1);
+  while (cursor <= endMonth) {
+    months.push({ month: cursor.getMonth() + 1, year: cursor.getFullYear() });
+    cursor.setMonth(cursor.getMonth() + 1);
+  }
+  return months;
+}
 
 /** Get activities for a session. Returns empty array if session not found. */
 export function getActivitiesForSession(sessionId: SessionId): Activity[] {
   const session = sessionsData[sessionId];
-  return (session?.activities ?? []) as Activity[];
+  return ((session?.activities ?? []) as Activity[]).map((activity) => ({
+    ...activity,
+    startDate: normalizeDateString(activity.startDate),
+    endDate: activity.endDate ? normalizeDateString(activity.endDate) : undefined,
+    regionalStartDate: activity.regionalStartDate ? normalizeDateString(activity.regionalStartDate) : undefined,
+    regionalEndDate: activity.regionalEndDate ? normalizeDateString(activity.regionalEndDate) : undefined,
+  }));
 }
 
 /** Get group from session ID (A-* = A, B-* = B). */
 export function getGroupFromSession(sessionId: SessionId): ProgramGroup {
-  return sessionId.startsWith("A-") ? "A" : "B";
+  return sessionGroupById.get(sessionId) ?? (sessionId.startsWith("A-") ? "A" : "B");
 }
 
 /** Get default session for a group (first session in options for that group). */
@@ -61,11 +110,12 @@ export function getDefaultSessionForGroup(group: ProgramGroup): SessionId {
 function getSessionDateRange(sessionId: SessionId): { start: string; end: string } | null {
   const activities = getActivitiesForSession(sessionId);
   if (activities.length === 0) return null;
-  let start = activities[0]!.startDate;
-  let end = activities[0]!.endDate ?? activities[0]!.startDate;
+  let start = normalizeDateString(activities[0]!.startDate);
+  let end = normalizeDateString(activities[0]!.endDate ?? activities[0]!.startDate);
   for (const a of activities) {
-    if (a.startDate < start) start = a.startDate;
-    const e = a.endDate ?? a.startDate;
+    const activityStart = normalizeDateString(a.startDate);
+    if (activityStart < start) start = activityStart;
+    const e = normalizeDateString(a.endDate ?? a.startDate);
     if (e > end) end = e;
   }
   return { start, end };
@@ -75,17 +125,18 @@ function getSessionDateRange(sessionId: SessionId): { start: string; end: string
 export function getSessionForCurrentDate(group: ProgramGroup, dateStr: string): SessionId {
   const opts = getSessionOptionsForGroup(group);
   if (opts.length === 0) return getDefaultSessionForGroup(group);
+  const normalizedDate = normalizeDateString(dateStr);
 
   // Find session that contains this date
   for (const s of opts) {
     const range = getSessionDateRange(s.id);
-    if (range && dateStr >= range.start && dateStr <= range.end) return s.id;
+    if (range && normalizedDate >= range.start && normalizedDate <= range.end) return s.id;
   }
 
   // Find nearest future session
   const future = opts.find((s) => {
     const range = getSessionDateRange(s.id);
-    return range && range.start > dateStr;
+    return range && range.start > normalizedDate;
   });
   if (future) return future.id;
 
@@ -171,15 +222,16 @@ export function matchesActivityDate(
   dateStr: string,
   showKKT: boolean
 ): boolean {
-  const targetDate = new Date(dateStr);
+  const targetDate = toDateOrNull(dateStr);
+  if (!targetDate) return false;
   let startDate: Date;
   let endDate: Date;
-  if (showKKT && activity.regionalStartDate) {
-    startDate = new Date(activity.regionalStartDate);
-    endDate = activity.regionalEndDate ? new Date(activity.regionalEndDate) : startDate;
+  if (showKKT && activity.regionalStartDate && toDateOrNull(activity.regionalStartDate)) {
+    startDate = toDateOrNull(activity.regionalStartDate)!;
+    endDate = toDateOrNull(activity.regionalEndDate) ?? startDate;
   } else {
-    startDate = new Date(activity.startDate);
-    endDate = activity.endDate ? new Date(activity.endDate) : startDate;
+    startDate = toDateOrNull(activity.startDate) ?? targetDate;
+    endDate = toDateOrNull(activity.endDate) ?? startDate;
   }
   return targetDate >= startDate && targetDate <= endDate;
 }
@@ -261,12 +313,14 @@ export function getActivitiesForMonth(
 
     let startDate: Date;
     let endDate: Date;
-    if (showKKT && activity.regionalStartDate) {
-      startDate = new Date(activity.regionalStartDate);
-      endDate = activity.regionalEndDate ? new Date(activity.regionalEndDate) : startDate;
+    if (showKKT && activity.regionalStartDate && toDateOrNull(activity.regionalStartDate)) {
+      startDate = toDateOrNull(activity.regionalStartDate)!;
+      endDate = toDateOrNull(activity.regionalEndDate) ?? startDate;
     } else {
-      startDate = new Date(activity.startDate);
-      endDate = activity.endDate ? new Date(activity.endDate) : startDate;
+      const parsedStart = toDateOrNull(activity.startDate);
+      if (!parsedStart) return false;
+      startDate = parsedStart;
+      endDate = toDateOrNull(activity.endDate) ?? startDate;
     }
 
     const monthStart = new Date(year, month - 1, 1);
@@ -278,12 +332,14 @@ export function getActivitiesForMonth(
 // Format date range in English
 export function formatDateRange(startDate: string, endDate?: string): string {
   // Parse dates as UTC to ensure consistency between server and client
-  const [startYear, startMonth, startDay] = startDate.split('-').map(Number);
+  const normalizedStartDate = normalizeDateString(startDate);
+  const [startYear, startMonth, startDay] = normalizedStartDate.split('-').map(Number);
   const start = new Date(Date.UTC(startYear, startMonth - 1, startDay));
   
   let end: Date;
   if (endDate) {
-    const [endYear, endMonth, endDay] = endDate.split('-').map(Number);
+    const normalizedEndDate = normalizeDateString(endDate);
+    const [endYear, endMonth, endDay] = normalizedEndDate.split('-').map(Number);
     end = new Date(Date.UTC(endYear, endMonth - 1, endDay));
   } else {
     end = start;
@@ -309,8 +365,10 @@ export function formatDateRange(startDate: string, endDate?: string): string {
 /** Days from today to activity start (UTC-normalized). Returns null if start is today or in the past. */
 export function getDaysUntilStart(activity: Activity, todayStr: string, showKKT?: boolean): number | null {
   const startStr = showKKT && activity.regionalStartDate ? activity.regionalStartDate : activity.startDate;
-  const [startYear, startMonth, startDay] = startStr.split('-').map(Number);
-  const [todayYear, todayMonth, todayDay] = todayStr.split('-').map(Number);
+  const normalizedStartStr = normalizeDateString(startStr);
+  const normalizedTodayStr = normalizeDateString(todayStr);
+  const [startYear, startMonth, startDay] = normalizedStartStr.split('-').map(Number);
+  const [todayYear, todayMonth, todayDay] = normalizedTodayStr.split('-').map(Number);
   const start = new Date(Date.UTC(startYear, startMonth - 1, startDay));
   const today = new Date(Date.UTC(todayYear, todayMonth - 1, todayDay));
   const diffMs = start.getTime() - today.getTime();
@@ -387,26 +445,13 @@ export function getMonthsForGroup(
   }
 
   if (relevantDates.length === 0) {
-    // Return default months if no activities found
-    if (group === 'A') {
-      return [
-        { month: 12, year: 2025 },
-        { month: 1, year: 2026 },
-        { month: 2, year: 2026 },
-        { month: 3, year: 2026 },
-        { month: 4, year: 2026 },
-        { month: 5, year: 2026 },
-      ];
-    } else {
-      return [
-        { month: 3, year: 2026 },
-        { month: 4, year: 2026 },
-        { month: 5, year: 2026 },
-        { month: 6, year: 2026 },
-        { month: 7, year: 2026 },
-        { month: 8, year: 2026 },
-      ];
+    const sessionRange = getSessionDateRange(sessionId);
+    if (sessionRange) {
+      const rangeStart = toDateOrNull(sessionRange.start);
+      const rangeEnd = toDateOrNull(sessionRange.end);
+      if (rangeStart && rangeEnd) return getMonthsBetweenDates(rangeStart, rangeEnd);
     }
+    return getDefaultMonthsWindow();
   }
 
   // Find min and max dates
@@ -463,10 +508,7 @@ export function getMonthsForSessions(
   options: GetMonthsOptions
 ): Array<{ month: number; year: number }> {
   if (sessionIds.length === 0) {
-    const group = 'A';
-    return group === 'A'
-      ? [{ month: 12, year: 2025 }, { month: 1, year: 2026 }, { month: 2, year: 2026 }, { month: 3, year: 2026 }, { month: 4, year: 2026 }, { month: 5, year: 2026 }]
-      : [{ month: 3, year: 2026 }, { month: 4, year: 2026 }, { month: 5, year: 2026 }, { month: 6, year: 2026 }, { month: 7, year: 2026 }, { month: 8, year: 2026 }];
+    return getDefaultMonthsWindow();
   }
   const monthSet = new Set<string>();
   for (const sid of sessionIds) {
@@ -482,10 +524,17 @@ export function getMonthsForSessions(
     })
     .sort((a, b) => (a.year !== b.year ? a.year - b.year : a.month - b.month));
   if (months.length === 0) {
-    const group = getGroupFromSession(sessionIds[0]!);
-    return group === 'A'
-      ? [{ month: 12, year: 2025 }, { month: 1, year: 2026 }, { month: 2, year: 2026 }, { month: 3, year: 2026 }, { month: 4, year: 2026 }, { month: 5, year: 2026 }]
-      : [{ month: 3, year: 2026 }, { month: 4, year: 2026 }, { month: 5, year: 2026 }, { month: 6, year: 2026 }, { month: 7, year: 2026 }, { month: 8, year: 2026 }];
+    const fallbackMonths = getMonthsForGroup(sessionIds[0]!, {
+      ...options,
+      showRegistration: true,
+      showLecture: true,
+      showExamination: true,
+      showOthersExams: true,
+      showBreak: true,
+      showSemesterPendek: true,
+      showKuliahIntersesi: true,
+    });
+    return fallbackMonths.length > 0 ? fallbackMonths : getDefaultMonthsWindow();
   }
   return months;
 }

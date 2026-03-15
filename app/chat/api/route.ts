@@ -120,7 +120,19 @@ function isComparisonQuestion(message: string): boolean {
 }
 
 function getActivityDedupeKey(a: Activity): string {
-  return [a.name, a.startDate, a.endDate ?? "", a.type].join("|");
+  return [
+    a.name,
+    a.startDate,
+    a.endDate ?? "",
+    a.type,
+    a.group ?? "",
+    a.programType ?? "",
+    a.semua ? "1" : "0",
+    a.details ?? "",
+    a.duration ?? "",
+    a.regionalStartDate ?? "",
+    a.regionalEndDate ?? "",
+  ].join("|");
 }
 
 function dedupeActivities(activities: Activity[]): Activity[] {
@@ -191,8 +203,28 @@ function getTodayISO(): string {
   return `${y}-${m}-${d}`;
 }
 
+function normalizeDateString(dateStr: string): string {
+  const ymd = /^(\d{4})-(\d{2})-(\d{2})$/;
+  const dmy = /^(\d{2})-(\d{2})-(\d{4})$/;
+  const ymdMatch = dateStr.match(ymd);
+  if (ymdMatch) return dateStr;
+  const dmyMatch = dateStr.match(dmy);
+  if (dmyMatch) {
+    const [, day, month, year] = dmyMatch;
+    return `${year}-${month}-${day}`;
+  }
+  return dateStr;
+}
+
+function toComparableDateValue(dateStr: string): number {
+  const normalized = normalizeDateString(dateStr);
+  const value = new Date(normalized).getTime();
+  return Number.isNaN(value) ? Number.POSITIVE_INFINITY : value;
+}
+
 function toDateFormat(dateStr: string): string {
-  const match = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  const normalized = normalizeDateString(dateStr);
+  const match = normalized.match(/^(\d{4})-(\d{2})-(\d{2})$/);
   if (match) {
     return `${match[3]}-${match[2]}-${match[1]}`;
   }
@@ -204,7 +236,8 @@ function toReadableDate(dateStr: string): string {
     "January", "February", "March", "April", "May", "June",
     "July", "August", "September", "October", "November", "December",
   ];
-  const match = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  const normalized = normalizeDateString(dateStr);
+  const match = normalized.match(/^(\d{4})-(\d{2})-(\d{2})$/);
   if (match) {
     const day = parseInt(match[3], 10);
     const monthIdx = parseInt(match[2], 10) - 1;
@@ -215,7 +248,9 @@ function toReadableDate(dateStr: string): string {
 
 function formatActivitiesAsContext(activities: Activity[]): string {
   // Sort chronologically by startDate for clearer AI reasoning
-  const sorted = [...activities].sort((a, b) => a.startDate.localeCompare(b.startDate));
+  const sorted = [...activities].sort(
+    (a, b) => toComparableDateValue(a.startDate) - toComparableDateValue(b.startDate)
+  );
 
   return sorted
     .map((a) => {
@@ -238,26 +273,33 @@ function formatActivitiesAsContext(activities: Activity[]): string {
  * This gives immediate answers for common "next break / next exam" questions.
  */
 function computeQuickReference(activities: Activity[], todayISO: string): string {
-  const sorted = [...activities].sort((a, b) => a.startDate.localeCompare(b.startDate));
+  const sorted = [...activities].sort(
+    (a, b) => toComparableDateValue(a.startDate) - toComparableDateValue(b.startDate)
+  );
+  const todayValue = toComparableDateValue(todayISO);
 
   // Find current activities (happening right now)
   const currentActivities = sorted.filter(
-    (a) => a.startDate <= todayISO && (a.endDate ?? a.startDate) >= todayISO
+    (a) => {
+      const start = toComparableDateValue(a.startDate);
+      const end = toComparableDateValue(a.endDate ?? a.startDate);
+      return start <= todayValue && end >= todayValue;
+    }
   );
 
   // Find next upcoming break (type=break, starts after today)
   const nextBreak = sorted.find(
-    (a) => a.type === "break" && a.startDate > todayISO
+    (a) => a.type === "break" && toComparableDateValue(a.startDate) > todayValue
   );
 
   // Find next upcoming exam
   const nextExam = sorted.find(
-    (a) => a.type === "examination" && a.startDate > todayISO
+    (a) => a.type === "examination" && toComparableDateValue(a.startDate) > todayValue
   );
 
   // Find semester break (Cuti Semester)
   const semesterBreak = sorted.find(
-    (a) => a.name.includes("Cuti Semester") && a.startDate > todayISO
+    (a) => a.name.includes("Cuti Semester") && toComparableDateValue(a.startDate) > todayValue
   );
 
   const lines: string[] = [];
@@ -319,7 +361,9 @@ function buildComparisonContext(
     const sess = sessionOptions.find((s) => s.id === sid);
     const label = sess?.label.replace(/^Group [AB]:\s*/, "") ?? sid;
     const activities = getActivitiesFromSessions([sid], program, group);
-    const sorted = [...activities].sort((a, b) => a.startDate.localeCompare(b.startDate));
+    const sorted = [...activities].sort(
+      (a, b) => toComparableDateValue(a.startDate) - toComparableDateValue(b.startDate)
+    );
     const keyEvents = sorted.filter(
       (a) =>
         a.type === "lecture" ||

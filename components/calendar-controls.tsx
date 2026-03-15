@@ -167,6 +167,19 @@ export function CalendarControls({
   const groupBProgramForSessions = groupBOptions.some((p) => p.value === selectedProgram)
     ? (selectedProgram as ProgramValue)
     : ('All' as ProgramValue);
+  const groupBSessionLabel = useMemo(() => {
+    const isGroupASelected = groupAOptions.some((option) => option.value === selectedProgram);
+    if (isGroupASelected) return '';
+    const labels = selectedSessions
+      .filter((sessionId) => sessionId.startsWith('B-'))
+      .map((sessionId) => {
+        const session = getSessionOptionsForGroup('B').find((item) => item.id === sessionId);
+        return session?.label.replace(/^Group B:\s*/, '') ?? sessionId;
+      });
+    if (labels.length === 0) return 'Select sessions';
+    if (labels.length === 1) return labels[0];
+    return `${labels.length} Selected`;
+  }, [groupAOptions, selectedProgram, selectedSessions]);
 
   // Memoize current program and session labels
   const currentProgramLabel = useMemo(() => 
@@ -330,38 +343,58 @@ export function CalendarControls({
                 {/* Group B: Session list, separator, program list */}
                 <div>
                   <div className="text-xs font-semibold text-muted-foreground mb-2 px-2">GROUP B</div>
-                  {/* Session list - direct click */}
-                  {getSessionOptionsForGroup('B').map((sess) => {
-                    const isSelected = selectedSessions.includes(sess.id);
-                    return (
-                      <DropdownMenuItem
-                        key={sess.id}
-                        className={`relative cursor-pointer pl-8 bg-transparent data-[highlighted]:bg-transparent ${isSelected ? 'text-primary data-[highlighted]:text-primary' : 'data-[highlighted]:text-foreground'}`}
-                        onSelect={(event) => {
-                          keepDropdownOpenRef.current = true;
-                          event.preventDefault();
-                        }}
-                        onClick={() => handleSessionToggle(groupBProgramForSessions, sess.id, 'B')}
-                      >
-                        <span
-                          className={`pointer-events-none absolute left-2 flex size-3.5 shrink-0 items-center justify-center rounded-full border ${isSelected ? 'border-primary bg-primary' : 'border-muted-foreground'}`}
-                          aria-hidden
-                        />
-                        {sess.label.replace(/^Group B:\s*/, '')}
-                      </DropdownMenuItem>
-                    );
-                  })}
+                  <DropdownMenuSub
+                    open={activeSubmenu === 'group-b-sessions'}
+                    onOpenChange={(open) => setActiveSubmenu(open ? 'group-b-sessions' : null)}
+                  >
+                    <DropdownMenuSubTrigger
+                      className="cursor-pointer"
+                      onSelect={(event) => {
+                        keepDropdownOpenRef.current = true;
+                        event.preventDefault();
+                      }}
+                    >
+                      <div className="flex w-full items-center justify-between gap-3">
+                        <span className="font-medium text-sm">Sessions</span>
+                        <span className="text-xs text-muted-foreground">{groupBSessionLabel}</span>
+                      </div>
+                    </DropdownMenuSubTrigger>
+                    <DropdownMenuPortal>
+                      <DropdownMenuSubContent className="min-w-[220px] bg-popover dark:bg-[#2A2A2A] border border-border">
+                        {getSessionOptionsForGroup('B').map((sess) => {
+                          const isSelected = selectedSessions.includes(sess.id);
+                          return (
+                            <DropdownMenuItem
+                              key={sess.id}
+                              className={`relative cursor-pointer pl-8 bg-transparent data-[highlighted]:bg-transparent ${isSelected ? 'text-primary data-[highlighted]:text-primary' : 'data-[highlighted]:text-foreground'}`}
+                              onSelect={(event) => {
+                                keepDropdownOpenRef.current = true;
+                                event.preventDefault();
+                              }}
+                              onClick={() => handleSessionToggle(groupBProgramForSessions, sess.id, 'B')}
+                            >
+                              <span
+                                className={`pointer-events-none absolute left-2 flex size-3.5 shrink-0 items-center justify-center rounded-full border ${isSelected ? 'border-primary bg-primary' : 'border-muted-foreground'}`}
+                                aria-hidden
+                              />
+                              {sess.label.replace(/^Group B:\s*/, '')}
+                            </DropdownMenuItem>
+                          );
+                        })}
+                      </DropdownMenuSubContent>
+                    </DropdownMenuPortal>
+                  </DropdownMenuSub>
                   <div className="my-2 h-px bg-border -mx-3 w-[calc(100%+1.5rem)]" />
                   {/* Program list - direct click */}
                   {groupBOptions.map((option) => (
                     <DropdownMenuItem
                       key={option.value}
                       className={`cursor-pointer bg-transparent data-[highlighted]:bg-transparent ${option.value === selectedProgram ? 'text-primary data-[highlighted]:text-primary font-medium' : 'data-[highlighted]:text-foreground'}`}
-                      onSelect={(event) => {
-                        keepDropdownOpenRef.current = true;
-                        event.preventDefault();
+                      onClick={() => {
+                        setActiveSubmenu(null);
+                        setDropdownOpen(false);
+                        handleProgramSelect(option.value as ProgramValue);
                       }}
-                      onClick={() => handleProgramSelect(option.value as ProgramValue)}
                     >
                       {option.label}
                     </DropdownMenuItem>
