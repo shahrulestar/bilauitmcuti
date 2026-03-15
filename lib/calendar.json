@@ -205,7 +205,7 @@
           "startDate": "2025-12-22",
           "endDate": "2026-01-18",
           "duration": "4 Minggu",
-          "type": "lecture",
+          "type": "other",
           "group": "A"
         },
         {
@@ -262,7 +262,7 @@
           "startDate": "2026-04-06",
           "endDate": "2026-04-19",
           "duration": "2 Minggu",
-          "type": "lecture",
+          "type": "other",
           "group": "A"
         },
         {
@@ -270,7 +270,7 @@
           "startDate": "2026-04-06",
           "endDate": "2026-05-10",
           "duration": "5 Minggu",
-          "type": "lecture",
+          "type": "other",
           "group": "A"
         },
         {
@@ -491,7 +491,7 @@
           "startDate": "2026-06-15",
           "endDate": "2026-07-12",
           "duration": "4 Minggu",
-          "type": "lecture",
+          "type": "other",
           "group": "A"
         },
         {
@@ -523,7 +523,7 @@
           "startDate": "2026-09-14",
           "endDate": "2026-10-04",
           "duration": "3 Minggu",
-          "type": "lecture",
+          "type": "other",
           "group": "A"
         },
         {
@@ -531,7 +531,7 @@
           "startDate": "2026-09-21",
           "endDate": "2026-10-25",
           "duration": "5 Minggu",
-          "type": "lecture",
+          "type": "other",
           "group": "A"
         },
         {
@@ -729,7 +729,7 @@
           "startDate": "2026-11-23",
           "endDate": "2026-12-20",
           "duration": "4 Minggu",
-          "type": "lecture",
+          "type": "other",
           "group": "A"
         },
         {
@@ -795,7 +795,7 @@
           "startDate": "2027-03-08",
           "endDate": "2027-03-21",
           "duration": "2 Minggu",
-          "type": "lecture",
+          "type": "other",
           "group": "A"
         },
         {
@@ -803,7 +803,7 @@
           "startDate": "2027-03-08",
           "endDate": "2027-04-11",
           "duration": "5 Minggu",
-          "type": "lecture",
+          "type": "other",
           "group": "A"
         },
         {
@@ -1852,7 +1852,7 @@
           "startDate": "2026-09-28",
           "endDate": "2026-11-01",
           "duration": "5 Minggu",
-          "type": "lecture",
+          "type": "other",
           "group": "B",
           "semua": true
         },
@@ -1882,7 +1882,7 @@
           "startDate": "2026-12-28",
           "endDate": "2027-01-31",
           "duration": "5 Minggu",
-          "type": "lecture",
+          "type": "other",
           "group": "B",
           "semua": true
         },
@@ -1891,7 +1891,7 @@
           "startDate": "2026-12-28",
           "endDate": "2027-01-31",
           "duration": "5 Minggu",
-          "type": "lecture",
+          "type": "other",
           "group": "B",
           "semua": true
         },
@@ -2227,14 +2227,6 @@
           "programType": "Master"
         },
         {
-          "name": "Kuliah Bermula",
-          "startDate": "2027-03-15",
-          "endDate": "2027-03-15",
-          "type": "lecture",
-          "group": "B",
-          "semua": true
-        },
-        {
           "name": "Tempoh Permohonan Penangguhan Pembayaran Yuran via Online Fee Deferment",
           "startDate": "2027-03-16",
           "endDate": "2027-04-12",
@@ -2352,7 +2344,7 @@
           "startDate": "2027-03-15",
           "endDate": "2027-04-18",
           "duration": "5 Minggu",
-          "type": "lecture",
+          "type": "other",
           "group": "B",
           "semua": true
         },
@@ -2392,7 +2384,7 @@
           "startDate": "2027-06-14",
           "endDate": "2027-07-18",
           "duration": "5 Minggu",
-          "type": "lecture",
+          "type": "other",
           "group": "B",
           "semua": true
         },
@@ -2401,7 +2393,7 @@
           "startDate": "2027-06-14",
           "endDate": "2027-07-18",
           "duration": "5 Minggu",
-          "type": "lecture",
+          "type": "other",
           "group": "B",
           "semua": true
         },
@@ -2440,8 +2432,7 @@
           "duration": "7 Minggu",
           "type": "lecture",
           "group": "B",
-          "semua": true,
-          "details": "Bertindih dengan Minggu ke-3 Peperiksaan Akhir Semester 20272"
+          "semua": true
         },
         {
           "name": "Kuliah Intersesi (20273)",

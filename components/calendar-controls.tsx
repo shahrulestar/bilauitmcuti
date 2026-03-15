@@ -89,6 +89,7 @@ export function CalendarControls({
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [activeSubmenu, setActiveSubmenu] = useState<string | null>(null);
   const keepDropdownOpenRef = useRef(false);
+  const overlayOpenScrollYRef = useRef(0);
   const [isPWAInstalled, setIsPWAInstalled] = useState(false);
   const [currentFooterText, setCurrentFooterText] = useState(0);
 
@@ -213,23 +214,39 @@ export function CalendarControls({
     ),
     hasOthersExams: sessionActivities.some(
       a => a.type === 'examination' && a.name.includes('Khas')
-    )
+    ),
+    hasRegionalDateRange: sessionActivities.some(
+      a => Boolean(a.regionalStartDate || a.regionalEndDate)
+    ),
   }), [sessionActivities]);
   
-  const { hasSemesterPendek, hasKuliahIntersesi, hasOthersExams } = activityChecks;
+  const { hasSemesterPendek, hasKuliahIntersesi, hasOthersExams, hasRegionalDateRange } = activityChecks;
+
+  useEffect(() => {
+    if (!hasRegionalDateRange && showKKT) onShowKKTChange(false);
+  }, [hasRegionalDateRange, showKKT, onShowKKTChange]);
+
+  useEffect(() => {
+    if (!isOpen && !dropdownOpen) return;
+    overlayOpenScrollYRef.current = window.scrollY;
+  }, [isOpen, dropdownOpen]);
 
   useEffect(() => {
     const handleScroll = () => {
-      if (window.scrollY > 0) {
-        setIsOpen(false);
+      if (!isOpen && !dropdownOpen) return;
+      const hasMeaningfulScroll = Math.abs(window.scrollY - overlayOpenScrollYRef.current) > 8;
+      if (!hasMeaningfulScroll) return;
+
+      if (isOpen) setIsOpen(false);
+      if (dropdownOpen) {
         setDropdownOpen(false);
         setActiveSubmenu(null);
       }
     };
 
-    window.addEventListener('scroll', handleScroll);
+    window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
+  }, [isOpen, dropdownOpen]);
 
   // Footer crossfade animation
   useEffect(() => {
@@ -635,6 +652,7 @@ export function CalendarControls({
                     </label>
                   </div>
 
+                  {hasRegionalDateRange && (
                   <label className="flex items-center justify-between cursor-pointer py-0.5 transition-none">
                     <div className="flex items-center gap-2">
                       <span className="text-sm font-medium text-foreground">Show</span>
@@ -669,6 +687,7 @@ export function CalendarControls({
                       />
                     </div>
                   </label>
+                  )}
 
                   {/* Theme Toggle */}
                   <ThemeToggle />
