@@ -1,4 +1,5 @@
 import { DEFAULT_FILTER_STATES, defaultSession } from './data';
+import type { ProgramValue } from './route-utils';
 
 export interface FilterStates {
   showKKT: boolean;
@@ -12,6 +13,7 @@ export interface FilterStates {
   showCountdown: boolean;
   sessionId?: string;
   sessionIds?: string[];
+  sessionIdsByProgram?: Partial<Record<ProgramValue, string[]>>;
 }
 
 const COOKIE_NAME = 'calendar-filters';
@@ -33,6 +35,14 @@ export function parseFiltersFromCookie(cookieValue: string | null | undefined): 
       : parsed.sessionId
         ? [parsed.sessionId]
         : [defaultSession];
+    const sessionIdsByProgram =
+      parsed.sessionIdsByProgram && typeof parsed.sessionIdsByProgram === 'object'
+        ? Object.fromEntries(
+            Object.entries(parsed.sessionIdsByProgram)
+              .filter(([, value]) => Array.isArray(value) && value.length > 0)
+              .map(([key, value]) => [key, value as string[]])
+          ) as Partial<Record<ProgramValue, string[]>>
+        : undefined;
     return {
       showKKT: parsed.showKKT ?? DEFAULT_FILTER_STATES.showKKT,
       showRegistration: parsed.showRegistration ?? DEFAULT_FILTER_STATES.showRegistration,
@@ -45,6 +55,7 @@ export function parseFiltersFromCookie(cookieValue: string | null | undefined): 
       showCountdown: parsed.showCountdown ?? DEFAULT_FILTER_STATES.showCountdown,
       sessionId: sessionIds[0],
       sessionIds,
+      sessionIdsByProgram,
     };
   } catch {
     return { ...DEFAULT_FILTER_STATES, sessionId: defaultSession, sessionIds: [defaultSession] };

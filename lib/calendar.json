@@ -1236,9 +1236,10 @@
           "programType": "Diploma"
         },
         {
-          "name": "Persetujuan Menerima Tawaran UiTM Secara Online - Tawaran Kedua (Diploma Lepasan SPM)",
+          "name": "Persetujuan Menerima Tawaran UiTM Secara Online - Tawaran Kedua",
           "startDate": "2026-06-16",
           "endDate": "2026-08-30",
+          "details": "Diploma Lepasan SPM",
           "type": "registration",
           "group": "B",
           "programType": "Diploma"
@@ -1268,9 +1269,10 @@
           "programType": "Diploma"
         },
         {
-          "name": "Pendaftaran Online Sebagai Pelajar Sepenuh Masa - Tawaran Kedua (Diploma Lepasan SPM)",
+          "name": "Pendaftaran Online Sebagai Pelajar Sepenuh Masa - Tawaran Kedua",
           "startDate": "2026-06-16",
           "endDate": "2026-08-30",
+          "details": "Diploma Lepasan SPM",
           "type": "registration",
           "group": "B",
           "programType": "Diploma"
@@ -1363,33 +1365,37 @@
           "group": "B"
         },
         {
-          "name": "Persetujuan Menerima Tawaran UiTM (Lepasan STPM/STAM/Matrikulasi/Asasi/Diploma)",
+          "name": "Persetujuan Menerima Tawaran UiTM",
           "startDate": "2026-08-15",
           "endDate": "2026-08-23",
+          "details": "Lepasan STPM / STAM / Matrikulasi / Asasi / Diploma",
           "type": "registration",
           "group": "B",
           "programType": "Bachelor"
         },
         {
-          "name": "Persetujuan Menerima Tawaran UiTM (Lepasan Penerapan Diploma Tahun Akhir UiTM)",
+          "name": "Persetujuan Menerima Tawaran UiTM (Penerapan)",
           "startDate": "2026-09-07",
           "endDate": "2026-09-13",
+          "details": "Lepasan Penerapan Diploma Tahun Akhir UiTM",
           "type": "registration",
           "group": "B",
           "programType": "Bachelor"
         },
         {
-          "name": "Pendaftaran Online Sebagai Pelajar Baharu Sepenuh Masa (Lepasan STPM/STAM/Matrikulasi/Asasi/Diploma)",
+          "name": "Pendaftaran Online Sebagai Pelajar Baharu Sepenuh Masa",
           "startDate": "2026-08-15",
           "endDate": "2026-08-23",
+          "details": "Lepasan STPM / STAM / Matrikulasi / Asasi / Diploma",
           "type": "registration",
           "group": "B",
           "programType": "Bachelor"
         },
         {
-          "name": "Pendaftaran Online Sebagai Pelajar Baharu Sepenuh Masa (Lepasan Penerapan Diploma Tahun Akhir UiTM)",
+          "name": "Pendaftaran Online Sebagai Pelajar Baharu Sepenuh Masa Graduan Diploma Artikulasi",
           "startDate": "2026-09-07",
           "endDate": "2026-09-13",
+          "details": "Lepasan Penerapan Diploma Tahun Akhir UiTM",
           "type": "registration",
           "group": "B",
           "programType": "Bachelor"
@@ -1403,9 +1409,10 @@
           "programType": "Bachelor"
         },
         {
-          "name": "Pendaftaran Fizikal & Serahan Dokumen (Lepasan STPM/STAM/Matrikulasi/Asasi/Diploma)",
+          "name": "Pendaftaran Fizikal & Serahan Dokumen Pelajar Baharu",
           "startDate": "2026-09-19",
           "endDate": "2026-09-20",
+          "details": "Lepasan STPM / STAM / Matrikulasi / Asasi / Diploma",
           "type": "registration",
           "group": "B",
           "programType": "Bachelor"
@@ -1835,17 +1842,19 @@
           "group": "B"
         },
         {
-          "name": "Persetujuan Menerima Tawaran UiTM (Lepasan STPM/STAM/Matrikulasi/Asasi/Diploma)",
+          "name": "Persetujuan Menerima Tawaran UiTM",
           "startDate": "2027-02-15",
           "endDate": "2027-02-21",
+          "details": "Lepasan STPM / STAM / Matrikulasi / Asasi / Diploma",
           "type": "registration",
           "group": "B",
           "programType": "Bachelor"
         },
         {
-          "name": "Pendaftaran Online Sebagai Pelajar Baharu Sepenuh Masa (Lepasan STPM/STAM/Matrikulasi/Asasi/Diploma)",
+          "name": "Pendaftaran Online Sebagai Pelajar Baharu Sepenuh Masa",
           "startDate": "2027-02-15",
           "endDate": "2027-02-21",
+          "details": "Lepasan STPM / STAM / Matrikulasi / Asasi / Diploma",
           "type": "registration",
           "group": "B",
           "programType": "Bachelor"
@@ -1859,9 +1868,10 @@
           "programType": "Bachelor"
         },
         {
-          "name": "Pendaftaran Fizikal & Serahan Dokumen (Lepasan STPM/STAM/Matrikulasi/Asasi/Diploma)",
+          "name": "Pendaftaran Fizikal & Serahan Dokumen Pelajar Baharu",
           "startDate": "2027-03-20",
           "endDate": "2027-03-21",
+          "details": "Lepasan STPM / STAM / Matrikulasi / Asasi / Diploma",
           "type": "registration",
           "group": "B",
           "programType": "Bachelor"

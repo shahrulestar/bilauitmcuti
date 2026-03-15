@@ -335,12 +335,13 @@ function MiniCalendar({ month, year, selectedProgram, selectedSessions, showKKT,
     const activities = getDayActivities(day);
     const activity = activities[0];
     if (!activity) return '';
+    const label = activity.details ? `${activity.name} - ${activity.details}` : activity.name;
     const countdownTypes: ActivityType[] = ['lecture', 'examination', 'break'];
     if (showCountdown && countdownTypes.includes(activity.type) && currentDateStr) {
       const days = getDaysUntilStart(activity, currentDateStr, showKKT);
-      if (days != null) return `${activity.name} (${formatCountdown(days)})`;
+      if (days != null) return `${label} (${formatCountdown(days)})`;
     }
-    return activity.name;
+    return label;
   };
 
   return (
@@ -473,7 +474,8 @@ function MiniCalendar({ month, year, selectedProgram, selectedSessions, showKKT,
                         const days = showCountdown && countdownTypes.includes(activity.type) && currentDateStr
                           ? getDaysUntilStart(activity, currentDateStr, showKKT)
                           : null;
-                        const displayName = days != null ? `${activity.name} (${formatCountdown(days)})` : activity.name;
+                        const label = activity.details ? `${activity.name} - ${activity.details}` : activity.name;
+                        const displayName = days != null ? `${label} (${formatCountdown(days)})` : label;
                         return (
                           <div key={idx} className="grid grid-cols-[auto_minmax(0,1fr)] items-start gap-2 transition-none" style={{ transition: 'none' }}>
                             <div className={`h-2 w-2 rounded-full mt-1 flex-shrink-0 ${dotColor} transition-none`} style={{ transition: 'none' }} />

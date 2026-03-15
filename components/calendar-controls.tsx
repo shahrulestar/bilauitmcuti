@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { List, Settings, Calendar, ChevronDown, ChevronUp, MessageCircle } from 'lucide-react';
 import {
@@ -88,6 +88,7 @@ export function CalendarControls({
   const [isOpen, setIsOpen] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [activeSubmenu, setActiveSubmenu] = useState<string | null>(null);
+  const keepDropdownOpenRef = useRef(false);
   const [isPWAInstalled, setIsPWAInstalled] = useState(false);
   const [currentFooterText, setCurrentFooterText] = useState(0);
 
@@ -125,6 +126,16 @@ export function CalendarControls({
     }
   }, [onProgramSessionChange, selectedSessions, router, viewMode]);
 
+  // Switch program only (parent resolves sessions from sessionsByProgram)
+  const handleProgramSelect = useCallback((program: ProgramValue) => {
+    if (onProgramSessionChange) {
+      onProgramSessionChange(program, []);
+    } else {
+      const newPath = getRoutePath(program, viewMode);
+      router.replace(newPath, { scroll: false });
+    }
+  }, [onProgramSessionChange, router, viewMode]);
+
   // Handle view mode change - use callback if provided (client state, no appear effect), else router
   const handleViewModeChange = useCallback(
     (newViewMode: ViewMode) => {
@@ -153,7 +164,10 @@ export function CalendarControls({
   // Memoize filtered program options to avoid recalculation
   const groupAOptions = useMemo(() => programOptions.filter(p => p.group === 'A'), []);
   const groupBOptions = useMemo(() => programOptions.filter(p => p.group === 'B'), []);
-  
+  const groupBProgramForSessions = groupBOptions.some((p) => p.value === selectedProgram)
+    ? (selectedProgram as ProgramValue)
+    : ('All' as ProgramValue);
+
   // Memoize current program and session labels
   const currentProgramLabel = useMemo(() => 
     programOptions.find(p => p.value === selectedProgram)?.label || 'Foundation/Prof',
@@ -195,6 +209,8 @@ export function CalendarControls({
     const handleScroll = () => {
       if (window.scrollY > 0) {
         setIsOpen(false);
+        setDropdownOpen(false);
+        setActiveSubmenu(null);
       }
     };
 
@@ -230,6 +246,11 @@ export function CalendarControls({
           <DropdownMenu
             open={dropdownOpen}
             onOpenChange={(open) => {
+              if (!open && keepDropdownOpenRef.current) {
+                keepDropdownOpenRef.current = false;
+                setDropdownOpen(true);
+                return;
+              }
               setDropdownOpen(open);
               if (!open) setActiveSubmenu(null);
             }}
@@ -261,8 +282,20 @@ export function CalendarControls({
                       open={activeSubmenu === option.value}
                       onOpenChange={(open) => setActiveSubmenu(open ? option.value : null)}
                     >
-                      <DropdownMenuSubTrigger className="cursor-pointer">
-                        <span className={`font-medium text-sm ${textClass}`}>{option.label}</span>
+                      <DropdownMenuSubTrigger
+                        className="cursor-pointer"
+                        onSelect={(event) => {
+                          keepDropdownOpenRef.current = true;
+                          event.preventDefault();
+                        }}
+                      >
+                        <span
+                          className={`font-medium text-sm ${
+                            option.value === selectedProgram ? 'text-primary' : textClass
+                          }`}
+                        >
+                          {option.label}
+                        </span>
                       </DropdownMenuSubTrigger>
                       <DropdownMenuPortal>
                         <DropdownMenuSubContent className="min-w-[200px] bg-popover dark:bg-[#2A2A2A] border border-border">
@@ -272,6 +305,10 @@ export function CalendarControls({
                               <DropdownMenuItem
                                 key={sess.id}
                                 className={`relative cursor-pointer pl-8 bg-transparent data-[highlighted]:bg-transparent ${isSelected ? 'text-primary data-[highlighted]:text-primary' : 'data-[highlighted]:text-foreground'}`}
+                                onSelect={(event) => {
+                                  keepDropdownOpenRef.current = true;
+                                  event.preventDefault();
+                                }}
                                 onClick={() => handleSessionToggle(option.value as ProgramValue, sess.id, 'A')}
                               >
                                 <span
@@ -290,39 +327,44 @@ export function CalendarControls({
               </div>
               <div className="my-2 h-px bg-border -mx-3 w-[calc(100%+1.5rem)]" />
               <div className="-mx-1 px-1">
-                {/* Group B */}
+                {/* Group B: Session list, separator, program list */}
                 <div>
                   <div className="text-xs font-semibold text-muted-foreground mb-2 px-2">GROUP B</div>
+                  {/* Session list - direct click */}
+                  {getSessionOptionsForGroup('B').map((sess) => {
+                    const isSelected = selectedSessions.includes(sess.id);
+                    return (
+                      <DropdownMenuItem
+                        key={sess.id}
+                        className={`relative cursor-pointer pl-8 bg-transparent data-[highlighted]:bg-transparent ${isSelected ? 'text-primary data-[highlighted]:text-primary' : 'data-[highlighted]:text-foreground'}`}
+                        onSelect={(event) => {
+                          keepDropdownOpenRef.current = true;
+                          event.preventDefault();
+                        }}
+                        onClick={() => handleSessionToggle(groupBProgramForSessions, sess.id, 'B')}
+                      >
+                        <span
+                          className={`pointer-events-none absolute left-2 flex size-3.5 shrink-0 items-center justify-center rounded-full border ${isSelected ? 'border-primary bg-primary' : 'border-muted-foreground'}`}
+                          aria-hidden
+                        />
+                        {sess.label.replace(/^Group B:\s*/, '')}
+                      </DropdownMenuItem>
+                    );
+                  })}
+                  <div className="my-2 h-px bg-border -mx-3 w-[calc(100%+1.5rem)]" />
+                  {/* Program list - direct click */}
                   {groupBOptions.map((option) => (
-                    <DropdownMenuSub
+                    <DropdownMenuItem
                       key={option.value}
-                      open={activeSubmenu === option.value}
-                      onOpenChange={(open) => setActiveSubmenu(open ? option.value : null)}
+                      className={`cursor-pointer bg-transparent data-[highlighted]:bg-transparent ${option.value === selectedProgram ? 'text-primary data-[highlighted]:text-primary font-medium' : 'data-[highlighted]:text-foreground'}`}
+                      onSelect={(event) => {
+                        keepDropdownOpenRef.current = true;
+                        event.preventDefault();
+                      }}
+                      onClick={() => handleProgramSelect(option.value as ProgramValue)}
                     >
-                      <DropdownMenuSubTrigger className="cursor-pointer">
-                        <span className={`font-medium text-sm ${textClass}`}>{option.label}</span>
-                      </DropdownMenuSubTrigger>
-                      <DropdownMenuPortal>
-                        <DropdownMenuSubContent className="min-w-[200px] bg-popover dark:bg-[#2A2A2A] border border-border">
-                          {getSessionOptionsForGroup('B').map((sess) => {
-                            const isSelected = selectedSessions.includes(sess.id);
-                            return (
-                              <DropdownMenuItem
-                                key={sess.id}
-                                className={`relative cursor-pointer pl-8 bg-transparent data-[highlighted]:bg-transparent ${isSelected ? 'text-primary data-[highlighted]:text-primary' : 'data-[highlighted]:text-foreground'}`}
-                                onClick={() => handleSessionToggle(option.value as ProgramValue, sess.id, 'B')}
-                              >
-                                <span
-                                  className={`pointer-events-none absolute left-2 flex size-3.5 shrink-0 items-center justify-center rounded-full border ${isSelected ? 'border-primary bg-primary' : 'border-muted-foreground'}`}
-                                  aria-hidden
-                                />
-                                {sess.label.replace(/^Group B:\s*/, '')}
-                              </DropdownMenuItem>
-                            );
-                          })}
-                        </DropdownMenuSubContent>
-                      </DropdownMenuPortal>
-                    </DropdownMenuSub>
+                      {option.label}
+                    </DropdownMenuItem>
                   ))}
                 </div>
               </div>

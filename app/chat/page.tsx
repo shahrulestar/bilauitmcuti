@@ -331,6 +331,43 @@ function getProgramGroup(program: string): "A" | "B" {
   return "B";
 }
 
+function getSessionMemoryKey(program: ProgramValue): ProgramValue {
+  return getProgramGroup(program) === "B" ? ("All" as ProgramValue) : program;
+}
+
+function isProgramValue(value: string | null): value is ProgramValue {
+  return !!value && programOptions.some((option) => option.value === value);
+}
+
+type ProgramSessionMap = Partial<Record<ProgramValue, SessionId[]>>;
+
+function normalizeSessionsForGroup(sessionIds: SessionId[], group: "A" | "B"): SessionId[] {
+  const unique = Array.from(new Set(sessionIds));
+  return unique.filter((id) => getGroupFromSession(id) === group);
+}
+
+function areSessionListsEqual(left: SessionId[], right: SessionId[]): boolean {
+  if (left.length !== right.length) return false;
+  return left.every((id, index) => right[index] === id);
+}
+
+function resolveSessionsForProgram(
+  program: ProgramValue,
+  sessionCandidates: SessionId[],
+  sessionsByProgram: ProgramSessionMap,
+  dateStr: string
+): SessionId[] {
+  const group = getProgramGroup(program);
+  const sessionMemoryKey = getSessionMemoryKey(program);
+  const fromCandidates = normalizeSessionsForGroup(sessionCandidates, group);
+  if (fromCandidates.length > 0) return fromCandidates;
+
+  const fromProgramMemory = normalizeSessionsForGroup(sessionsByProgram[sessionMemoryKey] ?? [], group);
+  if (fromProgramMemory.length > 0) return fromProgramMemory;
+
+  return [getSessionForCurrentDate(group, dateStr)];
+}
+
 function getRandomSuggestions(group: "A" | "B", exclude: string[]): string[] {
   const groupPool = group === "A" ? SUGGESTIONS_GROUP_A : SUGGESTIONS_GROUP_B;
   const combined = [...groupPool, ...SUGGESTIONS_GENERAL];
@@ -375,12 +412,20 @@ export default function ChatPage() {
   const router = useRouter();
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
-  const [selectedProgram, setSelectedProgram] = useState<ProgramValue>("All");
+  const [selectedProgram, setSelectedProgram] = useState<ProgramValue>(() => {
+    if (typeof window === "undefined") return "All";
+    const storedProgram = localStorage.getItem("selectedProgram");
+    return isProgramValue(storedProgram) ? storedProgram : "All";
+  });
   const [selectedSessions, setSelectedSessions] = useState<SessionId[]>(() =>
     getInitialChatSessions("All")
   );
+  const [sessionsByProgram, setSessionsByProgram] = useState<ProgramSessionMap>(() => ({
+    All: getInitialChatSessions("All"),
+  }));
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [activeSubmenu, setActiveSubmenu] = useState<string | null>(null);
+  const keepDropdownOpenRef = useRef(false);
   const [isLoading, setIsLoading] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [headerVisible, setHeaderVisible] = useState(true);
@@ -388,16 +433,70 @@ export default function ChatPage() {
   const currentGroup = getProgramGroup(selectedProgram);
   const [suggestions, setSuggestions] = useState<string[]>([]);
 
-  // Sync selectedSessions when program/group changes - ensure sessions match group
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      const raw =
+        localStorage.getItem("sessionIdsByProgram") ??
+        localStorage.getItem("chatSessionIdsByProgram");
+      const parsed = raw ? (JSON.parse(raw) as Partial<Record<ProgramValue, SessionId[]>>) : null;
+      const normalized: ProgramSessionMap = {};
+      if (parsed && typeof parsed === "object") {
+        for (const [programKey, sessionIds] of Object.entries(parsed)) {
+          if (!Array.isArray(sessionIds) || sessionIds.length === 0) continue;
+          const program = programKey as ProgramValue;
+          const group = getProgramGroup(program);
+          const inGroup = normalizeSessionsForGroup(sessionIds, group);
+          if (inGroup.length > 0) normalized[getSessionMemoryKey(program)] = inGroup;
+        }
+      }
+      const baseMap: ProgramSessionMap = { All: getInitialChatSessions("All") };
+      const mergedMap: ProgramSessionMap = { ...baseMap, ...normalized };
+      const storedProgram = localStorage.getItem("selectedProgram");
+      const nextProgram: ProgramValue = isProgramValue(storedProgram) ? storedProgram : "All";
+      const dateStr = new Date().toISOString().slice(0, 10);
+      const resolvedSessions = resolveSessionsForProgram(nextProgram, [], mergedMap, dateStr);
+      setSessionsByProgram(mergedMap);
+      setSelectedProgram(nextProgram);
+      setSelectedSessions(resolvedSessions);
+    } catch {
+      // Ignore parse errors and continue with defaults.
+    }
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      localStorage.setItem("sessionIdsByProgram", JSON.stringify(sessionsByProgram));
+      localStorage.setItem("chatSessionIdsByProgram", JSON.stringify(sessionsByProgram));
+    } catch {
+      // Ignore storage errors (private mode / quota).
+    }
+  }, [sessionsByProgram]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      localStorage.setItem("selectedProgram", selectedProgram);
+    } catch {
+      // Ignore storage errors (private mode / quota).
+    }
+  }, [selectedProgram]);
+
+  // Sync selectedSessions when program changes using per-program memory.
   useEffect(() => {
     const dateStr =
       typeof window !== "undefined" ? new Date().toISOString().slice(0, 10) : "2026-03-15";
     setSelectedSessions((prev) => {
-      const inGroup = prev.filter((id) => getGroupFromSession(id) === currentGroup);
-      if (inGroup.length > 0) return inGroup;
-      return [getSessionForCurrentDate(currentGroup, dateStr)];
+      const resolved = resolveSessionsForProgram(
+        selectedProgram,
+        [],
+        sessionsByProgram,
+        dateStr
+      );
+      return areSessionListsEqual(prev, resolved) ? prev : resolved;
     });
-  }, [currentGroup]);
+  }, [selectedProgram, sessionsByProgram]);
 
   // Randomize suggestions on mount and when program/group changes
   useLayoutEffect(() => {
@@ -407,21 +506,45 @@ export default function ChatPage() {
 
   const handleSessionToggle = useCallback(
     (programValue: ProgramValue, sessionId: SessionId, group: "A" | "B") => {
+      const dateStr =
+        typeof window !== "undefined" ? new Date().toISOString().slice(0, 10) : "2026-03-15";
       setSelectedProgram(programValue);
       setSelectedSessions((prev) => {
-        const inGroup = prev.filter((id) => id.startsWith(`${group}-`));
+        const baseSessions = resolveSessionsForProgram(
+          programValue,
+          [],
+          sessionsByProgram,
+          dateStr
+        );
+        const inGroup = baseSessions.filter((id) => id.startsWith(`${group}-`));
         const isSelected = inGroup.includes(sessionId);
         if (isSelected && inGroup.length > 1) {
-          return inGroup.filter((id) => id !== sessionId);
+          const next = inGroup.filter((id) => id !== sessionId);
+          const sessionMemoryKey = getSessionMemoryKey(programValue);
+          setSessionsByProgram((prevMap) => ({ ...prevMap, [sessionMemoryKey]: next }));
+          return next;
         }
         if (!isSelected) {
-          return [...inGroup, sessionId];
+          const next = [...inGroup, sessionId];
+          const sessionMemoryKey = getSessionMemoryKey(programValue);
+          setSessionsByProgram((prevMap) => ({ ...prevMap, [sessionMemoryKey]: next }));
+          return next;
         }
+        const sessionMemoryKey = getSessionMemoryKey(programValue);
+        setSessionsByProgram((prevMap) => ({ ...prevMap, [sessionMemoryKey]: inGroup }));
         return inGroup;
       });
     },
-    []
+    [sessionsByProgram]
   );
+
+  const handleProgramSelect = useCallback((program: ProgramValue) => {
+    const dateStr =
+      typeof window !== "undefined" ? new Date().toISOString().slice(0, 10) : "2026-03-15";
+    setSelectedProgram(program);
+    const resolved = resolveSessionsForProgram(program, [], sessionsByProgram, dateStr);
+    setSelectedSessions(resolved);
+  }, [sessionsByProgram]);
 
   const currentProgramLabel = useMemo(() => {
     const opt = programOptions.find((p) => p.value === selectedProgram);
@@ -444,6 +567,9 @@ export default function ChatPage() {
   const lastScrollTop = useRef(0);
   const groupAOptions = useMemo(() => programOptions.filter(p => p.group === 'A'), []);
   const groupBOptions = useMemo(() => programOptions.filter(p => p.group === 'B'), []);
+  const groupBProgramForSessions = groupBOptions.some((p) => p.value === selectedProgram)
+    ? selectedProgram
+    : ("All" as ProgramValue);
   const [emblaRef] = useEmblaCarousel({ dragFree: true, containScroll: "trimSnaps", align: "center" });
 
   const lastAssistantId = useMemo(() => {
@@ -514,6 +640,10 @@ export default function ChatPage() {
     const el = scrollContainerRef.current;
     if (!el) return;
     const currentScrollTop = el.scrollTop;
+    if (dropdownOpen) {
+      setDropdownOpen(false);
+      setActiveSubmenu(null);
+    }
     // Show header when scrolling up or near top
     if (currentScrollTop <= 10 || currentScrollTop < lastScrollTop.current) {
       setHeaderVisible(true);
@@ -521,7 +651,7 @@ export default function ChatPage() {
       setHeaderVisible(false);
     }
     lastScrollTop.current = currentScrollTop;
-  }, []);
+  }, [dropdownOpen]);
 
   const sendMessage = async (text: string) => {
     if (!text.trim() || isLoading) return;
@@ -897,6 +1027,11 @@ export default function ChatPage() {
               <DropdownMenu
                 open={dropdownOpen}
                 onOpenChange={(open) => {
+                  if (!open && keepDropdownOpenRef.current) {
+                    keepDropdownOpenRef.current = false;
+                    setDropdownOpen(true);
+                    return;
+                  }
                   setDropdownOpen(open);
                   if (!open) setActiveSubmenu(null);
                 }}
@@ -928,8 +1063,20 @@ export default function ChatPage() {
                           open={activeSubmenu === opt.value}
                           onOpenChange={(open) => setActiveSubmenu(open ? opt.value : null)}
                         >
-                          <DropdownMenuSubTrigger className="cursor-pointer">
-                            <span className="font-medium text-sm">{opt.label}</span>
+                          <DropdownMenuSubTrigger
+                            className="cursor-pointer"
+                            onSelect={(event) => {
+                              keepDropdownOpenRef.current = true;
+                              event.preventDefault();
+                            }}
+                          >
+                            <span
+                              className={`font-medium text-sm ${
+                                opt.value === selectedProgram ? "text-primary" : "text-foreground"
+                              }`}
+                            >
+                              {opt.label}
+                            </span>
                           </DropdownMenuSubTrigger>
                           <DropdownMenuPortal>
                             <DropdownMenuSubContent className="min-w-[200px] bg-popover dark:bg-[#2A2A2A] border border-border">
@@ -939,6 +1086,10 @@ export default function ChatPage() {
                                   <DropdownMenuItem
                                     key={sess.id}
                                     className={`relative cursor-pointer pl-8 bg-transparent data-[highlighted]:bg-transparent ${isSelected ? "text-primary data-[highlighted]:text-primary" : "data-[highlighted]:text-foreground"}`}
+                                    onSelect={(event) => {
+                                      keepDropdownOpenRef.current = true;
+                                      event.preventDefault();
+                                    }}
                                     onClick={() =>
                                       handleSessionToggle(opt.value as ProgramValue, sess.id, "A")
                                     }
@@ -961,38 +1112,43 @@ export default function ChatPage() {
                   <div className="-mx-1 px-1">
                     <div>
                       <div className="text-xs font-semibold text-muted-foreground mb-2 px-2">GROUP B</div>
+                      {/* Session list - direct click */}
+                      {getSessionOptionsForGroup("B").map((sess) => {
+                        const isSelected = selectedSessions.includes(sess.id);
+                        return (
+                          <DropdownMenuItem
+                            key={sess.id}
+                            className={`relative cursor-pointer pl-8 bg-transparent data-[highlighted]:bg-transparent ${isSelected ? "text-primary data-[highlighted]:text-primary" : "data-[highlighted]:text-foreground"}`}
+                            onSelect={(event) => {
+                              keepDropdownOpenRef.current = true;
+                              event.preventDefault();
+                            }}
+                            onClick={() =>
+                              handleSessionToggle(groupBProgramForSessions, sess.id, "B")
+                            }
+                          >
+                            <span
+                              className={`pointer-events-none absolute left-2 flex size-3.5 shrink-0 items-center justify-center rounded-full border ${isSelected ? "border-primary bg-primary" : "border-muted-foreground"}`}
+                              aria-hidden
+                            />
+                            {sess.label.replace(/^Group B:\s*/, "")}
+                          </DropdownMenuItem>
+                        );
+                      })}
+                      <div className="my-2 h-px bg-border -mx-3 w-[calc(100%+1.5rem)]" />
+                      {/* Program list - direct click */}
                       {groupBOptions.map((opt) => (
-                        <DropdownMenuSub
+                        <DropdownMenuItem
                           key={opt.value}
-                          open={activeSubmenu === opt.value}
-                          onOpenChange={(open) => setActiveSubmenu(open ? opt.value : null)}
+                          className={`cursor-pointer bg-transparent data-[highlighted]:bg-transparent ${opt.value === selectedProgram ? "text-primary data-[highlighted]:text-primary font-medium" : "data-[highlighted]:text-foreground"}`}
+                          onSelect={(event) => {
+                            keepDropdownOpenRef.current = true;
+                            event.preventDefault();
+                          }}
+                          onClick={() => handleProgramSelect(opt.value as ProgramValue)}
                         >
-                          <DropdownMenuSubTrigger className="cursor-pointer">
-                            <span className="font-medium text-sm">{opt.label}</span>
-                          </DropdownMenuSubTrigger>
-                          <DropdownMenuPortal>
-                            <DropdownMenuSubContent className="min-w-[200px] bg-popover dark:bg-[#2A2A2A] border border-border">
-                              {getSessionOptionsForGroup("B").map((sess) => {
-                                const isSelected = selectedSessions.includes(sess.id);
-                                return (
-                                  <DropdownMenuItem
-                                    key={sess.id}
-                                    className={`relative cursor-pointer pl-8 bg-transparent data-[highlighted]:bg-transparent ${isSelected ? "text-primary data-[highlighted]:text-primary" : "data-[highlighted]:text-foreground"}`}
-                                    onClick={() =>
-                                      handleSessionToggle(opt.value as ProgramValue, sess.id, "B")
-                                    }
-                                  >
-                                    <span
-                                      className={`pointer-events-none absolute left-2 flex size-3.5 shrink-0 items-center justify-center rounded-full border ${isSelected ? "border-primary bg-primary" : "border-muted-foreground"}`}
-                                      aria-hidden
-                                    />
-                                    {sess.label.replace(/^Group B:\s*/, "")}
-                                  </DropdownMenuItem>
-                                );
-                              })}
-                            </DropdownMenuSubContent>
-                          </DropdownMenuPortal>
-                        </DropdownMenuSub>
+                          {opt.label}
+                        </DropdownMenuItem>
                       ))}
                     </div>
                   </div>

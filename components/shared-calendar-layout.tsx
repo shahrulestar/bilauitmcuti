@@ -10,10 +10,30 @@ import { ListView } from '@/components/list-view';
 import { GridView } from '@/components/grid-view';
 import { getProgramFromRoute, getRoutePath } from '@/lib/route-utils';
 import type { ProgramValue } from '@/lib/route-utils';
-import { DEFAULT_FILTER_STATES, getDefaultSessionForGroup, getGroupFromSession, getSessionForCurrentDate } from '@/lib/data';
+import { DEFAULT_FILTER_STATES, getGroupFromSession, getSessionForCurrentDate } from '@/lib/data';
 import type { SessionId } from '@/lib/data';
 import { setFiltersToCookie, type FilterStates } from '@/lib/cookie-utils';
 import type { ViewMode } from '@/app/page';
+
+type ProgramSessionMap = Partial<Record<ProgramValue, SessionId[]>>;
+
+function getGroupFromProgram(program: ProgramValue): 'A' | 'B' {
+  return program === 'Foundation/Professional' ? 'A' : 'B';
+}
+
+function getSessionMemoryKey(program: ProgramValue): ProgramValue {
+  return getGroupFromProgram(program) === 'B' ? 'All' : program;
+}
+
+function normalizeSessionsForGroup(sessionIds: SessionId[], group: 'A' | 'B'): SessionId[] {
+  const unique = Array.from(new Set(sessionIds));
+  return unique.filter((id) => getGroupFromSession(id) === group);
+}
+
+function areSessionListsEqual(left: SessionId[], right: SessionId[]): boolean {
+  if (left.length !== right.length) return false;
+  return left.every((id, index) => right[index] === id);
+}
 
 interface SharedCalendarLayoutProps {
   viewMode: ViewMode;
@@ -52,7 +72,7 @@ export function SharedCalendarLayout({
   // Optimistic program state makes dropdown label update immediately on user click,
   // instead of waiting for router pathname update.
   const [selectedProgram, setSelectedProgram] = useState(routeSelectedProgram);
-  const programGroup: 'A' | 'B' = selectedProgram === 'Foundation/Professional' ? 'A' : 'B';
+  const programGroup = getGroupFromProgram(selectedProgram);
 
   // Keep optimistic state aligned with actual route state.
   useEffect(() => {
@@ -127,7 +147,62 @@ export function SharedCalendarLayout({
 
   const initialFilters = getInitialFilterState();
 
+  const getInitialProgramSessions = (): ProgramSessionMap => {
+    const rawMap = initialFiltersFromProps?.sessionIdsByProgram;
+    const nextMap: ProgramSessionMap = {};
+    if (rawMap && typeof rawMap === 'object') {
+      for (const [key, value] of Object.entries(rawMap)) {
+        if (!Array.isArray(value) || value.length === 0) continue;
+        const program = key as ProgramValue;
+        const group = getGroupFromProgram(program);
+        const normalized = normalizeSessionsForGroup(value as SessionId[], group);
+        if (normalized.length > 0) nextMap[getSessionMemoryKey(program)] = normalized;
+      }
+    }
+
+    // Client-side fallback: restore per-program sessions from localStorage if available.
+    if (typeof window !== 'undefined' && Object.keys(nextMap).length === 0) {
+      try {
+        const rawLocal = localStorage.getItem('sessionIdsByProgram');
+        if (rawLocal) {
+          const parsed = JSON.parse(rawLocal) as Partial<Record<ProgramValue, SessionId[]>>;
+          if (parsed && typeof parsed === 'object') {
+            for (const [key, value] of Object.entries(parsed)) {
+              if (!Array.isArray(value) || value.length === 0) continue;
+              const program = key as ProgramValue;
+              const group = getGroupFromProgram(program);
+              const normalized = normalizeSessionsForGroup(value as SessionId[], group);
+              if (normalized.length > 0) nextMap[getSessionMemoryKey(program)] = normalized;
+            }
+          }
+        }
+      } catch {
+        // Ignore invalid localStorage payload and continue with cookie/default values.
+      }
+    }
+
+    // Backward compatibility for existing single session/sessionIds cookie format.
+    const fromIds = initialFiltersFromProps?.sessionIds;
+    const fromSingle = initialFiltersFromProps?.sessionId;
+    const candidates = Array.isArray(fromIds) && fromIds.length > 0
+      ? fromIds
+      : fromSingle
+        ? [fromSingle]
+        : [];
+    const fallbackForRoute = normalizeSessionsForGroup(candidates as SessionId[], programGroup);
+    const routeSessionKey = getSessionMemoryKey(routeSelectedProgram);
+    if (fallbackForRoute.length > 0 && !nextMap[routeSessionKey]) {
+      nextMap[routeSessionKey] = fallbackForRoute;
+    }
+
+    return nextMap;
+  };
+
   const getInitialSessions = (): SessionId[] => {
+    const initialMap = getInitialProgramSessions();
+    const fromProgram = initialMap[getSessionMemoryKey(routeSelectedProgram)];
+    if (fromProgram && fromProgram.length > 0) return fromProgram;
+
     const fromIds = initialFiltersFromProps?.sessionIds;
     const fromSingle = initialFiltersFromProps?.sessionId;
     const candidates = Array.isArray(fromIds) && fromIds.length > 0
@@ -156,17 +231,22 @@ export function SharedCalendarLayout({
   const [isLoaded, setIsLoaded] = useState(false);
   const [currentMonth, setCurrentMonth] = useState('Academic Calendar');
   const [selectedStates, setSelectedStates] = useState<string[]>(initialFilters.showKKT ? ['Kedah', 'Kelantan', 'Terengganu'] : []);
+  const [sessionsByProgram, setSessionsByProgram] = useState<ProgramSessionMap>(getInitialProgramSessions);
   const [selectedSessions, setSelectedSessions] = useState<SessionId[]>(getInitialSessions);
 
-  // When program group changes, constrain sessions to that group only
+  // Keep selectedSessions synchronized with selectedProgram using per-program memory.
   useEffect(() => {
     const dateStr = initialCurrentDate ?? new Date().toISOString().slice(0, 10);
     setSelectedSessions((prev) => {
-      const inGroup = prev.filter((id) => getGroupFromSession(id) === programGroup);
-      if (inGroup.length > 0) return inGroup;
-      return [getSessionForCurrentDate(programGroup, dateStr)];
+      const targetGroup = getGroupFromProgram(selectedProgram);
+      const sessionMemoryKey = getSessionMemoryKey(selectedProgram);
+      const fromProgram = normalizeSessionsForGroup(sessionsByProgram[sessionMemoryKey] ?? [], targetGroup);
+      if (fromProgram.length > 0) return areSessionListsEqual(prev, fromProgram) ? prev : fromProgram;
+
+      const fallback = [getSessionForCurrentDate(targetGroup, dateStr)];
+      return areSessionListsEqual(prev, fallback) ? prev : fallback;
     });
-  }, [programGroup, initialCurrentDate]);
+  }, [selectedProgram, sessionsByProgram, initialCurrentDate]);
 
   // Keep both views mounted - toggle via display to prevent appear effect on view switch
   const [activeViewMode, setActiveViewMode] = useState(viewMode);
@@ -187,12 +267,20 @@ export function SharedCalendarLayout({
   const handleProgramSessionChange = useCallback(
     (program: ProgramValue, sessionIds: SessionId[]) => {
       setSelectedProgram(program);
-      const targetGroup: 'A' | 'B' = program === 'Foundation/Professional' ? 'A' : 'B';
-      const inGroup = sessionIds.filter((id) => getGroupFromSession(id) === targetGroup);
+      const targetGroup = getGroupFromProgram(program);
+      const sessionMemoryKey = getSessionMemoryKey(program);
+      const inGroup = normalizeSessionsForGroup(sessionIds, targetGroup);
+      const fromProgram = normalizeSessionsForGroup(sessionsByProgram[sessionMemoryKey] ?? [], targetGroup);
       const resolvedSessions =
         inGroup.length > 0
           ? inGroup
-          : [getSessionForCurrentDate(targetGroup, initialCurrentDate ?? new Date().toISOString().slice(0, 10))];
+          : fromProgram.length > 0
+            ? fromProgram
+            : [getSessionForCurrentDate(targetGroup, initialCurrentDate ?? new Date().toISOString().slice(0, 10))];
+      const nextSessionsByProgram: ProgramSessionMap = {
+        ...sessionsByProgram,
+        [sessionMemoryKey]: resolvedSessions,
+      };
 
       // Persist selected session(s) before route navigation to avoid remount fallback to default session.
       setFiltersToCookie({
@@ -207,13 +295,11 @@ export function SharedCalendarLayout({
         showCountdown,
         sessionId: resolvedSessions[0],
         sessionIds: resolvedSessions,
+        sessionIdsByProgram: nextSessionsByProgram,
       });
+      setSessionsByProgram(nextSessionsByProgram);
 
-      if (inGroup.length > 0) {
-        setSelectedSessions(inGroup);
-      } else {
-        setSelectedSessions(resolvedSessions);
-      }
+      setSelectedSessions(resolvedSessions);
       const newPath = getRoutePath(program, activeViewMode);
       if (newPath !== pathname) {
         router.replace(newPath, { scroll: false });
@@ -234,6 +320,7 @@ export function SharedCalendarLayout({
       showOthersExams,
       showBreak,
       showCountdown,
+      sessionsByProgram,
     ]
   );
 
@@ -259,6 +346,7 @@ export function SharedCalendarLayout({
       showCountdown,
       sessionId: selectedSessions[0],
       sessionIds: selectedSessions,
+      sessionIdsByProgram: sessionsByProgram,
     };
     
     // Save all settings in one go
@@ -273,6 +361,8 @@ export function SharedCalendarLayout({
       localStorage.setItem('showOthersExams', JSON.stringify(showOthersExams));
       localStorage.setItem('showBreak', JSON.stringify(showBreak));
       localStorage.setItem('showCountdown', JSON.stringify(showCountdown));
+      localStorage.setItem('selectedProgram', selectedProgram);
+      localStorage.setItem('sessionIdsByProgram', JSON.stringify(sessionsByProgram));
       
       // Save to cookie for SSR consistency
       setFiltersToCookie(filterStates);
@@ -300,7 +390,7 @@ export function SharedCalendarLayout({
     } else {
       setSelectedStates([]);
     }
-  }, [showKKT, showRegistration, showLecture, showSemesterPendek, showKuliahIntersesi, showExamination, showOthersExams, showBreak, showCountdown, selectedSessions, isLoaded]);
+  }, [showKKT, showRegistration, showLecture, showSemesterPendek, showKuliahIntersesi, showExamination, showOthersExams, showBreak, showCountdown, selectedSessions, sessionsByProgram, isLoaded]);
 
   // Theme-aware classes
   const bgClass = 'bg-background text-foreground';
