@@ -1105,22 +1105,13 @@
           "programType": "PreDiploma"
         },
         {
-          "name": "Program Minggu Destini Siswa (MDS)",
+          "name": "Program Minggu Destini Siswa (MDS) & Program Minggu Edu 5.0@UiTM",
           "startDate": "2026-03-24",
           "endDate": "2026-03-27",
           "details": "Secara Online",
           "type": "other",
           "group": "B",
-          "programType": "PreDiploma"
-        },
-        {
-          "name": "Program Minggu Edu 5.0@UiTM",
-          "startDate": "2026-03-24",
-          "endDate": "2026-03-27",
-          "details": "Secara Online",
-          "type": "other",
-          "group": "B",
-          "programType": "PreDiploma"
+          "programTypes": ["PreDiploma", "Diploma", "Bachelor"]
         },
         {
           "name": "Pendaftaran Kolej Penginapan - Pelajar Baharu",
@@ -1167,24 +1158,6 @@
           "startDate": "2026-03-28",
           "endDate": "2026-03-29",
           "type": "registration",
-          "group": "B",
-          "programType": "Diploma"
-        },
-        {
-          "name": "Program Minggu Destini Siswa (MDS)",
-          "startDate": "2026-03-24",
-          "endDate": "2026-03-27",
-          "details": "Secara Online",
-          "type": "other",
-          "group": "B",
-          "programType": "Diploma"
-        },
-        {
-          "name": "Program Minggu Edu 5.0@UiTM",
-          "startDate": "2026-03-24",
-          "endDate": "2026-03-27",
-          "details": "Secara Online",
-          "type": "other",
           "group": "B",
           "programType": "Diploma"
         },
@@ -1275,24 +1248,6 @@
           "endDate": "2026-03-29",
           "details": "Lepasan STPM / STAM / Matrikulasi / Asasi / Diploma IPT Lain / Diploma UiTM",
           "type": "registration",
-          "group": "B",
-          "programType": "Bachelor"
-        },
-        {
-          "name": "Program Minggu Destini Siswa (MDS)",
-          "startDate": "2026-03-24",
-          "endDate": "2026-03-27",
-          "details": "Secara Online",
-          "type": "other",
-          "group": "B",
-          "programType": "Bachelor"
-        },
-        {
-          "name": "Program Minggu Edu 5.0@UiTM",
-          "startDate": "2026-03-24",
-          "endDate": "2026-03-27",
-          "details": "Secara Online",
-          "type": "other",
           "group": "B",
           "programType": "Bachelor"
         },
@@ -1491,20 +1446,12 @@
           "semua": true
         },
         {
-          "name": "Program Minggu Destini Siswa (MDS)",
+          "name": "Program Minggu Destini Siswa (MDS) & Program Minggu Edu 5.0@UiTM",
           "startDate": "2026-09-21",
           "endDate": "2026-09-27",
           "type": "other",
           "group": "B",
-          "semua": true
-        },
-        {
-          "name": "Program Minggu Edu 5.0@UiTM",
-          "startDate": "2026-09-21",
-          "endDate": "2026-09-27",
-          "type": "other",
-          "group": "B",
-          "semua": true
+          "programTypes": ["PreDiploma", "Diploma", "Bachelor"]
         },
         {
           "name": "Pendaftaran Kolej Penginapan - Pelajar Baharu",
@@ -2001,22 +1948,13 @@
           "semua": true
         },
         {
-          "name": "Program Minggu Destini Siswa (MDS)",
+          "name": "Program Minggu Destini Siswa (MDS) & Program Minggu Edu 5.0@UiTM",
           "startDate": "2027-03-01",
           "endDate": "2027-03-07",
           "type": "other",
           "group": "B",
-          "semua": true,
-          "details": "Secara Online"
-        },
-        {
-          "name": "Program Minggu Edu 5.0@UiTM",
-          "startDate": "2027-03-01",
-          "endDate": "2027-03-07",
-          "type": "other",
-          "group": "B",
-          "semua": true,
-          "details": "Secara Online"
+          "details": "Secara Online",
+          "programTypes": ["PreDiploma", "Diploma", "Bachelor"]
         },
         {
           "name": "Pendaftaran Kolej Penginapan - Pelajar Baharu",

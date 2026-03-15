@@ -1,5 +1,5 @@
 import { memo, useMemo, useState, useEffect, useCallback } from 'react';
-import { getActivitiesForMonthMultiSessions, getMonthsForSessions, formatDateRange, getDaysUntilStart, formatCountdown, getProgramBadgeConfig, type ProgramGroup, type SessionId } from '@/lib/data';
+import { getActivitiesForMonthMultiSessions, getMonthsForSessions, formatDateRange, getDaysUntilStart, formatCountdown, getProgramBadgeConfig, getProgramBadgesConfig, type ProgramGroup, type SessionId } from '@/lib/data';
 
 interface ListViewProps {
   selectedProgram: string;
@@ -94,7 +94,10 @@ export const ListView = memo(function ListView({
       return true;
     }
     
-    // Filter by program type
+    // Filter by program type or programTypes
+    if (activity?.programTypes?.length) {
+      return activity.programTypes.includes(selectedProgram);
+    }
     if (activity?.programType && activity.programType !== selectedProgram) return false;
     
     return true;
@@ -180,7 +183,7 @@ export const ListView = memo(function ListView({
               activity.regionalStartDate || '',
               activity.regionalEndDate || '',
               activity.semua ? '1' : '0',
-              getNormalizedProgramType(activity.programType),
+              activity.programTypes?.length ? activity.programTypes.join(',') : getNormalizedProgramType(activity.programType),
             ].join('|');
 
             return [dedupeKey, activity] as const;
@@ -317,14 +320,22 @@ export const ListView = memo(function ListView({
                     
                     {/* Activity info */}
                     <div className="flex flex-1 flex-col transition-none" suppressHydrationWarning>
-                      {/* Group B with badge: dot + badge in one row above title (container fit content, left align, gap-2 like dot-title) */}
-                      {group === 'B' && getProgramBadgeConfig(activity) ? (
+                      {/* Group B with badge: dot + badge(s) in one row above title (container fit content, left align, gap-2 like dot-title) */}
+                      {group === 'B' && (getProgramBadgeConfig(activity) || getProgramBadgesConfig(activity, selectedProgram).length > 0) ? (
                         <>
-                          <div className="flex items-center gap-2 w-fit mb-1 transition-none" suppressHydrationWarning>
+                          <div className="flex items-center gap-2 w-fit mb-1 transition-none flex-wrap" suppressHydrationWarning>
                             <div className={`h-2 w-2 shrink-0 rounded-full ${getActivityColor(activity)} transition-none`} suppressHydrationWarning />
-                            <div className={`inline-block py-1 rounded-full text-xs font-medium px-3 ${getProgramBadgeConfig(activity)?.bgClass} ${getProgramBadgeConfig(activity)?.textClass} transition-none`} suppressHydrationWarning>
-                              {getProgramBadgeConfig(activity)?.label}
-                            </div>
+                            {getProgramBadgesConfig(activity, selectedProgram).length > 0
+                              ? getProgramBadgesConfig(activity, selectedProgram).map((cfg) => (
+                                  <div key={cfg.label} className={`inline-block py-1 rounded-full text-xs font-medium px-3 ${cfg.bgClass} ${cfg.textClass} transition-none`} suppressHydrationWarning>
+                                    {cfg.label}
+                                  </div>
+                                ))
+                              : getProgramBadgeConfig(activity) && (
+                                  <div className={`inline-block py-1 rounded-full text-xs font-medium px-3 ${getProgramBadgeConfig(activity)?.bgClass} ${getProgramBadgeConfig(activity)?.textClass} transition-none`} suppressHydrationWarning>
+                                    {getProgramBadgeConfig(activity)?.label}
+                                  </div>
+                                )}
                           </div>
                           <h3 className={`font-medium text-base leading-6 break-words ${textClass} mb-1 transition-none`} suppressHydrationWarning>{activity.name}</h3>
                         </>

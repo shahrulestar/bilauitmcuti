@@ -10,7 +10,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
-import { getActivitiesForDateMultiSessions, getMonthsForSessions, getDaysUntilStart, formatCountdown, getProgramBadgeConfig, type Activity, type ActivityType, type SessionId } from '@/lib/data';
+import { getActivitiesForDateMultiSessions, getMonthsForSessions, getDaysUntilStart, formatCountdown, getProgramBadgeConfig, getProgramBadgesConfig, type Activity, type ActivityType, type SessionId } from '@/lib/data';
 
 interface TooltipActivityListProps {
   dateKey: string;
@@ -79,8 +79,13 @@ function TooltipActivityList({
           const days = showCountdown && countdownTypes.includes(activity.type) && currentDateStr
             ? getDaysUntilStart(activity, currentDateStr, showKKT)
             : null;
-          const badgeConfig =
-            selectedProgram === 'All' ? getProgramBadgeConfig(activity) : null;
+          const badgeConfigs = selectedProgram === 'All'
+            ? getProgramBadgesConfig(activity, selectedProgram).length > 0
+              ? getProgramBadgesConfig(activity, selectedProgram)
+              : getProgramBadgeConfig(activity) ? [getProgramBadgeConfig(activity)!] : []
+            : getProgramBadgesConfig(activity, selectedProgram).length > 0
+              ? getProgramBadgesConfig(activity, selectedProgram)
+              : getProgramBadgeConfig(activity) ? [getProgramBadgeConfig(activity)!] : [];
           const label = activity.details ? `${activity.name} - ${activity.details}` : activity.name;
           const displayName = days != null ? `${label} (${formatCountdown(days)})` : label;
 
@@ -88,9 +93,13 @@ function TooltipActivityList({
             <div key={`${activity.name}|${activity.startDate}|${idx}`} className="grid grid-cols-[auto_minmax(0,1fr)] items-start gap-2 transition-none">
               <div className={`h-2 w-2 rounded-full mt-1 flex-shrink-0 ${dotColor} transition-none`} />
               <div className="min-w-0">
-                {badgeConfig ? (
-                  <div className={`mb-1 inline-block rounded-full px-2 py-0.5 text-[10px] font-medium ${badgeConfig.bgClass} ${badgeConfig.textClass}`}>
-                    {badgeConfig.label}
+                {badgeConfigs.length > 0 ? (
+                  <div className="mb-1 flex flex-wrap gap-1">
+                    {badgeConfigs.map((cfg) => (
+                      <div key={cfg.label} className={`inline-block rounded-full px-2 py-0.5 text-[10px] font-medium ${cfg.bgClass} ${cfg.textClass}`}>
+                        {cfg.label}
+                      </div>
+                    ))}
                   </div>
                 ) : null}
                 <p className="text-xs leading-relaxed whitespace-normal text-wrap break-words [overflow-wrap:anywhere] line-clamp-3 transition-none">{displayName}</p>
