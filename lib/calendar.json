@@ -78,15 +78,7 @@
           "group": "A"
         },
         {
-          "name": "Program Minggu Destini Siswa (MDS)",
-          "startDate": "2025-12-16",
-          "endDate": "2025-12-18",
-          "type": "other",
-          "group": "A",
-          "details": "Secara Online"
-        },
-        {
-          "name": "Program Minggu Edu 5.0@UiTM",
+          "name": "Program Minggu Destini Siswa (MDS) & Program Minggu Edu 5.0@UiTM",
           "startDate": "2025-12-16",
           "endDate": "2025-12-18",
           "type": "other",
@@ -344,15 +336,7 @@
           "group": "A"
         },
         {
-          "name": "Program Minggu Destini Siswa (MDS)",
-          "startDate": "2026-06-03",
-          "endDate": "2026-06-07",
-          "type": "other",
-          "group": "A",
-          "details": "Online"
-        },
-        {
-          "name": "Program Minggu Edu 5.0@UiTM",
+          "name": "Program Minggu Destini Siswa (MDS) & Program Minggu Edu 5.0@UiTM",
           "startDate": "2026-06-03",
           "endDate": "2026-06-07",
           "type": "other",
@@ -605,14 +589,7 @@
           "group": "A"
         },
         {
-          "name": "Program Minggu Destini Siswa (MDS)",
-          "startDate": "2026-11-17",
-          "endDate": "2026-11-22",
-          "type": "other",
-          "group": "A"
-        },
-        {
-          "name": "Program Minggu Edu 5.0@UiTM",
+          "name": "Program Minggu Destini Siswa (MDS) & Program Minggu Edu 5.0@UiTM",
           "startDate": "2026-11-17",
           "endDate": "2026-11-22",
           "type": "other",
