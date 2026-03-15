@@ -271,10 +271,10 @@ export function CalendarControls({
             <DropdownMenuTrigger asChild>
               <Button
                 variant="outline"
-                className={`w-fit max-w-[220px] sm:max-w-[260px] !h-[38px] !py-1 border bg-secondary dark:bg-[#2A2A2A] hover:!bg-secondary dark:hover:!bg-[#2A2A2A] active:!bg-secondary dark:active:!bg-[#2A2A2A] border-border focus:outline-none focus:ring-0 focus-visible:outline-none focus-visible:ring-0 ${textClass} truncate flex items-center justify-between gap-2 rounded-lg transition-none`}
+                className={`w-fit max-w-[180px] sm:max-w-[260px] md:max-w-[300px] min-w-0 overflow-hidden !h-[38px] !py-1 border bg-secondary dark:bg-[#2A2A2A] hover:!bg-secondary dark:hover:!bg-[#2A2A2A] active:!bg-secondary dark:active:!bg-[#2A2A2A] border-border focus:outline-none focus:ring-0 focus-visible:outline-none focus-visible:ring-0 ${textClass} flex items-center justify-between gap-2 rounded-lg transition-none`}
                 suppressHydrationWarning
               >
-                <span className="truncate text-left font-medium text-sm min-w-0">
+                <span className="block min-w-0 flex-1 truncate text-left font-medium text-sm">
                   {currentProgramLabel}
                 </span>
                 {dropdownOpen ? (
@@ -389,7 +389,7 @@ export function CalendarControls({
                   {groupBOptions.map((option) => (
                     <DropdownMenuItem
                       key={option.value}
-                      className={`cursor-pointer bg-transparent data-[highlighted]:bg-transparent ${option.value === selectedProgram ? 'text-primary data-[highlighted]:text-primary font-medium' : 'data-[highlighted]:text-foreground'}`}
+                      className={`cursor-pointer font-medium bg-transparent data-[highlighted]:bg-transparent ${option.value === selectedProgram ? 'text-primary data-[highlighted]:text-primary' : 'data-[highlighted]:text-foreground'}`}
                       onClick={() => {
                         setActiveSubmenu(null);
                         setDropdownOpen(false);

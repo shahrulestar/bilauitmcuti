@@ -1044,9 +1044,9 @@ export default function ChatPage() {
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="h-8 text-xs border-none bg-transparent shadow-none px-2 gap-1 hover:!bg-transparent dark:hover:!bg-transparent rounded-lg font-medium"
+                    className="h-8 min-w-0 max-w-[180px] sm:max-w-[260px] md:max-w-[300px] overflow-hidden text-xs border-none bg-transparent shadow-none px-2 gap-1 hover:!bg-transparent dark:hover:!bg-transparent rounded-lg font-medium"
                   >
-                    <span className="truncate max-w-[180px]">{currentProgramLabel}</span>
+                    <span className="block min-w-0 flex-1 truncate text-left">{currentProgramLabel}</span>
                     {dropdownOpen ? (
                       <ChevronUp className="size-4 opacity-50 flex-shrink-0" />
                     ) : (
@@ -1164,7 +1164,7 @@ export default function ChatPage() {
                       {groupBOptions.map((opt) => (
                         <DropdownMenuItem
                           key={opt.value}
-                          className={`cursor-pointer bg-transparent data-[highlighted]:bg-transparent ${opt.value === selectedProgram ? "text-primary data-[highlighted]:text-primary font-medium" : "data-[highlighted]:text-foreground"}`}
+                          className={`cursor-pointer font-medium bg-transparent data-[highlighted]:bg-transparent ${opt.value === selectedProgram ? "text-primary data-[highlighted]:text-primary" : "data-[highlighted]:text-foreground"}`}
                           onClick={() => {
                             setActiveSubmenu(null);
                             setDropdownOpen(false);
