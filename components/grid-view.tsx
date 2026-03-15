@@ -1,6 +1,7 @@
 'use client';
 
 import React, { memo } from "react"
+import { ChevronDown, ChevronUp } from 'lucide-react';
 
 import { useState, useEffect, useMemo } from 'react';
 import {
@@ -10,6 +11,110 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { getActivitiesForDateMultiSessions, getMonthsForSessions, getDaysUntilStart, formatCountdown, getProgramBadgeConfig, type Activity, type ActivityType, type SessionId } from '@/lib/data';
+
+interface TooltipActivityListProps {
+  dateKey: string;
+  activities: Activity[];
+  selectedProgram: string;
+  showCountdown: boolean;
+  currentDateStr: string | null;
+  showKKT: boolean;
+}
+
+function TooltipActivityList({
+  dateKey,
+  activities,
+  selectedProgram,
+  showCountdown,
+  currentDateStr,
+  showKKT,
+}: TooltipActivityListProps) {
+  const PAGE_SIZE = 8;
+  const [startIndex, setStartIndex] = useState(0);
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const mediaQuery = window.matchMedia('(max-width: 640px)');
+    const sync = () => setIsMobile(mediaQuery.matches);
+    sync();
+    mediaQuery.addEventListener('change', sync);
+    return () => mediaQuery.removeEventListener('change', sync);
+  }, []);
+
+  useEffect(() => {
+    setStartIndex(0);
+  }, [dateKey, activities.length]);
+
+  const shouldPaginate = isMobile && activities.length > PAGE_SIZE;
+  const hasPrev = startIndex > 0;
+  const hasNext = startIndex + PAGE_SIZE < activities.length;
+  const visible = shouldPaginate
+    ? activities.slice(startIndex, startIndex + PAGE_SIZE)
+    : activities;
+
+  return (
+    <div className="w-full py-2">
+      {shouldPaginate && hasPrev ? (
+        <div className="pb-1">
+          <button
+            type="button"
+            onClick={() => setStartIndex((prev) => Math.max(0, prev - 1))}
+            className="flex h-6 w-full items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+            aria-label="Show previous events"
+          >
+            <ChevronUp className="h-4 w-4" />
+          </button>
+        </div>
+      ) : null}
+
+      <div className="space-y-2">
+        {visible.map((activity, idx) => {
+          const dotColor =
+            activity.type === 'registration' ? 'bg-[#d1d5db]' :
+            activity.type === 'lecture' ? 'bg-[#8b5cf6]' :
+            activity.type === 'examination' ? 'bg-[#dc2626]' :
+            activity.type === 'break' ? 'bg-[#10b981]' : 'bg-gray-400';
+          const countdownTypes: ActivityType[] = ['lecture', 'examination', 'break'];
+          const days = showCountdown && countdownTypes.includes(activity.type) && currentDateStr
+            ? getDaysUntilStart(activity, currentDateStr, showKKT)
+            : null;
+          const badgeConfig =
+            selectedProgram === 'All' ? getProgramBadgeConfig(activity) : null;
+          const label = activity.details ? `${activity.name} - ${activity.details}` : activity.name;
+          const displayName = days != null ? `${label} (${formatCountdown(days)})` : label;
+
+          return (
+            <div key={`${activity.name}|${activity.startDate}|${idx}`} className="grid grid-cols-[auto_minmax(0,1fr)] items-start gap-2 transition-none">
+              <div className={`h-2 w-2 rounded-full mt-1 flex-shrink-0 ${dotColor} transition-none`} />
+              <div className="min-w-0">
+                {badgeConfig ? (
+                  <div className={`mb-1 inline-block rounded-full px-2 py-0.5 text-[10px] font-medium ${badgeConfig.bgClass} ${badgeConfig.textClass}`}>
+                    {badgeConfig.label}
+                  </div>
+                ) : null}
+                <p className="text-xs leading-relaxed whitespace-normal text-wrap break-words [overflow-wrap:anywhere] line-clamp-3 transition-none">{displayName}</p>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {shouldPaginate && hasNext ? (
+        <div className="pt-1">
+          <button
+            type="button"
+            onClick={() => setStartIndex((prev) => Math.min(activities.length - PAGE_SIZE, prev + 1))}
+            className="flex h-6 w-full items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+            aria-label="Show next events"
+          >
+            <ChevronDown className="h-4 w-4" />
+          </button>
+        </div>
+      ) : null}
+    </div>
+  );
+}
 
 interface GridViewProps {
   selectedProgram: string;
@@ -469,38 +574,17 @@ function MiniCalendar({ month, year, selectedProgram, selectedSessions, showKKT,
                     side="top" 
                     className="w-auto max-w-[300px] sm:max-w-[330px] px-3 py-2 mx-2 rounded-lg shadow-lg border border-border bg-popover text-popover-foreground [&[data-side='top']]:before:content-none transition-none"
                     sideOffset={8}
+                    collisionPadding={12}
                     style={{ pointerEvents: 'auto' } as React.CSSProperties & { '--radix-tooltip-content-transform-origin'?: string }}
                   >
-                    <div className="w-full space-y-2">
-                      {uniqueDayActivities.map((activity, idx) => {
-                        const dotColor = 
-                          activity.type === 'registration' ? 'bg-[#d1d5db]' :
-                          activity.type === 'lecture' ? 'bg-[#8b5cf6]' :
-                          activity.type === 'examination' ? 'bg-[#dc2626]' :
-                          activity.type === 'break' ? 'bg-[#10b981]' : 'bg-gray-400';
-                        const countdownTypes: ActivityType[] = ['lecture', 'examination', 'break'];
-                        const days = showCountdown && countdownTypes.includes(activity.type) && currentDateStr
-                          ? getDaysUntilStart(activity, currentDateStr, showKKT)
-                          : null;
-                        const badgeConfig =
-                          selectedProgram === 'All' ? getProgramBadgeConfig(activity) : null;
-                        const label = activity.details ? `${activity.name} - ${activity.details}` : activity.name;
-                        const displayName = days != null ? `${label} (${formatCountdown(days)})` : label;
-                        return (
-                          <div key={idx} className="grid grid-cols-[auto_minmax(0,1fr)] items-start gap-2 transition-none" style={{ transition: 'none' }}>
-                            <div className={`h-2 w-2 rounded-full mt-1 flex-shrink-0 ${dotColor} transition-none`} style={{ transition: 'none' }} />
-                            <div className="min-w-0">
-                              {badgeConfig ? (
-                                <div className={`mb-1 inline-block rounded-full px-2 py-0.5 text-[10px] font-medium ${badgeConfig.bgClass} ${badgeConfig.textClass}`}>
-                                  {badgeConfig.label}
-                                </div>
-                              ) : null}
-                              <p className="text-xs leading-relaxed whitespace-normal text-wrap break-words [overflow-wrap:anywhere] line-clamp-3 transition-none">{displayName}</p>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
+                    <TooltipActivityList
+                      dateKey={dateStr}
+                      activities={uniqueDayActivities}
+                      selectedProgram={selectedProgram}
+                      showCountdown={showCountdown}
+                      currentDateStr={currentDateStr}
+                      showKKT={showKKT}
+                    />
                   </TooltipContent>
                 );
               })()}
