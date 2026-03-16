@@ -25,6 +25,7 @@ export interface Activity {
   programs?: string[]; // Applicable programs
   group?: 'A' | 'B'; // Group A (Foundation/Professional) or Group B (Pre-Diploma onwards)
   programType?: 'PreDiploma' | 'Diploma' | 'DiplomaPartTime' | 'Bachelor' | 'BachelorPartTime' | 'Master' | 'PhD'; // For Group B subdivision
+  programTypes?: string[]; // Multiple programs (e.g. PreDiploma, Diploma, Bachelor) - show all badges on "All" list, single badge when specific program
   semua?: boolean; // True if applies to all Group B students (Semua Pelajar)
   states?: string[]; // Applicable states only (used for Kedah, Kelantan, Terengganu)
 }
@@ -210,6 +211,27 @@ export function getProgramBadgeConfig(activity: Activity): ProgramBadgeConfig | 
   return null;
 }
 
+/** Get badge configs for activities with programTypes. For "All" view returns all; for specific program returns single if in list. */
+export function getProgramBadgesConfig(
+  activity: Activity,
+  selectedProgram: string
+): ProgramBadgeConfig[] {
+  if (activity.programTypes?.length) {
+    if (selectedProgram === 'All') {
+      return activity.programTypes
+        .filter((pt) => pt in programBadgeConfigMap)
+        .map((pt) => programBadgeConfigMap[pt as ProgramTypeForBadge]);
+    }
+    const match = activity.programTypes.find((pt) => pt === selectedProgram);
+    if (match && match in programBadgeConfigMap) {
+      return [programBadgeConfigMap[match as ProgramTypeForBadge]];
+    }
+    return [];
+  }
+  const single = getProgramBadgeConfig(activity);
+  return single ? [single] : [];
+}
+
 export type ProgramGroup = 'A' | 'B';
 
 /**
@@ -283,6 +305,9 @@ export function shouldIncludeActivity(
   if (activity.type === 'examination' && (activity.name.includes('Khas') || activity.name.includes('English Exit Test') || activity.name.includes('EET Lisan') || activity.name.includes('EET Speaking')) && !showOthersExams) return false;
 
   if (selectedProgram === 'All') return true;
+  if (activity.programTypes?.length) {
+    return activity.programTypes.includes(selectedProgram);
+  }
   if (activity.programType && activity.programType !== selectedProgram) return false;
   return true;
 }

@@ -131,7 +131,7 @@ function getActivityDedupeKey(a: Activity): string {
     a.endDate ?? "",
     a.type,
     a.group ?? "",
-    a.programType ?? "",
+    a.programTypes?.length ? a.programTypes.join(",") : (a.programType ?? ""),
     a.semua ? "1" : "0",
     a.details ?? "",
     a.duration ?? "",
@@ -153,6 +153,7 @@ function dedupeActivities(activities: Activity[]): Activity[] {
 function filterActivityByProgram(activity: Activity, program: string): boolean {
   if (program === "All" || program === "Foundation/Professional") return true;
   if (activity.semua) return true;
+  if (activity.programTypes?.length && activity.programTypes.includes(program)) return true;
   if (activity.programType === program) return true;
   return false;
 }
