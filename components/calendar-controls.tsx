@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { List, Settings, Calendar, ChevronDown, ChevronUp, MessageCircle } from 'lucide-react';
 import {
   DropdownMenu,
@@ -697,12 +698,7 @@ export function CalendarControls({
                     {/* Buttons Container */}
                     <div className="flex flex-col gap-2 w-full transition-none">
                       {/* Submit Feedback Button */}
-                      <a 
-                        href="/feedback"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="w-full"
-                      >
+                      <Link href="/contact" className="w-full">
                         <Button
                           size="sm"
                           variant="outline"
@@ -710,7 +706,7 @@ export function CalendarControls({
                         >
                           Feedback
                         </Button>
-                      </a>
+                      </Link>
 
                       {/* Download PWA Button - Only show if not already installed */}
                       {!isPWAInstalled && (

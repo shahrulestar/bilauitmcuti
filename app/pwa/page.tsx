@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { ChevronLeft, Monitor, Smartphone, TabletSmartphone, Sparkles, CalendarDays, LayoutGrid, List, Moon, Sun, MessageCircle, MapPin } from 'lucide-react';
+import { ChevronLeft, Monitor, Smartphone, TabletSmartphone, Sparkles, CalendarDays, LayoutGrid, List, Moon, Sun, MessageCircle, MapPin, MessageSquareText } from 'lucide-react';
 
 export default function PWAPage() {
   const router = useRouter();
@@ -37,9 +37,10 @@ export default function PWAPage() {
             Install <span className="text-[#8b5cf6]">Bila UiTM Cuti?</span>
           </h1>
           <p className="mt-2 text-muted-foreground">
-            Add this web app to your home screen for a faster, app-like experience.
-            If you already installed an old version, delete it from your home screen first, then reinstall from your browser.
+            Add this web app to your home screen for a faster, app-like experience with the latest calendar, chat, and contact updates.
+            If you installed an older version before, remove it first and reinstall from your browser.
           </p>
+          <p className="mt-2 text-sm text-muted-foreground">Last updated: March 2026</p>
         </div>
 
         {/* Already installed banner */}
@@ -131,6 +132,7 @@ export default function PWAPage() {
               <FeatureItem icon={<Sparkles className="h-4 w-4" />} label="Group A & B schedules" />
               <FeatureItem icon={<MapPin className="h-4 w-4" />} label="Kedah, Kelantan & Terengganu" />
               <FeatureItem icon={<MessageCircle className="h-4 w-4" />} label="AI chat assistant" />
+              <FeatureItem icon={<MessageSquareText className="h-4 w-4" />} label="Contact & feedback form" />
               <FeatureItem icon={<ThemeIcon />} label="Dark & light themes" />
               <FeatureItem icon={<List className="h-4 w-4" />} label="Fast & responsive design" />
               <FeatureItem icon={<Smartphone className="h-4 w-4" />} label="Installable as native app" />

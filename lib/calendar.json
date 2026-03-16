@@ -1079,7 +1079,7 @@
           "endDate": "2026-03-29",
           "type": "registration",
           "group": "B",
-          "programType": "PreDiploma"
+          "programTypes": ["PreDiploma", "Diploma"]
         },
         {
           "name": "Program Minggu Destini Siswa (MDS) & Program Minggu Edu 5.0@UiTM",
@@ -1104,7 +1104,7 @@
           "endDate": "2026-04-26",
           "type": "registration",
           "group": "B",
-          "programType": "PreDiploma"
+          "programTypes": ["PreDiploma", "Diploma"]
         },
         {
           "name": "Persetujuan Menerima Tawaran UiTM Secara Online",
@@ -1118,22 +1118,6 @@
           "name": "Pendaftaran Online Sebagai Pelajar Sepenuh Masa",
           "startDate": "2026-01-12",
           "endDate": "2026-03-22",
-          "type": "registration",
-          "group": "B",
-          "programType": "Diploma"
-        },
-        {
-          "name": "Pendaftaran Fizikal & Serahan Dokumen Pelajar Baharu",
-          "startDate": "2026-03-28",
-          "endDate": "2026-03-29",
-          "type": "registration",
-          "group": "B",
-          "programType": "Diploma"
-        },
-        {
-          "name": "Pendaftaran Kursus English Exit Test (EET699) Bagi Yang Layak Sahaja",
-          "startDate": "2026-03-24",
-          "endDate": "2026-04-26",
           "type": "registration",
           "group": "B",
           "programType": "Diploma"
@@ -1356,15 +1340,7 @@
           "endDate": "2026-09-20",
           "type": "registration",
           "group": "B",
-          "programType": "PreDiploma"
-        },
-        {
-          "name": "Pendaftaran Fizikal & Serahan Dokumen Pelajar Baharu",
-          "startDate": "2026-09-19",
-          "endDate": "2026-09-20",
-          "type": "registration",
-          "group": "B",
-          "programType": "Diploma"
+          "programTypes": ["PreDiploma", "Diploma"]
         },
         {
           "name": "Tarikh Akhir Muat Naik Gambar Kad Pelajar di iStudent Portal",
@@ -1436,15 +1412,7 @@
           "endDate": "2026-09-27",
           "type": "registration",
           "group": "B",
-          "programType": "Master"
-        },
-        {
-          "name": "Pendaftaran Pelajar Baharu (Sarjana Pascasiswazah & PhD)",
-          "startDate": "2026-09-07",
-          "endDate": "2026-09-27",
-          "type": "registration",
-          "group": "B",
-          "programType": "PhD"
+          "programTypes": ["Master", "PhD"]
         },
         {
           "name": "Pendaftaran Pelajar Baharu Tawaran Kedua (UiTM Shah Alam dan UiTM Cawangan)",
@@ -1452,15 +1420,7 @@
           "endDate": "2026-09-27",
           "type": "registration",
           "group": "B",
-          "programType": "Master"
-        },
-        {
-          "name": "Pendaftaran Pelajar Baharu Tawaran Kedua (UiTM Shah Alam dan UiTM Cawangan)",
-          "startDate": "2026-09-07",
-          "endDate": "2026-09-27",
-          "type": "registration",
-          "group": "B",
-          "programType": "PhD"
+          "programTypes": ["Master", "PhD"]
         },
         {
           "name": "Persetujuan Menerima Tawaran UiTM",
@@ -1816,15 +1776,7 @@
           "endDate": "2027-03-14",
           "type": "registration",
           "group": "B",
-          "programType": "PreDiploma"
-        },
-        {
-          "name": "Pendaftaran Fizikal & Serahan Dokumen Pelajar Baharu",
-          "startDate": "2027-03-13",
-          "endDate": "2027-03-14",
-          "type": "registration",
-          "group": "B",
-          "programType": "Diploma"
+          "programTypes": ["PreDiploma", "Diploma"]
         },
         {
           "name": "Tarikh Akhir Muat Naik Gambar Kad Pelajar di iStudent Portal",
@@ -1897,15 +1849,7 @@
           "endDate": "2027-03-21",
           "type": "registration",
           "group": "B",
-          "programType": "Master"
-        },
-        {
-          "name": "Pendaftaran Pelajar Baharu (Sarjana Pascasiswazah & PhD)",
-          "startDate": "2027-03-01",
-          "endDate": "2027-03-21",
-          "type": "registration",
-          "group": "B",
-          "programType": "PhD"
+          "programTypes": ["Master", "PhD"]
         },
         {
           "name": "Pendaftaran Pelajar Baharu Tawaran Kedua (UiTM Shah Alam dan UiTM Cawangan)",
@@ -1913,15 +1857,7 @@
           "endDate": "2027-03-21",
           "type": "registration",
           "group": "B",
-          "programType": "Master"
-        },
-        {
-          "name": "Pendaftaran Pelajar Baharu Tawaran Kedua (UiTM Shah Alam dan UiTM Cawangan)",
-          "startDate": "2027-03-01",
-          "endDate": "2027-03-21",
-          "type": "registration",
-          "group": "B",
-          "programType": "PhD"
+          "programTypes": ["Master", "PhD"]
         },
         {
           "name": "Persetujuan Menerima Tawaran UiTM",

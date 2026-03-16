@@ -18,7 +18,7 @@ Academic calendar web app for Universiti Teknologi MARA (UiTM) — Malaysia's la
 - Ask about academic dates, breaks, and exams in English or Malay
 - General UiTM info: campuses, faculties, programs, admission
 - Context-aware answers based on selected program
-- Powered by Groq (Llama 3.1 8B primary, GPT-OSS 20B fallback)
+- Powered by Groq (Llama 3.1 8B)
 - Rate limited: 10/min, 30/day per IP, 500/day global
 
 ### Progressive Web App
@@ -30,7 +30,7 @@ Academic calendar web app for Universiti Teknologi MARA (UiTM) — Malaysia's la
 
 - **Framework:** Next.js 16 (App Router), React 19, TypeScript
 - **Styling:** Tailwind CSS 4, shadcn/ui, Radix UI
-- **AI:** Groq SDK (llama-3.1-8b-instant, openai/gpt-oss-20b)
+- **AI:** Groq SDK (llama-3.1-8b-instant)
 - **Calendar:** react-day-picker, date-fns
 - **Validation:** Zod
 - **Deployment:** Cloudflare Workers (OpenNext)
@@ -60,6 +60,8 @@ cp .env.example .env.local
 
 ```env
 GROQ_API_KEY=your_groq_api_key_here
+TELEGRAM_BOT_TOKEN=your_telegram_bot_token_here
+TELEGRAM_CHAT_ID=your_telegram_chat_id_here
 ```
 
 ### Development
@@ -87,7 +89,7 @@ pnpm deploy   # build + deploy (requires wrangler login)
 
 **Cloudflare Dashboard (Pages/Workers):** Connect your repo, then set:
 - **Build command:** `pnpm run deploy`
-- **Environment variables:** `GROQ_API_KEY` (secret)
+- **Environment variables:** `GROQ_API_KEY`, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID` (secrets)
 - `CLOUDFLARE_API_TOKEN` is auto-injected when connected via Git
 
 **Troubleshooting:**
@@ -117,7 +119,7 @@ components/
   list-view.tsx         # List calendar view
   theme-toggle.tsx      # Dark/light theme switch
 lib/
-  ai.ts                # Groq AI integration with fallback
+  ai.ts                # Groq AI integration
   data.ts              # Academic calendar data (activities, dates)
   env.ts               # Centralized env validation
   rate-limit.ts        # Rate limiting (KV or in-memory fallback)

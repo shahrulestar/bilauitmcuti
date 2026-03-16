@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 export const runtime = 'edge';
 import { z } from "zod";
-import { askGroqWithFallback, MODEL_LLAMA, MODEL_GPT_OSS, type ChatMessage } from "@/lib/ai";
+import { askGroq, MODEL_LLAMA, type ChatMessage } from "@/lib/ai";
 import systemRules from "@/lib/system-rules.json";
 import {
   getActivitiesForSession,
@@ -585,12 +585,11 @@ export async function POST(request: NextRequest) {
         )
       : buildResearchSystemPrompt(todayFormatted);
 
-    const rawReply = await askGroqWithFallback(
+    const rawReply = await askGroq(
       sanitizedMessage,
       systemPrompt,
       sanitizedHistory,
-      MODEL_LLAMA,
-      MODEL_GPT_OSS
+      MODEL_LLAMA
     );
 
     const reply = rawReply

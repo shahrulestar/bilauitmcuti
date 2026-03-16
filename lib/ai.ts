@@ -4,7 +4,6 @@ import { getEnv } from "@/lib/env";
 const groq = new Groq({ apiKey: getEnv().GROQ_API_KEY });
 
 export const MODEL_LLAMA = "llama-3.1-8b-instant" as const;
-export const MODEL_GPT_OSS = "openai/gpt-oss-20b" as const;
 
 /** Groq 413 = request body too large. Raised to 16K to avoid truncating calendar data. */
 const MAX_SYSTEM_CHARS = 16_000;
@@ -13,7 +12,6 @@ const MAX_MESSAGE_CHARS = 1_000;
 const MAX_USER_PROMPT_CHARS = 1_000;
 
 const MAX_TOKENS_LLAMA = 2048;
-const MAX_TOKENS_GPT_OSS = 4096;
 
 export interface ChatMessage {
   role: "user" | "assistant";
@@ -64,43 +62,12 @@ async function callModel(
   return content;
 }
 
-/**
- * Try primary model, fallback to backup on error.
- * On 429 rate limit: wait Groq's suggested time, then retry once before falling back.
- */
-export async function askGroqWithFallback(
+export async function askGroq(
   prompt: string,
   systemPrompt: string | undefined,
   history: ChatMessage[] | undefined,
-  primaryModel: typeof MODEL_LLAMA | typeof MODEL_GPT_OSS,
-  backupModel: typeof MODEL_LLAMA | typeof MODEL_GPT_OSS
+  model: typeof MODEL_LLAMA = MODEL_LLAMA
 ): Promise<string> {
   const messages = buildMessages(prompt, systemPrompt, history);
-
-  function tryModel(model: string): Promise<string> {
-    const maxT = model === MODEL_GPT_OSS ? MAX_TOKENS_GPT_OSS : MAX_TOKENS_LLAMA;
-    return callModel(model, messages, maxT);
-  }
-
-  try {
-    return await tryModel(primaryModel);
-  } catch (primaryError: unknown) {
-    const errMsg = primaryError instanceof Error ? primaryError.message : String(primaryError);
-    if (process.env.NODE_ENV === "development") {
-      console.error(`Groq [${primaryModel}] failed, trying backup [${backupModel}]:`, errMsg);
-    }
-
-    try {
-      const result = await tryModel(backupModel);
-      if (process.env.NODE_ENV === "development") {
-        console.log(`Groq backup [${backupModel}] succeeded`);
-      }
-      return result;
-    } catch (backupError: unknown) {
-      if (process.env.NODE_ENV === "development") {
-        console.error(`Groq backup [${backupModel}] also failed:`, backupError);
-      }
-      throw primaryError;
-    }
-  }
+  return callModel(model, messages, MAX_TOKENS_LLAMA);
 }
