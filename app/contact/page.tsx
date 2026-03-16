@@ -103,7 +103,7 @@ export default function ContactPage() {
 
       <div className="flex-1 overflow-y-auto px-4 pb-6 pt-24 md:px-0">
         <div className="mx-auto w-full max-w-[600px]">
-          <Card className="gap-0 rounded-[10px]">
+          <Card className="gap-0 rounded-[10px] shadow-none">
             <CardHeader className="space-y-1 pb-4 px-3 sm:px-6">
               <div>
                 <CardTitle className="text-2xl font-semibold">Contact Form</CardTitle>
