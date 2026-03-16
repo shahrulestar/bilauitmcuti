@@ -154,7 +154,7 @@ function sanitizeMessage(message: string): string {
     .trim();
 }
 
-const CALENDAR_KEYWORDS = [
+const CALENDAR_STRONG_KEYWORDS = [
   "cuti",
   "semester",
   "peperiksaan",
@@ -164,33 +164,92 @@ const CALENDAR_KEYWORDS = [
   "break",
   "kuliah",
   "lecture",
-  "lectures",
-  "class",
-  "classes",
   "pendaftaran",
   "registration",
   "minggu ulangkaji",
   "revision",
-  "yuran",
-  "fee",
   "gugur taraf",
   "group a",
   "group b",
   "kumpulan",
   "jadual",
   "schedule",
-  "bila",
-  "when",
   "hari raya",
   "aidil",
-  "mds",
   "short semester",
   "intersession classes",
 ];
 
+const CALENDAR_AMBIGUOUS_KEYWORDS = [
+  "class",
+  "classes",
+  "lectures",
+  "yuran",
+  "fee",
+  "bila",
+  "when",
+  "mds",
+];
+
+const GENERAL_UITM_INFO_KEYWORDS = [
+  "kampus",
+  "campus",
+  "fakulti",
+  "faculty",
+  "program",
+  "course",
+  "courses",
+  "subjek",
+  "subject",
+  "subjects",
+  "admission",
+  "intake",
+  "syarat",
+  "requirement",
+  "requirements",
+  "scholarship",
+  "biasiswa",
+];
+
+const CALENDAR_INTENT_HINTS = [
+  "mula",
+  "start",
+  "akhir",
+  "end",
+  "next",
+  "upcoming",
+  "seterusnya",
+  "akan datang",
+  "lepas ni",
+  "current",
+  "sekarang",
+  "tarikh",
+  "date",
+  "jadual",
+  "schedule",
+  "cuti",
+  "semester",
+  "exam",
+  "peperiksaan",
+  "registration",
+  "pendaftaran",
+];
+
 function isCalendarQuestion(message: string): boolean {
   const lower = message.toLowerCase();
-  return CALENDAR_KEYWORDS.some((kw) => lower.includes(kw));
+  if (CALENDAR_STRONG_KEYWORDS.some((kw) => lower.includes(kw))) return true;
+
+  const hasAmbiguousKeyword = CALENDAR_AMBIGUOUS_KEYWORDS.some((kw) =>
+    lower.includes(kw)
+  );
+  if (!hasAmbiguousKeyword) return false;
+
+  const hasGeneralUitmIntent = GENERAL_UITM_INFO_KEYWORDS.some((kw) =>
+    lower.includes(kw)
+  );
+  if (hasGeneralUitmIntent) return false;
+
+  return CALENDAR_INTENT_HINTS.some((kw) => lower.includes(kw));
 }
 
 const COMPARE_KEYWORDS = [
@@ -351,7 +410,6 @@ function formatActivitiesAsContext(activities: Activity[]): string {
       if (a.endDate) line += ` to ${toDateFormat(a.endDate)}`;
       if (a.duration) line += ` (${a.duration})`;
       if (a.details) line += ` — ${a.details}`;
-      if (a.type) line += ` | type: ${a.type}`;
       if (a.regionalStartDate) {
         line += `\n  Kedah/Kelantan/Terengganu: ${toDateFormat(a.regionalStartDate)}`;
         if (a.regionalEndDate) line += ` to ${toDateFormat(a.regionalEndDate)}`;
@@ -543,6 +601,42 @@ function jsonError(message: string, status: number) {
   return NextResponse.json({ error: message }, { status });
 }
 
+function cleanAiReply(rawReply: string): string {
+  const internalFields = [
+    "type",
+    "startDate",
+    "endDate",
+    "programType",
+    "programTypes",
+    "group",
+    "details",
+    "duration",
+    "semua",
+    "regionalStartDate",
+    "regionalEndDate",
+  ].join("|");
+
+  const cleaned = rawReply
+    .replace(/\((?:PAST|NOW|UPCOMING)\)\s*/gi, "")
+    .replace(/\*\*([^*]+)\*\*/g, "$1")
+    .replace(/\*([^*]+)\*/g, "$1")
+    .replace(/^[\s]*\*\s/gm, "- ")
+    .replace(/#{1,6}\s?/g, "")
+    .replace(/`([^`]+)`/g, "$1")
+    .replace(/~~/g, "")
+    // Strip leaked key/value fragments like: | type: lecture
+    .replace(new RegExp(`\\|\\s*(?:${internalFields})\\s*:\\s*[^|\\n]+`, "gi"), "")
+    // Strip leaked JSON-style key/value fragments like: "type":"lecture"
+    .replace(new RegExp(`["'](?:${internalFields})["']\\s*:\\s*["'][^"']+["']`, "gi"), "")
+    // Remove trailing commas/semicolons left by removed fragments
+    .replace(/[ \t]*[,;][ \t]*(?=\n|$)/g, "")
+    .replace(/[ \t]{2,}/g, " ")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+
+  return cleaned;
+}
+
 export async function POST(request: NextRequest) {
   let correlationId = "unknown";
   try {
@@ -697,14 +791,7 @@ export async function POST(request: NextRequest) {
       modelBudget
     );
 
-    const reply = rawReply
-      .replace(/\((?:PAST|NOW|UPCOMING)\)\s*/gi, "")
-      .replace(/\*\*([^*]+)\*\*/g, "$1")
-      .replace(/\*([^*]+)\*/g, "$1")
-      .replace(/^[\s]*\*\s/gm, "- ")
-      .replace(/#{1,6}\s?/g, "")
-      .replace(/`([^`]+)`/g, "$1")
-      .replace(/~~/g, "");
+    const reply = cleanAiReply(rawReply);
 
     setCachedReply(cacheKey, reply);
     return NextResponse.json({ reply });
