@@ -42,6 +42,7 @@ import useEmblaCarousel from "embla-carousel-react";
 function getChatErrorMessage(res: Response, fallback: string): string {
   if (res.status === 429) return "Too many requests. Please wait a moment before trying again.";
   if (res.status === 403) return "Access was blocked. Please refresh and try again.";
+  if (res.status === 504) return "Request timed out. Please try again.";
   if (res.status >= 500) return "Server is temporarily unavailable. Please try again in a moment.";
   return fallback;
 }
@@ -324,8 +325,8 @@ const LOADING_PHRASES = [
   "Scanning timetable...",
 ];
 
-const FAST_RETRY_DELAY_MS = 350;
-const FAST_NETWORK_RETRY_DELAY_MS = 300;
+const FETCH_TIMEOUT_MS = 60_000;
+const RETRY_DELAYS_MS = [400, 800, 1600];
 
 function getRandomLoadingPhrase(exclude?: string): string {
   const available = LOADING_PHRASES.filter((p) => p !== exclude);
@@ -681,35 +682,45 @@ export default function ChatPage() {
         history,
       });
       let content: string | null = null;
+      const maxAttempts = 3;
+      const isRetryableStatus = (s: number) =>
+        s === 500 || s === 502 || s === 503 || s === 504 || s === 429;
 
-      // Retry up to 2 times for recoverable errors (503 model loading, network issues)
-      for (let attempt = 0; attempt < 2; attempt++) {
+      for (let attempt = 0; attempt < maxAttempts; attempt++) {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
         try {
           const res = await fetch("/chat/api", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body,
+            signal: controller.signal,
           });
+          clearTimeout(timeoutId);
 
           const data = await parseChatResponse(res);
 
           if (!res.ok) {
-            // Retry on 503 (model loading / busy)
-            if (res.status === 503 && attempt < 1) {
-              await new Promise((r) => setTimeout(r, FAST_RETRY_DELAY_MS));
+            content = data.error || getChatErrorMessage(res, "Something went wrong. Please try again.");
+            if (isRetryableStatus(res.status) && attempt < maxAttempts - 1) {
+              await new Promise((r) => setTimeout(r, RETRY_DELAYS_MS[attempt]));
               continue;
             }
-            content = data.error || getChatErrorMessage(res, "Something went wrong. Please try again.");
           } else {
             content = data.reply || "Sorry, I could not get a response.";
           }
           break;
-        } catch {
-          if (attempt < 1) {
-            await new Promise((r) => setTimeout(r, FAST_NETWORK_RETRY_DELAY_MS));
+        } catch (err) {
+          clearTimeout(timeoutId);
+          const isAbort = err instanceof Error && err.name === "AbortError";
+          content = isAbort
+            ? "Request timed out. Please try again."
+            : "Something went wrong. Please try again.";
+          if (attempt < maxAttempts - 1) {
+            await new Promise((r) => setTimeout(r, RETRY_DELAYS_MS[attempt]));
             continue;
           }
-          throw new Error("Network error");
+          break;
         }
       }
 

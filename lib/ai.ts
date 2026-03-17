@@ -14,6 +14,18 @@ const MAX_USER_PROMPT_CHARS = 1_200;
 const MAX_TOKENS_LLAMA = 2048;
 const DEFAULT_TEMPERATURE = 0.2;
 
+/** Timeout for GROQ API calls (Cloudflare Workers ~30–60s limit). */
+const GROQ_REQUEST_TIMEOUT_MS = 55_000;
+
+function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error("Request timed out")), ms)
+    ),
+  ]);
+}
+
 export interface ChatMessage {
   role: "user" | "assistant";
   content: string;
@@ -52,12 +64,15 @@ async function callModel(
   maxTokens: number,
   temperature: number
 ): Promise<string> {
-  const response = await groq.chat.completions.create({
-    model,
-    messages,
-    max_tokens: maxTokens,
-    temperature,
-  });
+  const response = await withTimeout(
+    groq.chat.completions.create({
+      model,
+      messages,
+      max_tokens: maxTokens,
+      temperature,
+    }),
+    GROQ_REQUEST_TIMEOUT_MS
+  );
   const content = response?.choices?.[0]?.message?.content;
   if (!content) {
     throw new Error("Empty response from model");

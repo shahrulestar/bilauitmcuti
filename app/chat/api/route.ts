@@ -92,7 +92,12 @@ function isTransientModelError(error: unknown): boolean {
     msg.includes("rate limit") ||
     msg.includes("busy") ||
     msg.includes("loading") ||
-    msg.includes("temporarily unavailable")
+    msg.includes("temporarily unavailable") ||
+    msg.includes("timeout") ||
+    msg.includes("timed out") ||
+    msg.includes("econnreset") ||
+    msg.includes("econnrefused") ||
+    msg.includes("network")
   );
 }
 
@@ -105,7 +110,7 @@ function getModelResponseBudget(
   useCalendarPrompt: boolean,
   isCompareRequested: boolean
 ): { maxTokens: number; temperature: number } {
-  // Keep concise answers fast by default, while allowing more room for comparison/detail questions.
+  // Higher maxTokens for complete long-form responses; avoid mid-sentence cutoffs.
   const lower = message.toLowerCase();
   const asksDetail =
     lower.includes("explain") ||
@@ -113,28 +118,36 @@ function getModelResponseBudget(
     lower.includes("how") ||
     lower.includes("detail") ||
     lower.includes("huraikan") ||
-    lower.includes("jelaskan");
+    lower.includes("jelaskan") ||
+    lower.includes("full") ||
+    lower.includes("complete") ||
+    lower.includes("lengkap");
 
-  if (isCompareRequested) return { maxTokens: 1200, temperature: 0.15 };
-  if (useCalendarPrompt && !asksDetail) return { maxTokens: 850, temperature: 0.15 };
-  if (useCalendarPrompt) return { maxTokens: 1050, temperature: 0.2 };
-  return { maxTokens: 1200, temperature: 0.25 };
+  if (isCompareRequested) return { maxTokens: 1800, temperature: 0.15 };
+  if (useCalendarPrompt && !asksDetail) return { maxTokens: 1200, temperature: 0.15 };
+  if (useCalendarPrompt) return { maxTokens: 1600, temperature: 0.2 };
+  return { maxTokens: 1800, temperature: 0.25 };
 }
 
-async function askGroqWithFastRetry(
+const RETRY_DELAYS_MS = [400, 800, 1600];
+
+async function askGroqWithRetry(
   message: string,
   systemPrompt: string,
   history: ChatMessage[] | undefined,
   options: { maxTokens: number; temperature: number }
 ): Promise<string> {
-  try {
-    return await askGroq(message, systemPrompt, history, MODEL_LLAMA, options);
-  } catch (firstError) {
-    if (!isTransientModelError(firstError)) throw firstError;
-    // Quick retry (short backoff) so user regenerate feels responsive.
-    await sleep(300);
-    return askGroq(message, systemPrompt, history, MODEL_LLAMA, options);
+  let lastError: unknown = null;
+  for (let attempt = 0; attempt <= RETRY_DELAYS_MS.length; attempt++) {
+    try {
+      return await askGroq(message, systemPrompt, history, MODEL_LLAMA, options);
+    } catch (err) {
+      lastError = err;
+      if (!isTransientModelError(err) || attempt >= RETRY_DELAYS_MS.length) throw err;
+      await sleep(RETRY_DELAYS_MS[attempt]);
+    }
   }
+  throw lastError;
 }
 
 // --- Input Validation ---
@@ -784,9 +797,12 @@ export async function POST(request: NextRequest) {
       useCalendarPrompt,
       isCompareRequested
     );
-    const rawReply = await askGroqWithFastRetry(
+    const systemPromptWithCompletion =
+      systemPrompt +
+      "\n\nIMPORTANT: Always complete your response fully. Do not stop mid-sentence or cut off mid-paragraph.";
+    const rawReply = await askGroqWithRetry(
       sanitizedMessage,
-      systemPrompt,
+      systemPromptWithCompletion,
       sanitizedHistory,
       modelBudget
     );
@@ -832,6 +848,12 @@ export async function POST(request: NextRequest) {
       return jsonError(
         "AI model is loading. Please try again in a few seconds.",
         503
+      );
+    }
+    if (errMsg.includes("timeout") || errMsg.includes("timed out")) {
+      return jsonError(
+        "Request took too long. Please try again.",
+        504
       );
     }
 
