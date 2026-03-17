@@ -954,12 +954,39 @@
           "semua": true
         },
         {
-          "name": "Pendaftaran Kursus",
+          "name": "Pendaftaran Kursus Pelajar Baharu mod ePJJ / PLK",
           "startDate": "2026-03-23",
           "endDate": "2026-04-26",
           "type": "registration",
           "group": "B",
-          "semua": true
+          "semua": true,
+          "general": true
+        },
+        {
+          "name": "Pendaftaran Kursus Pelajar Sarjana Muda",
+          "startDate": "2026-03-24",
+          "endDate": "2026-04-26",
+          "type": "registration",
+          "group": "B",
+          "semua": false,
+          "programType": "Bachelor"
+        },
+        {
+          "name": "Pendaftaran Kursus Pelajar Pra-Diploma dan Diploma",
+          "startDate": "2026-03-25",
+          "endDate": "2026-04-26",
+          "type": "registration",
+          "group": "B",
+          "programTypes": ["PreDiploma", "Diploma"]
+        },
+        {
+          "name": "Pendaftaran Kursus Pelajar Sarjana Secara Kerja Kursus",
+          "startDate": "2026-03-25",
+          "endDate": "2026-04-26",
+          "type": "registration",
+          "group": "B",
+          "semua": false,
+          "programType": "Master"
         },
         {
           "name": "Tempoh Permohonan Penangguhan Pembayaran Yuran via Online Fee Deferment",
@@ -1490,7 +1517,8 @@
           "endDate": "2026-10-18",
           "type": "registration",
           "group": "B",
-          "semua": true
+          "semua": true,
+          "general": true
         },
         {
           "name": "Pendaftaran Kursus Pelajar Sarjana Muda",
@@ -1901,7 +1929,8 @@
           "endDate": "2027-04-11",
           "type": "registration",
           "group": "B",
-          "semua": true
+          "semua": true,
+          "general": true
         },
         {
           "name": "Pendaftaran Kursus Pelajar Sarjana Muda",

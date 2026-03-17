@@ -27,6 +27,7 @@ export interface Activity {
   programType?: 'PreDiploma' | 'Diploma' | 'DiplomaPartTime' | 'Bachelor' | 'BachelorPartTime' | 'Master' | 'PhD'; // For Group B subdivision
   programTypes?: string[]; // Multiple programs (e.g. PreDiploma, Diploma, Bachelor) - show all badges on "All" list, single badge when specific program
   semua?: boolean; // True if applies to all Group B students (Semua Pelajar)
+  general?: boolean; // True = applies to all but hide "All Students" badge (general info)
   states?: string[]; // Applicable states only (used for Kedah, Kelantan, Terengganu)
 }
 
@@ -204,7 +205,7 @@ const allStudentsBadgeConfig: ProgramBadgeConfig = {
 };
 
 export function getProgramBadgeConfig(activity: Activity): ProgramBadgeConfig | null {
-  if (activity.semua) return allStudentsBadgeConfig;
+  if (activity.semua && !activity.general) return allStudentsBadgeConfig;
   if (activity.programType && activity.programType in programBadgeConfigMap) {
     return programBadgeConfigMap[activity.programType];
   }
