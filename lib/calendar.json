@@ -930,8 +930,8 @@
         {
           "name": "Peperiksaan/Penilaian Khas/Intersesi/Short Semester",
           "startDate": "2026-09-21",
-          "endDate": "2026-09-27",
-          "duration": "1 Minggu",
+          "endDate": "2026-09-25",
+          "duration": "5 Hari",
           "type": "examination",
           "group": "B",
           "semua": true
@@ -939,7 +939,7 @@
         {
           "name": "Peperiksaan / Penilaian Khas",
           "startDate": "2026-09-21",
-          "endDate": "2026-09-27",
+          "endDate": "2026-09-25",
           "type": "examination",
           "group": "B",
           "semua": true
@@ -947,8 +947,8 @@
         {
           "name": "Cuti Semester",
           "startDate": "2026-08-10",
-          "endDate": "2026-10-04",
-          "duration": "8 Minggu",
+          "endDate": "2026-09-27",
+          "duration": "7 Minggu",
           "type": "break",
           "group": "B",
           "semua": true
