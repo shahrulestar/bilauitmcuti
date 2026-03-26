@@ -171,33 +171,31 @@ function MiniCalendar({ month, year, selectedProgram, selectedSessions, showKKT,
   const isDesktopHoverMode = hasHoverCapability && !hasTouchInput;
 
   useEffect(() => {
-    if (typeof window === 'undefined' || isDesktopHoverMode || !tooltipOpen) return;
+    if (isDesktopHoverMode) return;
+    setHoveredDateStr(null);
+    setTooltipOpen(null);
+  }, [isDesktopHoverMode]);
 
-    const selectorValue =
-      typeof CSS !== 'undefined' && typeof CSS.escape === 'function'
-        ? CSS.escape(tooltipOpen)
-        : tooltipOpen.replace(/["\\]/g, '\\$&');
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    if (!tooltipOpen || isDesktopHoverMode) return;
 
-    const handleScroll = () => setTooltipOpen(null);
+    const closeTooltip = () => setTooltipOpen(null);
     const handlePointerDown = (event: PointerEvent) => {
-      const target = event.target;
-      if (!(target instanceof Node)) return;
-
-      const trigger = document.querySelector(`[data-mini-calendar-trigger="${selectorValue}"]`);
-      const content = document.querySelector(`[data-mini-calendar-tooltip="${selectorValue}"]`);
-      const isInsideTrigger = trigger instanceof Element && trigger.contains(target);
-      const isInsideContent = content instanceof Element && content.contains(target);
-      if (isInsideTrigger || isInsideContent) return;
-      setTooltipOpen(null);
+      const target = event.target as HTMLElement | null;
+      if (!target) return;
+      if (target.closest('[data-mini-calendar-trigger]')) return;
+      if (target.closest('[data-mini-calendar-tooltip]')) return;
+      closeTooltip();
     };
 
-    window.addEventListener('scroll', handleScroll, true);
-    document.addEventListener('pointerdown', handlePointerDown, true);
+    window.addEventListener('scroll', closeTooltip, true);
+    window.addEventListener('pointerdown', handlePointerDown);
     return () => {
-      window.removeEventListener('scroll', handleScroll, true);
-      document.removeEventListener('pointerdown', handlePointerDown, true);
+      window.removeEventListener('scroll', closeTooltip, true);
+      window.removeEventListener('pointerdown', handlePointerDown);
     };
-  }, [isDesktopHoverMode, tooltipOpen]);
+  }, [tooltipOpen, isDesktopHoverMode]);
 
   // Initialize currentDateStr synchronously on client to prevent hydration mismatch
   // This ensures the same value is used on first render (client-side)
@@ -547,15 +545,13 @@ function MiniCalendar({ month, year, selectedProgram, selectedSessions, showKKT,
             <div
               data-mini-calendar-trigger={dateStr ?? undefined}
               onClick={() => {
-                if (dateStr) {
-                  // On desktop, keep date click behavior; on touch, use tap to toggle tooltip.
-                  if (tooltipOpen === dateStr) {
-                    if (isDesktopHoverMode) onDateClick(dateStr);
-                    setTooltipOpen(null);
-                  } else {
-                    setTooltipOpen(dateStr);
-                  }
+                if (!dateStr) return;
+                if (!isDesktopHoverMode) {
+                  setTooltipOpen((prev) => (prev === dateStr ? null : dateStr));
+                  onDateClick(dateStr);
+                  return;
                 }
+                onDateClick(dateStr);
               }}
               onMouseEnter={() => {
                 if (isDesktopHoverMode && dateStr) {
@@ -588,59 +584,56 @@ function MiniCalendar({ month, year, selectedProgram, selectedSessions, showKKT,
 
           return (
             <div key={index} suppressHydrationWarning>
-              <Tooltip 
-                open={tooltipOpen === dateStr} 
+              <Tooltip
+                open={tooltipOpen === dateStr}
                 onOpenChange={(open) => {
-                  if (isDesktopHoverMode) {
-                    setTooltipOpen(open ? dateStr : null);
-                    return;
-                  }
-                  if (open) setTooltipOpen(dateStr);
-                }} 
+                  if (!isDesktopHoverMode) return;
+                  setTooltipOpen(open ? dateStr : null);
+                }}
                 delayDuration={0}
               >
                 <TooltipTrigger asChild>
                   {calendarCell}
                 </TooltipTrigger>
-              {dateStr && (() => {
-                const dayActivities = getDayActivities(day!);
-                const seenKey = new Set<string>();
-                const uniqueDayActivities = dayActivities.filter((a) => {
-                  const key = [
-                    a.name,
-                    a.startDate,
-                    a.endDate ?? '',
-                    a.type,
-                    a.programType ?? '',
-                    a.semua ? '1' : '0',
-                    a.details ?? '',
-                  ].join('|');
-                  if (seenKey.has(key)) return false;
-                  seenKey.add(key);
-                  return true;
-                });
-                if (uniqueDayActivities.length === 0) return null;
-                
-                return (
-                  <TooltipContent suppressHydrationWarning 
-                    data-mini-calendar-tooltip={dateStr}
-                    side="top" 
-                    className="w-auto max-w-[300px] sm:max-w-[330px] px-3 py-2 mx-2 rounded-lg shadow-lg border border-border bg-popover text-popover-foreground [&[data-side='top']]:before:content-none transition-none"
-                    sideOffset={8}
-                    collisionPadding={12}
-                    style={{ pointerEvents: 'auto' } as React.CSSProperties & { '--radix-tooltip-content-transform-origin'?: string }}
-                  >
-                    <TooltipActivityList
-                      dateKey={dateStr}
-                      activities={uniqueDayActivities}
-                      selectedProgram={selectedProgram}
-                      showCountdown={showCountdown}
-                      currentDateStr={currentDateStr}
-                      showKKT={showKKT}
-                    />
-                  </TooltipContent>
-                );
-              })()}
+                {dateStr && (() => {
+                  const dayActivities = getDayActivities(day!);
+                  const seenKey = new Set<string>();
+                  const uniqueDayActivities = dayActivities.filter((a) => {
+                    const key = [
+                      a.name,
+                      a.startDate,
+                      a.endDate ?? '',
+                      a.type,
+                      a.programType ?? '',
+                      a.semua ? '1' : '0',
+                      a.details ?? '',
+                    ].join('|');
+                    if (seenKey.has(key)) return false;
+                    seenKey.add(key);
+                    return true;
+                  });
+                  if (uniqueDayActivities.length === 0) return null;
+
+                  return (
+                    <TooltipContent suppressHydrationWarning
+                      data-mini-calendar-tooltip={dateStr}
+                      side="top"
+                      className="w-auto max-w-[300px] sm:max-w-[330px] px-3 py-2 mx-2 rounded-lg shadow-lg border border-border bg-popover text-popover-foreground [&[data-side='top']]:before:content-none transition-none"
+                      sideOffset={8}
+                      collisionPadding={12}
+                      style={{ pointerEvents: 'auto' } as React.CSSProperties & { '--radix-tooltip-content-transform-origin'?: string }}
+                    >
+                      <TooltipActivityList
+                        dateKey={dateStr}
+                        activities={uniqueDayActivities}
+                        selectedProgram={selectedProgram}
+                        showCountdown={showCountdown}
+                        currentDateStr={currentDateStr}
+                        showKKT={showKKT}
+                      />
+                    </TooltipContent>
+                  );
+                })()}
               </Tooltip>
             </div>
           );
