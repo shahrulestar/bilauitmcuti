@@ -86,7 +86,9 @@ function TooltipActivityList({
             : getProgramBadgesConfig(activity, selectedProgram).length > 0
               ? getProgramBadgesConfig(activity, selectedProgram)
               : getProgramBadgeConfig(activity) ? [getProgramBadgeConfig(activity)!] : [];
-          const label = activity.details ? `${activity.name} - ${activity.details}` : activity.name;
+          // Tooltip should show clean "name" (from calendar.json) + optional countdown only.
+          // We intentionally do NOT concatenate `details` into the name.
+          const label = activity.name;
           const displayName = days != null ? `${label} (${formatCountdown(days)})` : label;
 
           return (
@@ -488,7 +490,7 @@ function MiniCalendar({ month, year, selectedProgram, selectedSessions, showKKT,
     const activities = getDayActivities(day);
     const activity = activities[0];
     if (!activity) return '';
-    const label = activity.details ? `${activity.name} - ${activity.details}` : activity.name;
+    const label = activity.name;
     const countdownTypes: ActivityType[] = ['lecture', 'examination', 'break'];
     if (showCountdown && countdownTypes.includes(activity.type) && currentDateStr) {
       const days = getDaysUntilStart(activity, currentDateStr, showKKT);
@@ -604,7 +606,6 @@ function MiniCalendar({ month, year, selectedProgram, selectedSessions, showKKT,
                       a.type,
                       a.programType ?? '',
                       a.semua ? '1' : '0',
-                      a.details ?? '',
                     ].join('|');
                     if (seenKey.has(key)) return false;
                     seenKey.add(key);

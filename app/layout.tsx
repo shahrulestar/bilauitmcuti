@@ -10,7 +10,7 @@ import './globals.css'
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://cutiuitm.xyz'),
-  title: 'Bila UiTM Cuti?',
+  title: 'Bila UiTM Cuti',
   description: 'Kalendar akademik UiTM interaktif. Lihat jadual pendaftaran, kuliah, peperiksaan, dan cuti semester. Interactive UiTM academic calendar with registration dates, lecture schedules, examination periods, and breaks. Includes regional variations for Kedah, Kelantan, and Terengganu.',
   keywords: ['UiTM', 'academic calendar', 'registration', 'examination', 'lectures', 'holidays', 'Malaysia', 'Universiti Teknologi MARA', 'UiTM student app', 'Bila UiTM Cuti', 'Cuti UiTM', 'Jadual UiTM', 'Kalendar UiTM', 'Kalendar Akademik UiTM', 'Academic Calendar UiTM', 'jadual akademik UiTM', 'cuti semester UiTM', 'tarikh peperiksaan UiTM', 'tarikh pendaftaran UiTM', 'kuliah UiTM'],
   generator: 'Next.js',
@@ -27,8 +27,8 @@ export const metadata: Metadata = {
     canonical: 'https://cutiuitm.xyz',
   },
   openGraph: {
-    siteName: 'Bila UiTM Cuti?',
-    title: 'Bila UiTM Cuti?',
+    siteName: 'Bila UiTM Cuti',
+    title: 'Bila UiTM Cuti',
     description: 'Kalendar akademik UiTM. Jadual pendaftaran, kuliah, peperiksaan, dan cuti semester. Interactive UiTM academic calendar with schedules and examination dates.',
     type: 'website',
     url: 'https://cutiuitm.xyz',
@@ -44,7 +44,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Bila UiTM Cuti?',
+    title: 'Bila UiTM Cuti',
     description: 'Kalendar akademik UiTM. Jadual pendaftaran, kuliah, peperiksaan, dan cuti semester untuk semua program.',
     images: ['https://cutiuitm.xyz/all-cover.png'],
   },
@@ -90,7 +90,8 @@ export default function RootLayout({
     <html lang="en" className={`${GeistSans.variable} ${GeistMono.variable}`} suppressHydrationWarning>
       <head>
         <meta name="theme-color" content="#ffffff" />
-        <meta name="apple-mobile-web-app-title" content="Bila UiTM Cuti?" />
+        <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+        <meta name="apple-mobile-web-app-title" content="Bila UiTM Cuti" />
         <link rel="manifest" href="/manifest.json" />
         <script
           type="application/ld+json"
@@ -100,23 +101,23 @@ export default function RootLayout({
               "@graph": [
                 {
                   "@type": "Organization",
-                  "name": "Bila UiTM Cuti?",
+                  "name": "Bila UiTM Cuti",
                   "url": "https://cutiuitm.xyz",
                   "logo": "https://cutiuitm.xyz/android-chrome-512x512.png",
                   "description": "Kalendar akademik UiTM interaktif oleh Shahrul Estar.",
                 },
                 {
                   "@type": "WebSite",
-                  "name": "Bila UiTM Cuti?",
+                  "name": "Bila UiTM Cuti",
                   "alternateName": ["Bila UiTM Cuti", "Cuti UiTM", "Kalendar Akademik UiTM"],
                   "url": "https://cutiuitm.xyz",
                   "description": "Kalendar akademik UiTM interaktif. Jadual pendaftaran, kuliah, peperiksaan, dan cuti semester. Interactive UiTM academic calendar with registration dates, lecture schedules, examination periods, and breaks.",
                   "inLanguage": ["ms", "en"],
-                  "publisher": { "@type": "Organization", "name": "Bila UiTM Cuti?" },
+                  "publisher": { "@type": "Organization", "name": "Bila UiTM Cuti" },
                 },
                 {
                   "@type": "WebApplication",
-                  "name": "Bila UiTM Cuti?",
+                  "name": "Bila UiTM Cuti",
                   "url": "https://cutiuitm.xyz",
                   "applicationCategory": "EducationalApplication",
                   "operatingSystem": "All",

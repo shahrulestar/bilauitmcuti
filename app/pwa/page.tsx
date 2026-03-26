@@ -34,7 +34,7 @@ export default function PWAPage() {
         {/* Hero */}
         <div className="mb-10">
           <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
-            Install <span className="text-[#8b5cf6]">Bila UiTM Cuti?</span>
+            Install <span className="text-[#8b5cf6]">Bila UiTM Cuti</span>
           </h1>
           <p className="mt-2 text-muted-foreground">
             Add this web app to your home screen for a faster, app-like experience with the latest calendar, chat, and contact updates.
@@ -46,7 +46,7 @@ export default function PWAPage() {
         {/* Already installed banner */}
         {isInstalled && (
           <div className="mb-8 rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-4 text-sm text-emerald-700 dark:text-emerald-400">
-            You&apos;re already using Bila UiTM Cuti? as an installed app.
+            You&apos;re already using Bila UiTM Cuti as an installed app.
           </div>
         )}
 
