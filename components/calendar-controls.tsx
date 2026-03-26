@@ -260,12 +260,12 @@ export function CalendarControls({
   const positionClass = forceFixed
     ? 'fixed top-0 left-1/2 -translate-x-1/2 z-[60] w-full max-w-[1000px]'
     : 'sticky top-0 z-40';
+  const stabilityClass = forceFixed ? 'calendar-controls-fixed' : 'calendar-controls-sticky';
 
   return (
       <div 
-        className={`${positionClass} ${bgClass} -mx-4 sm:-mx-6 lg:-mx-4 px-4 sm:px-6 lg:px-4 transition-none isolate overflow-visible`} 
+        className={`${positionClass} ${bgClass} -mx-4 sm:-mx-6 lg:-mx-4 px-4 sm:px-6 lg:px-4 transition-none overflow-visible ${stabilityClass}`} 
         suppressHydrationWarning
-        style={{ transition: 'none', transform: 'translateZ(0)' }}
       >
         <div 
           className={`flex flex-row items-center justify-between gap-4 pt-8 w-full px-0 min-h-14 pb-1 ${bgClass} transition-none`} 

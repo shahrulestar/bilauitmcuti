@@ -324,6 +324,15 @@ input[type="checkbox"],
       box-shadow: none !important;
       -webkit-tap-highlight-color: transparent !important;
     }
+
+    /* Mobile Safari sticky stability:
+       Avoid flicker/peek-through during very fast scrolling.
+       Keep sticky behavior; only adjust painting/compositing hints. */
+    .calendar-controls-sticky {
+      contain: paint;
+      -webkit-backface-visibility: hidden;
+      backface-visibility: hidden;
+    }
   }
 
   /* Hover text color on nav icon buttons - desktop only */

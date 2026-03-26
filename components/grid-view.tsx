@@ -525,10 +525,9 @@ function MiniCalendar({ month, year, selectedProgram, selectedSessions, showKKT,
                   setTooltipOpen(null);
                 }
               }}
-              onPointerDown={(e) => {
-                // Prevent focus on pointer events (works for both mouse and touch)
-                // This is the key to remove focus outline on both desktop and mobile
-                e.preventDefault();
+              onMouseDown={(e) => {
+                // Keep desktop focus suppression without affecting touch click synthesis on iOS.
+                if (hasHoverCapability) e.preventDefault();
               }}
               onFocus={(e) => {
                 // Immediately blur if element somehow gets focus
