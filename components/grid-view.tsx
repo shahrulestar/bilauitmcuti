@@ -54,7 +54,7 @@ function TooltipActivityList({
     : activities;
 
   return (
-    <div className="w-full py-2">
+    <div className="w-full py-1">
       {shouldPaginate && hasPrev ? (
         <div className="pb-1">
           <button
@@ -617,7 +617,7 @@ function MiniCalendar({ month, year, selectedProgram, selectedSessions, showKKT,
                     <TooltipContent suppressHydrationWarning
                       data-mini-calendar-tooltip={dateStr}
                       side="top"
-                      className="w-auto max-w-[300px] sm:max-w-[330px] px-3 py-2 mx-2 rounded-lg shadow-lg border border-border bg-popover text-popover-foreground [&[data-side='top']]:before:content-none transition-none"
+                      className="w-auto max-w-[300px] sm:max-w-[330px] px-3 py-1 mx-2 rounded-lg shadow-lg border border-border bg-popover text-popover-foreground [&[data-side='top']]:before:content-none transition-none"
                       sideOffset={8}
                       collisionPadding={12}
                       style={{ pointerEvents: 'auto' } as React.CSSProperties & { '--radix-tooltip-content-transform-origin'?: string }}
