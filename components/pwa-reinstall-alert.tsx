@@ -29,6 +29,21 @@ function isMobileOs(): boolean {
   return isAndroid || isIOS;
 }
 
+function isDesktopBrowser(): boolean {
+  if (typeof window === 'undefined') return true;
+
+  const navigatorWithUaData = window.navigator as Navigator & {
+    userAgentData?: { mobile?: boolean };
+  };
+  const isMobileByUaData = navigatorWithUaData.userAgentData?.mobile;
+  if (typeof isMobileByUaData === 'boolean') return !isMobileByUaData;
+
+  const userAgent = window.navigator.userAgent.toLowerCase();
+  const hasMobileUa = /android|iphone|ipad|ipod|mobile/.test(userAgent);
+  const hasTouch = window.navigator.maxTouchPoints > 1 || window.matchMedia('(pointer: coarse)').matches;
+  return !hasMobileUa && !hasTouch;
+}
+
 function isLikelyOldPwaContext(): boolean {
   if (typeof window === 'undefined') return false;
 
@@ -59,6 +74,7 @@ export function PwaReinstallAlert() {
   useEffect(() => {
     if (!mounted || typeof window === 'undefined') return;
     if (pathname !== '/') return;
+    if (isDesktopBrowser()) return;
     if (!isPwaMode()) return;
     if (!isMobileOs()) return;
     if (!isLikelyOldPwaContext()) return;
