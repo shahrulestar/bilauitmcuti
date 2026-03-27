@@ -10,8 +10,6 @@ import {
 } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 
-const PWA_REINSTALL_REMINDER_KEY = 'pwa-reinstall-reminder-opened-v1';
-
 function isPwaMode(): boolean {
   if (typeof window === 'undefined') return false;
   const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
@@ -19,10 +17,23 @@ function isPwaMode(): boolean {
   return isStandalone || isMinimalUI;
 }
 
+function isMobileOs(): boolean {
+  if (typeof window === 'undefined') return false;
+
+  const userAgent = window.navigator.userAgent.toLowerCase();
+  const isAndroid = userAgent.includes('android');
+  const isIOS =
+    /iphone|ipad|ipod/.test(userAgent) ||
+    (window.navigator.platform === 'MacIntel' && window.navigator.maxTouchPoints > 1);
+
+  return isAndroid || isIOS;
+}
+
 function isLikelyOldPwaContext(): boolean {
   if (typeof window === 'undefined') return false;
 
   const hostname = window.location.hostname.toLowerCase();
+  if (hostname === 'bilauitmcuti.com' || hostname === 'www.bilauitmcuti.com') return false;
   if (hostname === 'www.cutiuitm.xyz' || hostname === 'cutiuitm.xyz') return true;
 
   const referrer = document.referrer.toLowerCase();
@@ -49,16 +60,9 @@ export function PwaReinstallAlert() {
     if (!mounted || typeof window === 'undefined') return;
     if (pathname !== '/') return;
     if (!isPwaMode()) return;
+    if (!isMobileOs()) return;
     if (!isLikelyOldPwaContext()) return;
-
-    try {
-      const alreadyOpened = localStorage.getItem(PWA_REINSTALL_REMINDER_KEY);
-      if (alreadyOpened) return;
-      localStorage.setItem(PWA_REINSTALL_REMINDER_KEY, 'true');
-      setShow(true);
-    } catch {
-      // ignore storage errors and avoid noisy UX
-    }
+    setShow(true);
   }, [mounted, pathname]);
 
   function handleOpenGuide() {
