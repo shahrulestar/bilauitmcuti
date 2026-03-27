@@ -5,7 +5,6 @@ import { usePathname, useRouter } from 'next/navigation';
 import { CalendarHeader } from '@/components/calendar-header';
 import { CalendarControls } from '@/components/calendar-controls';
 import { PwaPromptAlert } from '@/components/pwa-prompt-alert';
-import { PwaReinstallAlert } from '@/components/pwa-reinstall-alert';
 import { ListView } from '@/components/list-view';
 import { GridView } from '@/components/grid-view';
 import { getProgramFromRoute, getRoutePath } from '@/lib/route-utils';
@@ -400,7 +399,6 @@ export function SharedCalendarLayout({
       <div className="mx-auto max-w-[1000px] px-4 py-8 sm:px-6 lg:px-4 transition-none" style={{ transition: 'none' }}>
         <CalendarHeader />
         <PwaPromptAlert />
-        <PwaReinstallAlert />
 
         <CalendarControls
           selectedProgram={selectedProgram}

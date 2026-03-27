@@ -38,7 +38,6 @@ export default function PWAPage() {
           </h1>
           <p className="mt-2 text-muted-foreground">
             Add this web app to your home screen for a faster, app-like experience with the latest calendar, chat, and contact updates.
-            If you installed an older version before, remove it first and reinstall from your browser.
           </p>
           <p className="mt-2 text-sm text-muted-foreground">Last updated: March 2026</p>
         </div>
