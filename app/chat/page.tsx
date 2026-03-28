@@ -533,11 +533,7 @@ export default function ChatPage() {
   const router = useRouter();
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
-  const [selectedProgram, setSelectedProgram] = useState<ProgramValue>(() => {
-    if (typeof window === "undefined") return "All";
-    const storedProgram = localStorage.getItem("selectedProgram");
-    return isProgramValue(storedProgram) ? storedProgram : "All";
-  });
+  const [selectedProgram, setSelectedProgram] = useState<ProgramValue>("All");
   const [selectedSessions, setSelectedSessions] = useState<SessionId[]>(() =>
     getInitialChatSessions("All")
   );
