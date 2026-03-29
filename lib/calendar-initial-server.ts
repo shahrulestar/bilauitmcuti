@@ -108,7 +108,7 @@ export async function loadInitialCalendarSnapshot(params: {
   cookieValue: string | null | undefined;
 }): Promise<InitialCalendarLoadResult> {
   try {
-    const meta = await fetchMetaCached();
+    const meta = await fetchMetaCached({ entire: true });
     const filters = parseFiltersFromCookie(params.cookieValue, meta.defaultSession);
     const program = resolveProgramForServer(params.programFromRoute, filters);
     const selectedSessions = resolveInitialSessionIds(program, filters, meta);

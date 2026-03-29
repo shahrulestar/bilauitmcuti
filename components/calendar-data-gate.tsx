@@ -169,7 +169,7 @@ export function CalendarDataGate({
         }
 
         if (s.sessionOptions.length === 0) {
-          const meta = await fetchMeta();
+          const meta = await fetchMeta({ entire: true });
           if (cancelled) return;
           setMeta(meta);
         }

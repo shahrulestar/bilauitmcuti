@@ -1,5 +1,8 @@
 import { getSnapshot } from './calendar-store';
-import { DEFAULT_FILTER_STATES, getDefaultSessionFallback } from './data';
+import {
+  DEFAULT_FILTER_STATES,
+  getDefaultSessionFallback,
+} from './data';
 import { isProgramValue, type ProgramValue } from './route-utils';
 
 /** Prefer API defaultSession when store is hydrated; else static fallback (SSR-safe). */
@@ -28,6 +31,14 @@ export interface FilterStates {
 
 const COOKIE_NAME = 'calendar-filters';
 const COOKIE_MAX_AGE = 365 * 24 * 60 * 60; // 1 year
+
+/** Read raw value of `calendar-filters` from `document.cookie` (client only). */
+export function getCalendarFiltersCookieRaw(): string | null {
+  if (typeof document === 'undefined') return null;
+  const escaped = COOKIE_NAME.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const m = document.cookie.match(new RegExp(`(?:^|;\\s*)${escaped}=([^;]*)`));
+  return m?.[1] ?? null;
+}
 
 /**
  * Parse filter states from cookie value (decoded cookie value, not full cookie string).
@@ -109,12 +120,14 @@ export function setFiltersToCookie(filters: FilterStates): void {
 }
 
 /**
- * Get filter states from cookie (client-side only)
+ * Get filter states from cookie (client-side only).
+ * Reads the `calendar-filters` entry only — not the whole `document.cookie` string.
  */
 export function getFiltersFromCookie(): FilterStates {
   if (typeof window === 'undefined') {
     return DEFAULT_FILTER_STATES;
   }
 
-  return parseFiltersFromCookie(document.cookie);
+  const raw = getCalendarFiltersCookieRaw();
+  return parseFiltersFromCookie(raw, getDefaultSessionFallback());
 }

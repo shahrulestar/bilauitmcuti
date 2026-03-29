@@ -12,8 +12,8 @@ import {
   getGroupFromSession,
 } from "@/lib/data";
 import type { SessionId } from "@/lib/data";
-import { getRoutePath } from "@/lib/route-utils";
-import type { ProgramValue } from "@/lib/route-utils";
+import { getFiltersFromCookie, type FilterStates } from "@/lib/cookie-utils";
+import { getRoutePath, isProgramValue, type ProgramValue } from "@/lib/route-utils";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -458,10 +458,6 @@ function getSessionMemoryKey(program: ProgramValue): ProgramValue {
   return getProgramGroup(program) === "B" ? ("All" as ProgramValue) : program;
 }
 
-function isProgramValue(value: string | null): value is ProgramValue {
-  return !!value && getProgramOptions().some((option) => option.value === value);
-}
-
 type ProgramSessionMap = Partial<Record<ProgramValue, SessionId[]>>;
 
 function normalizeSessionsForGroup(sessionIds: SessionId[], group: "A" | "B"): SessionId[] {
@@ -489,6 +485,46 @@ function resolveSessionsForProgram(
   if (fromProgramMemory.length > 0) return fromProgramMemory;
 
   return [getSessionForCurrentDate(group, dateStr)];
+}
+
+function normalizeEntriesFromSessionMap(
+  raw: Partial<Record<ProgramValue, SessionId[]>> | null | undefined
+): ProgramSessionMap {
+  const normalized: ProgramSessionMap = {};
+  if (!raw || typeof raw !== "object") return normalized;
+  for (const [programKey, sessionIds] of Object.entries(raw)) {
+    if (!Array.isArray(sessionIds) || sessionIds.length === 0) continue;
+    const program = programKey as ProgramValue;
+    const group = getProgramGroup(program);
+    const inGroup = normalizeSessionsForGroup(sessionIds, group);
+    if (inGroup.length > 0) normalized[getSessionMemoryKey(program)] = inGroup;
+  }
+  return normalized;
+}
+
+/** Prefer `calendar-filters` cookie (homepage / SSR), then localStorage. */
+function mergeSessionMapsFromHomepage(
+  fromLocal: Partial<Record<ProgramValue, SessionId[]>> | null,
+  filters: FilterStates
+): ProgramSessionMap {
+  const localNorm = normalizeEntriesFromSessionMap(fromLocal);
+  const cookieNorm = normalizeEntriesFromSessionMap(filters.sessionIdsByProgram ?? null);
+  const merged: ProgramSessionMap = { ...localNorm, ...cookieNorm };
+
+  if (filters.sessionIds && filters.sessionIds.length > 0) {
+    const prog =
+      filters.selectedProgram && isProgramValue(filters.selectedProgram)
+        ? filters.selectedProgram
+        : "All";
+    const memKey = getSessionMemoryKey(prog);
+    const group = getProgramGroup(prog);
+    const ids = normalizeSessionsForGroup(filters.sessionIds as SessionId[], group);
+    if (ids.length > 0 && (!merged[memKey] || merged[memKey]!.length === 0)) {
+      merged[memKey] = ids;
+    }
+  }
+
+  return merged;
 }
 
 function getRandomSuggestions(group: "A" | "B", exclude: string[]): string[] {
@@ -561,29 +597,38 @@ export default function ChatPage() {
   const currentGroup = getProgramGroup(selectedProgram);
   const [suggestions, setSuggestions] = useState<string[]>([]);
 
-  useEffect(() => {
+  const hydrateChatFromHomepageSources = useCallback(() => {
     if (typeof window === "undefined") return;
     try {
+      const filters = getFiltersFromCookie();
       const raw =
         localStorage.getItem("sessionIdsByProgram") ??
         localStorage.getItem("chatSessionIdsByProgram");
-      const parsed = raw ? (JSON.parse(raw) as Partial<Record<ProgramValue, SessionId[]>>) : null;
-      const normalized: ProgramSessionMap = {};
-      if (parsed && typeof parsed === "object") {
-        for (const [programKey, sessionIds] of Object.entries(parsed)) {
-          if (!Array.isArray(sessionIds) || sessionIds.length === 0) continue;
-          const program = programKey as ProgramValue;
-          const group = getProgramGroup(program);
-          const inGroup = normalizeSessionsForGroup(sessionIds, group);
-          if (inGroup.length > 0) normalized[getSessionMemoryKey(program)] = inGroup;
-        }
-      }
-      const baseMap: ProgramSessionMap = { All: getInitialChatSessions("All") };
-      const mergedMap: ProgramSessionMap = { ...baseMap, ...normalized };
-      const storedProgram = localStorage.getItem("selectedProgram");
-      const nextProgram: ProgramValue = isProgramValue(storedProgram) ? storedProgram : "All";
+      const parsed = raw
+        ? (JSON.parse(raw) as Partial<Record<ProgramValue, SessionId[]>>)
+        : null;
+
+      const merged = mergeSessionMapsFromHomepage(parsed, filters);
       const dateStr = new Date().toISOString().slice(0, 10);
-      const resolvedSessions = resolveSessionsForProgram(nextProgram, [], mergedMap, dateStr);
+      const mergedMap: ProgramSessionMap = {
+        All: getInitialChatSessions("All"),
+        ...merged,
+      };
+
+      const storedProgram = localStorage.getItem("selectedProgram");
+      const nextProgram: ProgramValue =
+        filters.selectedProgram && isProgramValue(filters.selectedProgram)
+          ? filters.selectedProgram
+          : storedProgram && isProgramValue(storedProgram)
+            ? storedProgram
+            : "All";
+
+      const resolvedSessions = resolveSessionsForProgram(
+        nextProgram,
+        [],
+        mergedMap,
+        dateStr
+      );
       setSessionsByProgram(mergedMap);
       setSelectedProgram(nextProgram);
       setSelectedSessions(resolvedSessions);
@@ -591,6 +636,27 @@ export default function ChatPage() {
       // Ignore parse errors and continue with defaults.
     }
   }, []);
+
+  useEffect(() => {
+    hydrateChatFromHomepageSources();
+  }, [hydrateChatFromHomepageSources, calendarDataVersion]);
+
+  useEffect(() => {
+    const onVisible = () => {
+      if (document.visibilityState === "visible") hydrateChatFromHomepageSources();
+    };
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === "sessionIdsByProgram" || e.key === "selectedProgram") {
+        hydrateChatFromHomepageSources();
+      }
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    window.addEventListener("storage", onStorage);
+    return () => {
+      document.removeEventListener("visibilitychange", onVisible);
+      window.removeEventListener("storage", onStorage);
+    };
+  }, [hydrateChatFromHomepageSources]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;

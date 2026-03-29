@@ -755,7 +755,8 @@ function buildCalendarSystemPrompt(
   comparisonContext?: string,
   forceComparisonTable?: boolean,
   multipleSessionsSelected?: boolean,
-  uitmSupplement?: string
+  uitmSupplement?: string,
+  selectedSessionCount?: number
 ): string {
   const truncatedPrimary =
     primaryContext.length > MAX_PRIMARY_CONTEXT_CHARS
@@ -780,6 +781,9 @@ function buildCalendarSystemPrompt(
     .replace(/\{\{quickReference\}\}/g, quickReference);
 
   result += `\n\n=== SESSION LIST (GROUP ${primaryGroup}) ===\n${sessionListContext}`;
+
+  const n = selectedSessionCount ?? 0;
+  result += `\n\n=== SELECTED SESSIONS (USER CHOICE) ===\nRows marked "(selected)" are the user's current session choice(s). Count: ${n}. Unless the user names a different session id explicitly, treat vague wording about semester calendar, sessions, sesi, next/last semester, or Malay equivalents (e.g. kalendar semester, semester depan, semester lepas, sesi seterusnya) as referring to these selected session(s) and the GROUP calendar sections below. With multiple selections, scope or compare answers per session (id + label).`;
 
   if (comparisonContext && comparisonContext.length > 0) {
     result += `\n\n=== SESSION COMPARISON (user selected multiple sessions) ===\n${comparisonContext}`;
@@ -1020,7 +1024,8 @@ export async function POST(request: NextRequest) {
           comparisonContext,
           isCompareRequested,
           multipleSessionsSelected,
-          UITM_GENERAL_INFO
+          UITM_GENERAL_INFO,
+          effectiveSessions.length
         )
       : buildResearchSystemPrompt(todayFormatted);
 

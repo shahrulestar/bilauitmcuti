@@ -141,21 +141,40 @@ function asMetaPayload(data: unknown): MetaResponse {
   return { defaultSession, sessionOptions, programOptions };
 }
 
+export interface FetchMetaOptions {
+  /** When true, requests `/api/v1/meta?entire=true` (browser) or upstream equivalent. */
+  entire?: boolean;
+}
+
+function metaCacheKey(options?: FetchMetaOptions): "default" | "entire" {
+  return options?.entire ? "entire" : "default";
+}
+
 /** Full catalogue: both groups’ session and program options. */
-export async function fetchMeta(): Promise<MetaResponse> {
-  const data = await fetchJsonWithRetry(buildCalendarRequestUrl("v1/meta"));
+export async function fetchMeta(options?: FetchMetaOptions): Promise<MetaResponse> {
+  const url = options?.entire
+    ? buildCalendarRequestUrl("v1/meta", new URLSearchParams({ entire: "true" }))
+    : buildCalendarRequestUrl("v1/meta");
+  const data = await fetchJsonWithRetry(url);
   return asMetaPayload(data);
 }
 
-let metaCache: { meta: MetaResponse; at: number } | null = null;
+const metaCache = new Map<
+  "default" | "entire",
+  { meta: MetaResponse; at: number }
+>();
 const META_CACHE_TTL_MS = 5 * 60 * 1000;
 
-/** Short-lived cache for Edge chat (reduces duplicate meta calls). */
-export async function fetchMetaCached(): Promise<MetaResponse> {
+/** Short-lived cache for Edge chat / RSC (reduces duplicate meta calls). Separate entries for `entire`. */
+export async function fetchMetaCached(
+  options?: FetchMetaOptions
+): Promise<MetaResponse> {
+  const key = metaCacheKey(options);
   const now = Date.now();
-  if (metaCache && now - metaCache.at < META_CACHE_TTL_MS) return metaCache.meta;
-  const meta = await fetchMeta();
-  metaCache = { meta, at: now };
+  const hit = metaCache.get(key);
+  if (hit && now - hit.at < META_CACHE_TTL_MS) return hit.meta;
+  const meta = await fetchMeta(options);
+  metaCache.set(key, { meta, at: now });
   return meta;
 }
 

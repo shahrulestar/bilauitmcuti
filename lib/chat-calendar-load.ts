@@ -1,5 +1,8 @@
-import type { MetaResponse } from "./calendar-api";
-import { normalizeApiActivity } from "./calendar-api";
+import {
+  fetchMetaCached,
+  normalizeApiActivity,
+  type MetaResponse,
+} from "./calendar-api";
 import calendarJson from "./calendar.json";
 import {
   getSnapshot,
@@ -54,12 +57,22 @@ function readLocalCalendar(): LocalCalendarFile {
 const localCalendar = readLocalCalendar();
 
 export async function loadMetaIntoStore(): Promise<MetaResponse> {
-  const meta: MetaResponse = {
+  const fallback: MetaResponse = {
     defaultSession: localCalendar.defaultSession,
     sessionOptions: localCalendar.sessionOptions,
     programOptions: localCalendar.programOptions,
   };
-  setMeta(meta);
+
+  let meta: MetaResponse;
+  try {
+    meta = await fetchMetaCached({ entire: true });
+    if (meta.sessionOptions.length === 0) meta = fallback;
+    setMeta(meta);
+  } catch {
+    meta = fallback;
+    setMeta(meta);
+  }
+
   resetSessionActivitiesCache();
   return meta;
 }
