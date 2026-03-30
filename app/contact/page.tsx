@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ChevronLeft } from "lucide-react";
 import { toast } from "sonner";
@@ -33,6 +33,7 @@ export default function ContactPage() {
   const [website, setWebsite] = useState("");
   const [startedAt, setStartedAt] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [pendingSubmit, setPendingSubmit] = useState(false);
   const turnstileRef = useRef<TurnstileWidgetHandle>(null);
 
   const turnstileSiteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ?? "";
@@ -52,15 +53,8 @@ export default function ContactPage() {
     [who, category, message]
   );
 
-  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (!isFormValid || isSubmitting) return;
-    if (!turnstileToken.trim()) {
-      turnstileRef.current?.execute();
-      toast.info("Verifying request... please click Submit again.");
-      return;
-    }
-
+  const submitContactForm = useCallback(async () => {
+    if (!isFormValid || isSubmitting || !turnstileToken.trim()) return;
     setIsSubmitting(true);
 
     try {
@@ -96,7 +90,24 @@ export default function ContactPage() {
     } finally {
       setIsSubmitting(false);
     }
+  }, [category, email, isFormValid, isSubmitting, message, startedAt, turnstileToken, website, who]);
+
+  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!isFormValid || isSubmitting) return;
+    if (!turnstileToken.trim()) {
+      setPendingSubmit(true);
+      turnstileRef.current?.execute();
+      return;
+    }
+    await submitContactForm();
   }
+
+  useEffect(() => {
+    if (!pendingSubmit || !turnstileToken.trim() || isSubmitting) return;
+    setPendingSubmit(false);
+    void submitContactForm();
+  }, [pendingSubmit, turnstileToken, isSubmitting, isFormValid, submitContactForm]);
 
   function handleReset() {
     setWho("");
@@ -104,6 +115,7 @@ export default function ContactPage() {
     setMessage("");
     setEmail("");
     setWebsite("");
+    setPendingSubmit(false);
     turnstileRef.current?.reset();
     setStartedAt(Date.now());
   }

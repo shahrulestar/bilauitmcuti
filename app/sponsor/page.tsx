@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ChevronLeft } from "lucide-react";
 import { toast } from "sonner";
@@ -43,6 +43,7 @@ export default function SponsorPage() {
   const [website, setWebsite] = useState("");
   const [startedAt, setStartedAt] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [pendingSubmit, setPendingSubmit] = useState(false);
   const qrTurnstileRef = useRef<TurnstileWidgetHandle>(null);
   const formTurnstileRef = useRef<TurnstileWidgetHandle>(null);
 
@@ -69,15 +70,8 @@ export default function SponsorPage() {
     );
   }, [anonymous, nickname, socialPlatform, socialHandle, message, proofFile]);
 
-  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (!isFormValid || isSubmitting) return;
-    if (!turnstileToken.trim()) {
-      formTurnstileRef.current?.execute();
-      toast.info("Verifying request... please click Submit again.");
-      return;
-    }
-
+  const submitSponsorForm = useCallback(async () => {
+    if (!isFormValid || isSubmitting || !turnstileToken.trim()) return;
     setIsSubmitting(true);
 
     try {
@@ -122,7 +116,36 @@ export default function SponsorPage() {
     } finally {
       setIsSubmitting(false);
     }
+  }, [
+    anonymous,
+    isFormValid,
+    isSubmitting,
+    message,
+    nickname,
+    proofFile,
+    socialHandle,
+    socialPlatform,
+    startedAt,
+    turnstileToken,
+    website,
+  ]);
+
+  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!isFormValid || isSubmitting) return;
+    if (!turnstileToken.trim()) {
+      setPendingSubmit(true);
+      formTurnstileRef.current?.execute();
+      return;
+    }
+    await submitSponsorForm();
   }
+
+  useEffect(() => {
+    if (!pendingSubmit || !turnstileToken.trim() || isSubmitting) return;
+    setPendingSubmit(false);
+    void submitSponsorForm();
+  }, [pendingSubmit, turnstileToken, isSubmitting, isFormValid, submitSponsorForm]);
 
   function handleReset() {
     setShowQr(false);
@@ -135,6 +158,7 @@ export default function SponsorPage() {
     setMessage("");
     setProofFile(null);
     setWebsite("");
+    setPendingSubmit(false);
     formTurnstileRef.current?.reset();
     qrTurnstileRef.current?.reset();
     setStartedAt(Date.now());
@@ -189,7 +213,6 @@ export default function SponsorPage() {
                       if (!qrTurnstileToken.trim()) {
                         setShowQrChallenge(true);
                         qrTurnstileRef.current?.execute();
-                        toast.info("Complete the verification challenge to view the payment QR.");
                         return;
                       }
                       setShowQr(true);

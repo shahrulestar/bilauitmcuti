@@ -585,6 +585,7 @@ export default function ChatPage() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [turnstileToken, setTurnstileToken] = useState("");
+  const [pendingMessage, setPendingMessage] = useState<string | null>(null);
   const [selectedProgram, setSelectedProgram] = useState<ProgramValue>("All");
   const [selectedSessions, setSelectedSessions] = useState<SessionId[]>(() =>
     getInitialChatSessions("All")
@@ -859,22 +860,14 @@ export default function ChatPage() {
     lastScrollTop.current = currentScrollTop;
   }, [dropdownOpen]);
 
-  const sendMessage = async (text: string) => {
+  const sendMessage = useCallback(async (text: string) => {
     if (!text.trim() || isLoading) return;
     if (!turnstileToken.trim()) {
+      setPendingMessage(text.trim());
       turnstileRef.current?.execute();
-      const assistantNow = Date.now();
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: (assistantNow + 1).toString(),
-          role: "assistant",
-          content: "Verifying request... please send again.",
-          timestamp: assistantNow,
-        },
-      ]);
       return;
     }
+    setPendingMessage(null);
 
     const now = Date.now();
     const userMessage: Message = {
@@ -989,12 +982,19 @@ export default function ChatPage() {
       setIsLoading(false);
       if (didAttemptFetch) turnstileRef.current?.reset();
     }
-  };
+  }, [isLoading, messages, selectedProgram, selectedSessions, turnstileToken]);
 
   const handleSubmit = async (e?: React.FormEvent) => {
     e?.preventDefault();
     await sendMessage(input);
   };
+
+  useEffect(() => {
+    if (!pendingMessage || !turnstileToken.trim() || isLoading) return;
+    const text = pendingMessage;
+    setPendingMessage(null);
+    void sendMessage(text);
+  }, [pendingMessage, turnstileToken, isLoading, sendMessage]);
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {
