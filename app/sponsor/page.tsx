@@ -33,8 +33,6 @@ export default function SponsorPage() {
   const router = useRouter();
   const [headerVisible, setHeaderVisible] = useState(true);
   const [showQr, setShowQr] = useState(false);
-  const [qrTurnstileToken, setQrTurnstileToken] = useState("");
-  const [showQrChallenge, setShowQrChallenge] = useState(false);
   const [anonymous, setAnonymous] = useState(false);
   const [nickname, setNickname] = useState("");
   const [socialPlatform, setSocialPlatform] = useState<SponsorSocialPlatform | "">("");
@@ -48,11 +46,10 @@ export default function SponsorPage() {
   const [startedAt, setStartedAt] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [pendingSubmit, setPendingSubmit] = useState(false);
-  const [qrTurnstileNonce, setQrTurnstileNonce] = useState(0);
+  const [pendingShowQr, setPendingShowQr] = useState(false);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const lastScrollTop = useRef(0);
   const formTurnstileRef = useRef<TurnstileWidgetHandle>(null);
-  const qrTurnstileRef = useRef<TurnstileWidgetHandle>(null);
 
   const isProduction = process.env.NODE_ENV === "production";
   const turnstileSiteKey = isProduction ? (process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ?? "") : "";
@@ -67,10 +64,7 @@ export default function SponsorPage() {
     const hasVerifiedCookie = document.cookie
       .split(";")
       .some((item) => item.trim().startsWith(`${SPONSOR_TURNSTILE_COOKIE}=1`));
-    if (hasVerifiedCookie) {
-      setIsTurnstileSessionVerified(true);
-      setQrTurnstileToken("verified");
-    }
+    if (hasVerifiedCookie) setIsTurnstileSessionVerified(true);
   }, []);
 
   const messageLength = message.length;
@@ -115,9 +109,7 @@ export default function SponsorPage() {
         if (response.status === 403) {
           setIsTurnstileSessionVerified(false);
           setTurnstileToken("");
-          setQrTurnstileToken("");
           setFormTurnstileNonce((prev) => prev + 1);
-          setQrTurnstileNonce((prev) => prev + 1);
         }
         toast.error(raw.error ?? "Unable to submit right now. Please try again.");
         return;
@@ -133,12 +125,9 @@ export default function SponsorPage() {
       setAnonymous(false);
       setWebsite("");
       setShowQr(false);
-      setQrTurnstileToken("");
-      setShowQrChallenge(false);
+      setPendingShowQr(false);
       setTurnstileToken("");
-      setQrTurnstileToken("");
       setFormTurnstileNonce((prev) => prev + 1);
-      setQrTurnstileNonce((prev) => prev + 1);
       setStartedAt(Date.now());
     } catch {
       toast.error("Network issue detected. Please try again.");
@@ -177,10 +166,14 @@ export default function SponsorPage() {
     void submitSponsorForm();
   }, [pendingSubmit, requiresTurnstile, turnstileToken, isSubmitting, submitSponsorForm]);
 
+  useEffect(() => {
+    if (!pendingShowQr || !turnstileToken.trim()) return;
+    setPendingShowQr(false);
+    setShowQr(true);
+  }, [pendingShowQr, turnstileToken]);
+
   function handleReset() {
     setShowQr(false);
-    setQrTurnstileToken("");
-    setShowQrChallenge(false);
     setAnonymous(false);
     setNickname("");
     setSocialPlatform("");
@@ -189,10 +182,9 @@ export default function SponsorPage() {
     setProofFile(null);
     setWebsite("");
     setTurnstileToken("");
-    setQrTurnstileToken("");
     setPendingSubmit(false);
+    setPendingShowQr(false);
     setFormTurnstileNonce((prev) => prev + 1);
-    setQrTurnstileNonce((prev) => prev + 1);
     setStartedAt(Date.now());
   }
 
@@ -262,9 +254,9 @@ export default function SponsorPage() {
                         setShowQr(false);
                         return;
                       }
-                      if (requiresTurnstile && !qrTurnstileToken.trim()) {
-                        setShowQrChallenge(true);
-                        qrTurnstileRef.current?.execute();
+                      if (requiresTurnstile && !turnstileToken.trim()) {
+                        setPendingShowQr(true);
+                        formTurnstileRef.current?.execute();
                         return;
                       }
                       setShowQr(true);
@@ -272,23 +264,6 @@ export default function SponsorPage() {
                   >
                     {showQr ? "Hide payment QR" : "Show payment QR"}
                   </Button>
-                  {requiresTurnstile && showQrChallenge && !qrTurnstileToken.trim() ? (
-                    <div className="space-y-1">
-                      <TurnstileWidget
-                        ref={qrTurnstileRef}
-                        key={qrTurnstileNonce}
-                        siteKey={turnstileSiteKey}
-                        action="sponsor_qr_view"
-                        onToken={(token) => {
-                          setQrTurnstileToken(token);
-                          if (token.trim()) setShowQr(true);
-                        }}
-                      />
-                      <div className="text-xs text-muted-foreground">
-                        Verify once to unlock the QR.
-                      </div>
-                    </div>
-                  ) : null}
                   {showQr ? (
                     <div className="pt-1">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
