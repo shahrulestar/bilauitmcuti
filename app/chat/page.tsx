@@ -42,6 +42,7 @@ import {
 import useEmblaCarousel from "embla-carousel-react";
 import {
   TurnstileWidget,
+  type TurnstileWidgetHandle,
 } from "@/components/turnstile-widget";
 
 function getChatErrorMessage(res: Response, fallback: string): string {
@@ -760,6 +761,7 @@ export default function ChatPage() {
   const [disclaimerFade, setDisclaimerFade] = useState<"in" | "out">("in");
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const turnstileRef = useRef<TurnstileWidgetHandle>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const lastScrollTop = useRef(0);
   const groupAOptions = useMemo(() => programOptions.filter(p => p.group === 'A'), [programOptions]);
@@ -1207,6 +1209,7 @@ export default function ChatPage() {
 
             <div className="px-3 pb-2">
               <TurnstileWidget
+                ref={turnstileRef}
                 key={turnstileNonce}
                 siteKey={turnstileSiteKey}
                 action="chat_message"

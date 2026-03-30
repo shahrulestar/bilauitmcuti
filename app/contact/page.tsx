@@ -16,7 +16,10 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { Toaster } from "@/components/ui/sonner";
 import { CONTACT_CATEGORY_OPTIONS, CONTACT_WHO_OPTIONS } from "@/lib/contact";
-import { TurnstileWidget } from "@/components/turnstile-widget";
+import {
+  TurnstileWidget,
+  type TurnstileWidgetHandle,
+} from "@/components/turnstile-widget";
 
 const MAX_MESSAGE_LENGTH = 400;
 
@@ -32,8 +35,10 @@ export default function ContactPage() {
   const [website, setWebsite] = useState("");
   const [startedAt, setStartedAt] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [pendingSubmit, setPendingSubmit] = useState(false);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const lastScrollTop = useRef(0);
+  const turnstileRef = useRef<TurnstileWidgetHandle>(null);
 
   const turnstileSiteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ?? "";
 
@@ -93,8 +98,19 @@ export default function ContactPage() {
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!isFormValid || isSubmitting) return;
+    if (!turnstileToken.trim()) {
+      setPendingSubmit(true);
+      turnstileRef.current?.execute();
+      return;
+    }
     await submitContactForm();
   }
+
+  useEffect(() => {
+    if (!pendingSubmit || !turnstileToken.trim() || isSubmitting) return;
+    setPendingSubmit(false);
+    void submitContactForm();
+  }, [pendingSubmit, turnstileToken, isSubmitting, submitContactForm]);
 
   function handleReset() {
     setWho("");
@@ -103,6 +119,7 @@ export default function ContactPage() {
     setEmail("");
     setWebsite("");
     setTurnstileToken("");
+    setPendingSubmit(false);
     setTurnstileNonce((prev) => prev + 1);
     setStartedAt(Date.now());
   }
@@ -241,6 +258,7 @@ export default function ContactPage() {
 
                 <div className="space-y-2">
                   <TurnstileWidget
+                    ref={turnstileRef}
                     key={turnstileNonce}
                     siteKey={turnstileSiteKey}
                     action="contact_form"

@@ -379,9 +379,11 @@ export default function RootLayout({
             __html: `
               (function() {
                 const isDev = ${process.env.NODE_ENV === 'development'};
+                const buildId = ${JSON.stringify(process.env.NEXT_PUBLIC_BUILD_ID ?? "")};
                 if ('serviceWorker' in navigator) {
                   window.addEventListener('load', function() {
-                    navigator.serviceWorker.register('/sw.js').catch(function(err) {
+                    const swUrl = buildId ? ('/sw.js?v=' + encodeURIComponent(buildId)) : '/sw.js';
+                    navigator.serviceWorker.register(swUrl).catch(function(err) {
                       if (isDev) console.log('SW registration failed:', err);
                     });
                   });

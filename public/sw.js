@@ -1,4 +1,5 @@
-const SW_VERSION = 'v2026-03-30-02';
+const swUrl = new URL(self.location.href);
+const SW_VERSION = swUrl.searchParams.get('v') || 'v2026-03-30-03';
 const CACHE_NAME = `bilauitmcuti-${SW_VERSION}`;
 const PRECACHE_URLS = ['/', '/favicon.ico', '/manifest.json'];
 const TURNSTILE_HOST = 'challenges.cloudflare.com';

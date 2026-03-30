@@ -15,7 +15,10 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Toaster } from "@/components/ui/sonner";
-import { TurnstileWidget } from "@/components/turnstile-widget";
+import {
+  TurnstileWidget,
+  type TurnstileWidgetHandle,
+} from "@/components/turnstile-widget";
 import {
   SPONSOR_MAX_MESSAGE_LENGTH,
   SPONSOR_SOCIAL_OPTIONS,
@@ -42,9 +45,12 @@ export default function SponsorPage() {
   const [website, setWebsite] = useState("");
   const [startedAt, setStartedAt] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [pendingSubmit, setPendingSubmit] = useState(false);
   const [qrTurnstileNonce, setQrTurnstileNonce] = useState(0);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const lastScrollTop = useRef(0);
+  const formTurnstileRef = useRef<TurnstileWidgetHandle>(null);
+  const qrTurnstileRef = useRef<TurnstileWidgetHandle>(null);
 
   const turnstileSiteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ?? "";
 
@@ -132,8 +138,19 @@ export default function SponsorPage() {
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!isFormValid || isSubmitting) return;
+    if (!turnstileToken.trim()) {
+      setPendingSubmit(true);
+      formTurnstileRef.current?.execute();
+      return;
+    }
     await submitSponsorForm();
   }
+
+  useEffect(() => {
+    if (!pendingSubmit || !turnstileToken.trim() || isSubmitting) return;
+    setPendingSubmit(false);
+    void submitSponsorForm();
+  }, [pendingSubmit, turnstileToken, isSubmitting, submitSponsorForm]);
 
   function handleReset() {
     setShowQr(false);
@@ -148,6 +165,7 @@ export default function SponsorPage() {
     setWebsite("");
     setTurnstileToken("");
     setQrTurnstileToken("");
+    setPendingSubmit(false);
     setFormTurnstileNonce((prev) => prev + 1);
     setQrTurnstileNonce((prev) => prev + 1);
     setStartedAt(Date.now());
@@ -221,6 +239,7 @@ export default function SponsorPage() {
                       }
                       if (!qrTurnstileToken.trim()) {
                         setShowQrChallenge(true);
+                        qrTurnstileRef.current?.execute();
                         return;
                       }
                       setShowQr(true);
@@ -231,6 +250,7 @@ export default function SponsorPage() {
                   {showQrChallenge && !qrTurnstileToken.trim() ? (
                     <div className="space-y-1">
                       <TurnstileWidget
+                        ref={qrTurnstileRef}
                         key={qrTurnstileNonce}
                         siteKey={turnstileSiteKey}
                         action="sponsor_qr_view"
@@ -373,6 +393,7 @@ export default function SponsorPage() {
 
                 <div className="space-y-2">
                   <TurnstileWidget
+                    ref={formTurnstileRef}
                     key={formTurnstileNonce}
                     siteKey={turnstileSiteKey}
                     action={SPONSOR_TURNSTILE_ACTION}
