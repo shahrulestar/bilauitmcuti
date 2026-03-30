@@ -1055,6 +1055,15 @@ export default function ChatPage() {
                 Ask about the UiTM academic calendar. Select your program and start.
               </p>
             </div>
+            <div className="w-full max-w-[320px] px-3">
+              <TurnstileWidget
+                ref={turnstileRef}
+                key={turnstileNonce}
+                siteKey={turnstileSiteKey}
+                action="chat_message"
+                onToken={setTurnstileToken}
+              />
+            </div>
           </div>
         ) : (
           <div className="mx-auto max-w-[600px] space-y-6 pt-14">
@@ -1207,15 +1216,17 @@ export default function ChatPage() {
               className="chat-input w-full resize-none bg-transparent px-4 pt-3 pb-1 text-sm leading-relaxed placeholder:text-muted-foreground focus:outline-none disabled:opacity-50"
             />
 
-            <div className="px-3 pb-2">
-              <TurnstileWidget
-                ref={turnstileRef}
-                key={turnstileNonce}
-                siteKey={turnstileSiteKey}
-                action="chat_message"
-                onToken={setTurnstileToken}
-              />
-            </div>
+            {messages.length > 0 ? (
+              <div className="px-3 pb-2">
+                <TurnstileWidget
+                  ref={turnstileRef}
+                  key={turnstileNonce}
+                  siteKey={turnstileSiteKey}
+                  action="chat_message"
+                  onToken={setTurnstileToken}
+                />
+              </div>
+            ) : null}
 
             {/* Bottom bar */}
             <div className="flex items-center justify-between px-3 py-2">
