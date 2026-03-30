@@ -15,10 +15,7 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Toaster } from "@/components/ui/sonner";
-import {
-  TurnstileWidget,
-  type TurnstileWidgetHandle,
-} from "@/components/turnstile-widget";
+import { TurnstileWidget } from "@/components/turnstile-widget";
 import {
   SPONSOR_MAX_MESSAGE_LENGTH,
   SPONSOR_SOCIAL_OPTIONS,
@@ -30,6 +27,7 @@ const QR_IMAGE_SRC = "/sponsor-qr.png";
 
 export default function SponsorPage() {
   const router = useRouter();
+  const [headerVisible, setHeaderVisible] = useState(true);
   const [showQr, setShowQr] = useState(false);
   const [qrTurnstileToken, setQrTurnstileToken] = useState("");
   const [showQrChallenge, setShowQrChallenge] = useState(false);
@@ -40,16 +38,15 @@ export default function SponsorPage() {
   const [message, setMessage] = useState("");
   const [proofFile, setProofFile] = useState<File | null>(null);
   const [turnstileToken, setTurnstileToken] = useState("");
+  const [formTurnstileNonce, setFormTurnstileNonce] = useState(0);
   const [website, setWebsite] = useState("");
   const [startedAt, setStartedAt] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [pendingSubmit, setPendingSubmit] = useState(false);
-  const qrTurnstileRef = useRef<TurnstileWidgetHandle>(null);
-  const formTurnstileRef = useRef<TurnstileWidgetHandle>(null);
+  const [qrTurnstileNonce, setQrTurnstileNonce] = useState(0);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const lastScrollTop = useRef(0);
 
   const turnstileSiteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ?? "";
-  const turnstileExecution =
-    process.env.NEXT_PUBLIC_TURNSTILE_EXECUTION === "render" ? "render" : "execute";
 
   useEffect(() => {
     setStartedAt(Date.now());
@@ -108,8 +105,10 @@ export default function SponsorPage() {
       setShowQr(false);
       setQrTurnstileToken("");
       setShowQrChallenge(false);
-      formTurnstileRef.current?.reset();
-      qrTurnstileRef.current?.reset();
+      setTurnstileToken("");
+      setQrTurnstileToken("");
+      setFormTurnstileNonce((prev) => prev + 1);
+      setQrTurnstileNonce((prev) => prev + 1);
       setStartedAt(Date.now());
     } catch {
       toast.error("Network issue detected. Please try again.");
@@ -133,19 +132,8 @@ export default function SponsorPage() {
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!isFormValid || isSubmitting) return;
-    if (!turnstileToken.trim()) {
-      setPendingSubmit(true);
-      formTurnstileRef.current?.execute();
-      return;
-    }
     await submitSponsorForm();
   }
-
-  useEffect(() => {
-    if (!pendingSubmit || !turnstileToken.trim() || isSubmitting) return;
-    setPendingSubmit(false);
-    void submitSponsorForm();
-  }, [pendingSubmit, turnstileToken, isSubmitting, isFormValid, submitSponsorForm]);
 
   function handleReset() {
     setShowQr(false);
@@ -158,18 +146,35 @@ export default function SponsorPage() {
     setMessage("");
     setProofFile(null);
     setWebsite("");
-    setPendingSubmit(false);
-    formTurnstileRef.current?.reset();
-    qrTurnstileRef.current?.reset();
+    setTurnstileToken("");
+    setQrTurnstileToken("");
+    setFormTurnstileNonce((prev) => prev + 1);
+    setQrTurnstileNonce((prev) => prev + 1);
     setStartedAt(Date.now());
   }
+
+  const handleScroll = useCallback(() => {
+    const el = scrollContainerRef.current;
+    if (!el) return;
+    const currentScrollTop = el.scrollTop;
+    if (currentScrollTop <= 10 || currentScrollTop < lastScrollTop.current) {
+      setHeaderVisible(true);
+    } else if (currentScrollTop > lastScrollTop.current) {
+      setHeaderVisible(false);
+    }
+    lastScrollTop.current = currentScrollTop;
+  }, []);
 
   return (
     <div className="relative flex h-dvh flex-col bg-background text-foreground">
       <Toaster position="top-center" />
       <div className="chat-top-fade absolute left-0 right-0 top-0 z-[9] pointer-events-none" />
 
-      <div className="chat-header absolute left-0 right-0 top-0 z-10 px-4 md:px-0">
+      <div
+        className={`chat-header absolute left-0 right-0 top-0 z-10 px-4 transition-transform md:px-0 ${
+          headerVisible ? "translate-y-0" : "-translate-y-full"
+        }`}
+      >
         <header className="mx-auto flex w-full max-w-[600px] items-center gap-3 pt-8 pb-3">
           <button
             onClick={() => router.push("/")}
@@ -181,7 +186,11 @@ export default function SponsorPage() {
         </header>
       </div>
 
-      <div className="flex-1 overflow-y-auto px-4 pb-6 pt-24 md:px-0">
+      <div
+        ref={scrollContainerRef}
+        onScroll={handleScroll}
+        className="flex-1 overflow-y-auto px-4 pb-6 pt-24 md:px-0"
+      >
         <div className="mx-auto w-full max-w-[600px]">
           <Card className="gap-0 rounded-[10px] shadow-none">
             <CardHeader className="space-y-1 pb-4 px-3 sm:px-6">
@@ -212,7 +221,6 @@ export default function SponsorPage() {
                       }
                       if (!qrTurnstileToken.trim()) {
                         setShowQrChallenge(true);
-                        qrTurnstileRef.current?.execute();
                         return;
                       }
                       setShowQr(true);
@@ -223,10 +231,9 @@ export default function SponsorPage() {
                   {showQrChallenge && !qrTurnstileToken.trim() ? (
                     <div className="space-y-1">
                       <TurnstileWidget
-                        ref={qrTurnstileRef}
+                        key={qrTurnstileNonce}
                         siteKey={turnstileSiteKey}
                         action="sponsor_qr_view"
-                        execution={turnstileExecution}
                         onToken={(token) => {
                           setQrTurnstileToken(token);
                           if (token.trim()) setShowQr(true);
@@ -366,10 +373,9 @@ export default function SponsorPage() {
 
                 <div className="space-y-2">
                   <TurnstileWidget
-                    ref={formTurnstileRef}
+                    key={formTurnstileNonce}
                     siteKey={turnstileSiteKey}
                     action={SPONSOR_TURNSTILE_ACTION}
-                    execution={turnstileExecution}
                     onToken={setTurnstileToken}
                   />
                 </div>

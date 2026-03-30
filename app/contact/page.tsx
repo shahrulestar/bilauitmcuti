@@ -16,29 +16,26 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { Toaster } from "@/components/ui/sonner";
 import { CONTACT_CATEGORY_OPTIONS, CONTACT_WHO_OPTIONS } from "@/lib/contact";
-import {
-  TurnstileWidget,
-  type TurnstileWidgetHandle,
-} from "@/components/turnstile-widget";
+import { TurnstileWidget } from "@/components/turnstile-widget";
 
 const MAX_MESSAGE_LENGTH = 400;
 
 export default function ContactPage() {
   const router = useRouter();
+  const [headerVisible, setHeaderVisible] = useState(true);
   const [who, setWho] = useState("");
   const [category, setCategory] = useState("");
   const [message, setMessage] = useState("");
   const [email, setEmail] = useState("");
   const [turnstileToken, setTurnstileToken] = useState("");
+  const [turnstileNonce, setTurnstileNonce] = useState(0);
   const [website, setWebsite] = useState("");
   const [startedAt, setStartedAt] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [pendingSubmit, setPendingSubmit] = useState(false);
-  const turnstileRef = useRef<TurnstileWidgetHandle>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const lastScrollTop = useRef(0);
 
   const turnstileSiteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ?? "";
-  const turnstileExecution =
-    process.env.NEXT_PUBLIC_TURNSTILE_EXECUTION === "render" ? "render" : "execute";
 
   useEffect(() => {
     setStartedAt(Date.now());
@@ -83,7 +80,8 @@ export default function ContactPage() {
       setCategory("");
       setWho("");
       setWebsite("");
-      turnstileRef.current?.reset();
+      setTurnstileToken("");
+      setTurnstileNonce((prev) => prev + 1);
       setStartedAt(Date.now());
     } catch {
       toast.error("Network issue detected. Please try again.");
@@ -95,19 +93,8 @@ export default function ContactPage() {
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!isFormValid || isSubmitting) return;
-    if (!turnstileToken.trim()) {
-      setPendingSubmit(true);
-      turnstileRef.current?.execute();
-      return;
-    }
     await submitContactForm();
   }
-
-  useEffect(() => {
-    if (!pendingSubmit || !turnstileToken.trim() || isSubmitting) return;
-    setPendingSubmit(false);
-    void submitContactForm();
-  }, [pendingSubmit, turnstileToken, isSubmitting, isFormValid, submitContactForm]);
 
   function handleReset() {
     setWho("");
@@ -115,17 +102,33 @@ export default function ContactPage() {
     setMessage("");
     setEmail("");
     setWebsite("");
-    setPendingSubmit(false);
-    turnstileRef.current?.reset();
+    setTurnstileToken("");
+    setTurnstileNonce((prev) => prev + 1);
     setStartedAt(Date.now());
   }
+
+  const handleScroll = useCallback(() => {
+    const el = scrollContainerRef.current;
+    if (!el) return;
+    const currentScrollTop = el.scrollTop;
+    if (currentScrollTop <= 10 || currentScrollTop < lastScrollTop.current) {
+      setHeaderVisible(true);
+    } else if (currentScrollTop > lastScrollTop.current) {
+      setHeaderVisible(false);
+    }
+    lastScrollTop.current = currentScrollTop;
+  }, []);
 
   return (
     <div className="relative flex h-dvh flex-col bg-background text-foreground">
       <Toaster position="top-center" />
       <div className="chat-top-fade absolute left-0 right-0 top-0 z-[9] pointer-events-none" />
 
-      <div className="chat-header absolute left-0 right-0 top-0 z-10 px-4 md:px-0">
+      <div
+        className={`chat-header absolute left-0 right-0 top-0 z-10 px-4 transition-transform md:px-0 ${
+          headerVisible ? "translate-y-0" : "-translate-y-full"
+        }`}
+      >
         <header className="mx-auto flex w-full max-w-[600px] items-center gap-3 pt-8 pb-3">
           <button
             onClick={() => router.push("/")}
@@ -137,7 +140,11 @@ export default function ContactPage() {
         </header>
       </div>
 
-      <div className="flex-1 overflow-y-auto px-4 pb-6 pt-24 md:px-0">
+      <div
+        ref={scrollContainerRef}
+        onScroll={handleScroll}
+        className="flex-1 overflow-y-auto px-4 pb-6 pt-24 md:px-0"
+      >
         <div className="mx-auto w-full max-w-[600px]">
           <Card className="gap-0 rounded-[10px] shadow-none">
             <CardHeader className="space-y-1 pb-4 px-3 sm:px-6">
@@ -234,10 +241,9 @@ export default function ContactPage() {
 
                 <div className="space-y-2">
                   <TurnstileWidget
-                    ref={turnstileRef}
+                    key={turnstileNonce}
                     siteKey={turnstileSiteKey}
                     action="contact_form"
-                    execution={turnstileExecution}
                     onToken={setTurnstileToken}
                   />
                 </div>

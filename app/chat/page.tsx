@@ -42,7 +42,6 @@ import {
 import useEmblaCarousel from "embla-carousel-react";
 import {
   TurnstileWidget,
-  type TurnstileWidgetHandle,
 } from "@/components/turnstile-widget";
 
 function getChatErrorMessage(res: Response, fallback: string): string {
@@ -585,7 +584,7 @@ export default function ChatPage() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [turnstileToken, setTurnstileToken] = useState("");
-  const [pendingMessage, setPendingMessage] = useState<string | null>(null);
+  const [turnstileNonce, setTurnstileNonce] = useState(0);
   const [selectedProgram, setSelectedProgram] = useState<ProgramValue>("All");
   const [selectedSessions, setSelectedSessions] = useState<SessionId[]>(() =>
     getInitialChatSessions("All")
@@ -604,8 +603,6 @@ export default function ChatPage() {
   const [suggestions, setSuggestions] = useState<string[]>([]);
 
   const turnstileSiteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ?? "";
-  const turnstileExecution =
-    process.env.NEXT_PUBLIC_TURNSTILE_EXECUTION === "render" ? "render" : "execute";
 
   const hydrateChatFromHomepageSources = useCallback(() => {
     if (typeof window === "undefined") return;
@@ -763,7 +760,6 @@ export default function ChatPage() {
   const [disclaimerFade, setDisclaimerFade] = useState<"in" | "out">("in");
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const turnstileRef = useRef<TurnstileWidgetHandle>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const lastScrollTop = useRef(0);
   const groupAOptions = useMemo(() => programOptions.filter(p => p.group === 'A'), [programOptions]);
@@ -862,12 +858,7 @@ export default function ChatPage() {
 
   const sendMessage = useCallback(async (text: string) => {
     if (!text.trim() || isLoading) return;
-    if (!turnstileToken.trim()) {
-      setPendingMessage(text.trim());
-      turnstileRef.current?.execute();
-      return;
-    }
-    setPendingMessage(null);
+    if (!turnstileToken.trim()) return;
 
     const now = Date.now();
     const userMessage: Message = {
@@ -980,7 +971,10 @@ export default function ChatPage() {
       setMessages((prev) => [...prev, errorMessage]);
     } finally {
       setIsLoading(false);
-      if (didAttemptFetch) turnstileRef.current?.reset();
+      if (didAttemptFetch) {
+        setTurnstileToken("");
+        setTurnstileNonce((prev) => prev + 1);
+      }
     }
   }, [isLoading, messages, selectedProgram, selectedSessions, turnstileToken]);
 
@@ -988,13 +982,6 @@ export default function ChatPage() {
     e?.preventDefault();
     await sendMessage(input);
   };
-
-  useEffect(() => {
-    if (!pendingMessage || !turnstileToken.trim() || isLoading) return;
-    const text = pendingMessage;
-    setPendingMessage(null);
-    void sendMessage(text);
-  }, [pendingMessage, turnstileToken, isLoading, sendMessage]);
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -1189,6 +1176,7 @@ export default function ChatPage() {
                       type="button"
                       disabled={
                         !turnstileSiteKey ||
+                        !turnstileToken.trim() ||
                         isLoading
                       }
                       onClick={() => sendMessage(suggestion)}
@@ -1219,10 +1207,9 @@ export default function ChatPage() {
 
             <div className="px-3 pb-2">
               <TurnstileWidget
-                ref={turnstileRef}
+                key={turnstileNonce}
                 siteKey={turnstileSiteKey}
                 action="chat_message"
-                execution={turnstileExecution}
                 onToken={setTurnstileToken}
               />
             </div>
@@ -1385,7 +1372,7 @@ export default function ChatPage() {
                 {/* Send button */}
                 <button
                   type="submit"
-                  disabled={!input.trim() || isLoading}
+                  disabled={!input.trim() || isLoading || !turnstileToken.trim()}
                   className="flex items-center justify-center w-8 h-8 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                   aria-label="Send message"
                 >
