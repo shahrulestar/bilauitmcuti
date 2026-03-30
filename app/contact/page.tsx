@@ -37,7 +37,7 @@ export default function ContactPage() {
 
   const turnstileSiteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ?? "";
   const turnstileExecution =
-    process.env.NEXT_PUBLIC_TURNSTILE_EXECUTION === "execute" ? "execute" : "render";
+    process.env.NEXT_PUBLIC_TURNSTILE_EXECUTION === "render" ? "render" : "execute";
 
   useEffect(() => {
     setStartedAt(Date.now());
@@ -48,14 +48,18 @@ export default function ContactPage() {
     () =>
       who.length > 0 &&
       category.length > 0 &&
-      message.trim().length > 0 &&
-      turnstileToken.trim().length > 0,
-    [who, category, message, turnstileToken]
+      message.trim().length > 0,
+    [who, category, message]
   );
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!isFormValid || isSubmitting) return;
+    if (!turnstileToken.trim()) {
+      turnstileRef.current?.execute();
+      toast.info("Verifying request... please click Submit again.");
+      return;
+    }
 
     setIsSubmitting(true);
 

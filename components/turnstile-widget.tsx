@@ -123,6 +123,7 @@ export const TurnstileWidget = forwardRef<
         sitekey: safeSiteKey,
         action: action ?? undefined,
         theme: "auto",
+        appearance: "execute",
         execution,
         callback: (token: string) => onTokenRef.current(token),
         "expired-callback": () => onTokenRef.current(""),

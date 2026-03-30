@@ -48,7 +48,7 @@ export default function SponsorPage() {
 
   const turnstileSiteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ?? "";
   const turnstileExecution =
-    process.env.NEXT_PUBLIC_TURNSTILE_EXECUTION === "execute" ? "execute" : "render";
+    process.env.NEXT_PUBLIC_TURNSTILE_EXECUTION === "render" ? "render" : "execute";
 
   useEffect(() => {
     setStartedAt(Date.now());
@@ -59,8 +59,7 @@ export default function SponsorPage() {
   const isFormValid = useMemo(() => {
     const base =
       message.trim().length > 0 &&
-      proofFile !== null &&
-      turnstileToken.trim().length > 0;
+      proofFile !== null;
     if (anonymous) return base;
     return (
       base &&
@@ -68,11 +67,16 @@ export default function SponsorPage() {
       socialPlatform !== "" &&
       socialHandle.trim().length > 0
     );
-  }, [anonymous, nickname, socialPlatform, socialHandle, message, proofFile, turnstileToken]);
+  }, [anonymous, nickname, socialPlatform, socialHandle, message, proofFile]);
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!isFormValid || isSubmitting) return;
+    if (!turnstileToken.trim()) {
+      formTurnstileRef.current?.execute();
+      toast.info("Verifying request... please click Submit again.");
+      return;
+    }
 
     setIsSubmitting(true);
 
@@ -184,6 +188,7 @@ export default function SponsorPage() {
                       }
                       if (!qrTurnstileToken.trim()) {
                         setShowQrChallenge(true);
+                        qrTurnstileRef.current?.execute();
                         toast.info("Complete the verification challenge to view the payment QR.");
                         return;
                       }

@@ -604,7 +604,7 @@ export default function ChatPage() {
 
   const turnstileSiteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ?? "";
   const turnstileExecution =
-    process.env.NEXT_PUBLIC_TURNSTILE_EXECUTION === "execute" ? "execute" : "render";
+    process.env.NEXT_PUBLIC_TURNSTILE_EXECUTION === "render" ? "render" : "execute";
 
   const hydrateChatFromHomepageSources = useCallback(() => {
     if (typeof window === "undefined") return;
@@ -861,7 +861,20 @@ export default function ChatPage() {
 
   const sendMessage = async (text: string) => {
     if (!text.trim() || isLoading) return;
-    if (!turnstileToken.trim()) return;
+    if (!turnstileToken.trim()) {
+      turnstileRef.current?.execute();
+      const assistantNow = Date.now();
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: (assistantNow + 1).toString(),
+          role: "assistant",
+          content: "Verifying request... please send again.",
+          timestamp: assistantNow,
+        },
+      ]);
+      return;
+    }
 
     const now = Date.now();
     const userMessage: Message = {
@@ -1176,7 +1189,6 @@ export default function ChatPage() {
                       type="button"
                       disabled={
                         !turnstileSiteKey ||
-                        !turnstileToken.trim() ||
                         isLoading
                       }
                       onClick={() => sendMessage(suggestion)}
@@ -1373,7 +1385,7 @@ export default function ChatPage() {
                 {/* Send button */}
                 <button
                   type="submit"
-                  disabled={!input.trim() || isLoading || !turnstileToken.trim()}
+                  disabled={!input.trim() || isLoading}
                   className="flex items-center justify-center w-8 h-8 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                   aria-label="Send message"
                 >
