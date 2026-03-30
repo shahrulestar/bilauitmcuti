@@ -41,6 +41,8 @@ const MAX_HISTORY_ARRAY_LENGTH = 20;
 const MAX_HISTORY_CONTENT_LENGTH = 8000;
 
 const MAX_SELECTED_SESSIONS = 6;
+const CHAT_TURNSTILE_COOKIE = "chat_turnstile_verified";
+const CHAT_TURNSTILE_COOKIE_MAX_AGE_SECONDS = 60 * 60 * 12;
 
 const chatRequestSchema = z.object({
   message: z.string().min(1, "Message is required").max(MAX_MESSAGE_LENGTH),
@@ -58,7 +60,7 @@ const chatRequestSchema = z.object({
     )
     .max(MAX_HISTORY_ARRAY_LENGTH)
     .optional(),
-  turnstileToken: z.string().min(1),
+  turnstileToken: z.string().min(1).optional(),
 });
 
 // --- Rate Limiter (KV when on Cloudflare, in-memory fallback) ---
@@ -873,6 +875,20 @@ function cleanAiReply(rawReply: string): string {
 
 export async function POST(request: NextRequest) {
   let correlationId = "unknown";
+  let shouldSetVerifiedCookie = false;
+  const withVerifiedCookie = (response: NextResponse): NextResponse => {
+    if (!shouldSetVerifiedCookie) return response;
+    response.cookies.set({
+      name: CHAT_TURNSTILE_COOKIE,
+      value: "1",
+      maxAge: CHAT_TURNSTILE_COOKIE_MAX_AGE_SECONDS,
+      path: "/",
+      sameSite: "lax",
+      secure: process.env.NODE_ENV === "production",
+      httpOnly: false,
+    });
+    return response;
+  };
   try {
     // Content-Type validation
     const contentType = request.headers.get("content-type");
@@ -924,16 +940,24 @@ export async function POST(request: NextRequest) {
     }
 
     const { message, program, selectedSessions: rawSelectedSessions, history, turnstileToken } = parseResult.data;
+    const hasVerifiedCookie =
+      request.cookies.get(CHAT_TURNSTILE_COOKIE)?.value === "1";
 
-    const hostname = request.headers.get("host") ?? "";
-    const turnstileResult = await verifyTurnstileToken({
-      token: turnstileToken,
-      expectedAction: "chat_message",
-      expectedHostname: getTurnstileExpectedHostname(hostname),
-      remoteip: getClientIpForTurnstile(request),
-    });
-    if (!turnstileResult.success) {
-      return jsonError("Access was blocked. Please refresh and try again.", 403);
+    if (!hasVerifiedCookie) {
+      if (!turnstileToken?.trim()) {
+        return jsonError("Please complete verification first.", 403);
+      }
+      const hostname = request.headers.get("host") ?? "";
+      const turnstileResult = await verifyTurnstileToken({
+        token: turnstileToken,
+        expectedAction: "chat_message",
+        expectedHostname: getTurnstileExpectedHostname(hostname),
+        remoteip: getClientIpForTurnstile(request),
+      });
+      if (!turnstileResult.success) {
+        return jsonError("Access was blocked. Please refresh and try again.", 403);
+      }
+      shouldSetVerifiedCookie = true;
     }
 
     const meta = await loadMetaIntoStore();
@@ -1057,7 +1081,7 @@ export async function POST(request: NextRequest) {
     ].join("||");
 
     const cachedReply = getCachedReply(cacheKey);
-    if (cachedReply) return NextResponse.json({ reply: cachedReply });
+    if (cachedReply) return withVerifiedCookie(NextResponse.json({ reply: cachedReply }));
 
     const modelBudget = getModelResponseBudget(
       sanitizedMessage,
@@ -1078,53 +1102,53 @@ export async function POST(request: NextRequest) {
     const reply = cleanAiReply(rawReply);
 
     setCachedReply(cacheKey, reply);
-    return NextResponse.json({ reply });
+    return withVerifiedCookie(NextResponse.json({ reply }));
   } catch (error: unknown) {
     if (error instanceof SyntaxError || (error instanceof Error && error.message?.includes("JSON"))) {
-      return jsonError("Invalid JSON in request body", 400);
+      return withVerifiedCookie(jsonError("Invalid JSON in request body", 400));
     }
     const errMsg = error instanceof Error ? error.message : String(error);
     const status = (error as { status?: number })?.status;
     logger.error("Chat API error", { correlationId, errMsg, status });
 
     if (status === 401 || errMsg.includes("401") || errMsg.includes("Unauthorized")) {
-      return jsonError(
+      return withVerifiedCookie(jsonError(
         "AI service authentication failed. Please check API key configuration.",
         502
-      );
+      ));
     }
     if (status === 403 || errMsg.includes("403") || errMsg.includes("Forbidden")) {
-      return jsonError(
+      return withVerifiedCookie(jsonError(
         "AI model access denied. Please try again later or contact support.",
         502
-      );
+      ));
     }
     if (status === 413 || errMsg.includes("413")) {
-      return jsonError(
+      return withVerifiedCookie(jsonError(
         "Request too large. Try a shorter message or clear chat history.",
         413
-      );
+      ));
     }
     if (errMsg.includes("429") || errMsg.includes("rate")) {
-      return jsonError("AI service is busy. Please try again in a moment.", 429);
+      return withVerifiedCookie(jsonError("AI service is busy. Please try again in a moment.", 429));
     }
     if (
       errMsg.includes("503") ||
       errMsg.includes("loading") ||
       errMsg.includes("unavailable")
     ) {
-      return jsonError(
+      return withVerifiedCookie(jsonError(
         "AI model is loading. Please try again in a few seconds.",
         503
-      );
+      ));
     }
     if (errMsg.includes("timeout") || errMsg.includes("timed out")) {
-      return jsonError(
+      return withVerifiedCookie(jsonError(
         "Request took too long. Please try again.",
         504
-      );
+      ));
     }
 
-    return jsonError("Failed to get response from AI. Please try again.", 500);
+    return withVerifiedCookie(jsonError("Failed to get response from AI. Please try again.", 500));
   }
 }

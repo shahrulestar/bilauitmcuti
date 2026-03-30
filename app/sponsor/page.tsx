@@ -27,6 +27,8 @@ import {
 import type { SponsorSocialPlatform } from "@/lib/sponsor";
 
 const QR_IMAGE_SRC = "/sponsor-qr.png";
+const TURNSTILE_DEV_SITE_KEY = "1x00000000000000000000AA";
+const SPONSOR_TURNSTILE_COOKIE = "sponsor_turnstile_verified";
 
 export default function SponsorPage() {
   const router = useRouter();
@@ -42,6 +44,7 @@ export default function SponsorPage() {
   const [proofFile, setProofFile] = useState<File | null>(null);
   const [turnstileToken, setTurnstileToken] = useState("");
   const [formTurnstileNonce, setFormTurnstileNonce] = useState(0);
+  const [isTurnstileSessionVerified, setIsTurnstileSessionVerified] = useState(false);
   const [website, setWebsite] = useState("");
   const [startedAt, setStartedAt] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -52,10 +55,24 @@ export default function SponsorPage() {
   const formTurnstileRef = useRef<TurnstileWidgetHandle>(null);
   const qrTurnstileRef = useRef<TurnstileWidgetHandle>(null);
 
-  const turnstileSiteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ?? "";
+  const turnstileSiteKey =
+    process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ??
+    (process.env.NODE_ENV === "development" ? TURNSTILE_DEV_SITE_KEY : "");
+  const requiresTurnstile = Boolean(turnstileSiteKey) && !isTurnstileSessionVerified;
 
   useEffect(() => {
     setStartedAt(Date.now());
+  }, []);
+
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    const hasVerifiedCookie = document.cookie
+      .split(";")
+      .some((item) => item.trim().startsWith(`${SPONSOR_TURNSTILE_COOKIE}=1`));
+    if (hasVerifiedCookie) {
+      setIsTurnstileSessionVerified(true);
+      setQrTurnstileToken("verified");
+    }
   }, []);
 
   const messageLength = message.length;
@@ -74,7 +91,8 @@ export default function SponsorPage() {
   }, [anonymous, nickname, socialPlatform, socialHandle, message, proofFile]);
 
   const submitSponsorForm = useCallback(async () => {
-    if (!isFormValid || isSubmitting || !turnstileToken.trim()) return;
+    if (!isFormValid || isSubmitting) return;
+    if (requiresTurnstile && !turnstileToken.trim()) return;
     setIsSubmitting(true);
 
     try {
@@ -84,7 +102,7 @@ export default function SponsorPage() {
       formData.append("socialPlatform", anonymous ? "" : socialPlatform);
       formData.append("socialHandle", anonymous ? "" : socialHandle.trim());
       formData.append("message", message.trim());
-      formData.append("turnstileToken", turnstileToken);
+      if (requiresTurnstile) formData.append("turnstileToken", turnstileToken);
       formData.append("startedAt", String(startedAt));
       formData.append("website", website);
       if (proofFile) formData.append("proof", proofFile);
@@ -96,11 +114,19 @@ export default function SponsorPage() {
 
       const raw = (await response.json().catch(() => ({}))) as { message?: string; error?: string };
       if (!response.ok) {
+        if (response.status === 403) {
+          setIsTurnstileSessionVerified(false);
+          setTurnstileToken("");
+          setQrTurnstileToken("");
+          setFormTurnstileNonce((prev) => prev + 1);
+          setQrTurnstileNonce((prev) => prev + 1);
+        }
         toast.error(raw.error ?? "Unable to submit right now. Please try again.");
         return;
       }
 
       toast.success(raw.message ?? "Thanks! Your submission was received.");
+      setIsTurnstileSessionVerified(true);
       setMessage("");
       setNickname("");
       setSocialPlatform("");
@@ -131,6 +157,7 @@ export default function SponsorPage() {
     socialHandle,
     socialPlatform,
     startedAt,
+    requiresTurnstile,
     turnstileToken,
     website,
   ]);
@@ -138,7 +165,7 @@ export default function SponsorPage() {
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!isFormValid || isSubmitting) return;
-    if (!turnstileToken.trim()) {
+    if (requiresTurnstile && !turnstileToken.trim()) {
       setPendingSubmit(true);
       formTurnstileRef.current?.execute();
       return;
@@ -150,7 +177,7 @@ export default function SponsorPage() {
     if (!pendingSubmit || !turnstileToken.trim() || isSubmitting) return;
     setPendingSubmit(false);
     void submitSponsorForm();
-  }, [pendingSubmit, turnstileToken, isSubmitting, submitSponsorForm]);
+  }, [pendingSubmit, requiresTurnstile, turnstileToken, isSubmitting, submitSponsorForm]);
 
   function handleReset() {
     setShowQr(false);
@@ -237,7 +264,7 @@ export default function SponsorPage() {
                         setShowQr(false);
                         return;
                       }
-                      if (!qrTurnstileToken.trim()) {
+                      if (requiresTurnstile && !qrTurnstileToken.trim()) {
                         setShowQrChallenge(true);
                         qrTurnstileRef.current?.execute();
                         return;
@@ -247,7 +274,7 @@ export default function SponsorPage() {
                   >
                     {showQr ? "Hide payment QR" : "Show payment QR"}
                   </Button>
-                  {showQrChallenge && !qrTurnstileToken.trim() ? (
+                  {requiresTurnstile && showQrChallenge && !qrTurnstileToken.trim() ? (
                     <div className="space-y-1">
                       <TurnstileWidget
                         ref={qrTurnstileRef}
@@ -391,15 +418,17 @@ export default function SponsorPage() {
                   <div className="text-xs text-muted-foreground">Image or PDF, max 10 MB.</div>
                 </div>
 
-                <div className="space-y-2">
-                  <TurnstileWidget
-                    ref={formTurnstileRef}
-                    key={formTurnstileNonce}
-                    siteKey={turnstileSiteKey}
-                    action={SPONSOR_TURNSTILE_ACTION}
-                    onToken={setTurnstileToken}
-                  />
-                </div>
+                {requiresTurnstile ? (
+                  <div className="space-y-2">
+                    <TurnstileWidget
+                      ref={formTurnstileRef}
+                      key={formTurnstileNonce}
+                      siteKey={turnstileSiteKey}
+                      action={SPONSOR_TURNSTILE_ACTION}
+                      onToken={setTurnstileToken}
+                    />
+                  </div>
+                ) : null}
 
                 <div className="hidden" aria-hidden>
                   <label htmlFor="website">Website</label>

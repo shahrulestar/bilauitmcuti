@@ -18,6 +18,8 @@ import {
 export const runtime = "edge";
 
 const MIN_SUBMIT_TIME_MS = 3000;
+const SPONSOR_TURNSTILE_COOKIE = "sponsor_turnstile_verified";
+const SPONSOR_TURNSTILE_COOKIE_MAX_AGE_SECONDS = 60 * 60 * 12;
 
 const ALLOWED_PROOF_TYPES = new Set([
   "image/jpeg",
@@ -36,7 +38,7 @@ const sponsorFieldsSchema = z
     socialPlatform: z.string(),
     socialHandle: z.string().max(500),
     message: z.string().min(1).max(SPONSOR_MAX_MESSAGE_LENGTH),
-    turnstileToken: z.string().min(1),
+    turnstileToken: z.string().min(1).optional(),
     startedAt: z.coerce.number().int().positive(),
     website: z.string().optional(),
   })
@@ -164,6 +166,20 @@ async function sendTelegramProof(params: {
 
 export async function POST(request: NextRequest) {
   const correlationId = `sponsor-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+  let shouldSetVerifiedCookie = false;
+  const withVerifiedCookie = (response: NextResponse): NextResponse => {
+    if (!shouldSetVerifiedCookie) return response;
+    response.cookies.set({
+      name: SPONSOR_TURNSTILE_COOKIE,
+      value: "1",
+      maxAge: SPONSOR_TURNSTILE_COOKIE_MAX_AGE_SECONDS,
+      path: "/",
+      sameSite: "lax",
+      secure: process.env.NODE_ENV === "production",
+      httpOnly: false,
+    });
+    return response;
+  };
   try {
     const contentType = request.headers.get("content-type") ?? "";
     if (!contentType.includes("multipart/form-data")) {
@@ -219,15 +235,24 @@ export async function POST(request: NextRequest) {
       return jsonError("Please take a moment before submitting the form.", 429);
     }
 
-    const hostname = request.headers.get("host") ?? "";
-    const turnstileResult = await verifyTurnstileToken({
-      token: data.turnstileToken,
-      expectedAction: SPONSOR_TURNSTILE_ACTION,
-      expectedHostname: getTurnstileExpectedHostname(hostname),
-      remoteip: getClientIpForTurnstile(request),
-    });
-    if (!turnstileResult.success) {
-      return jsonError("Access was blocked. Please complete the challenge and try again.", 403);
+    const hasVerifiedCookie =
+      request.cookies.get(SPONSOR_TURNSTILE_COOKIE)?.value === "1";
+    if (!hasVerifiedCookie) {
+      const token = data.turnstileToken?.trim() ?? "";
+      if (!token) {
+        return jsonError("Please complete verification first.", 403);
+      }
+      const hostname = request.headers.get("host") ?? "";
+      const turnstileResult = await verifyTurnstileToken({
+        token,
+        expectedAction: SPONSOR_TURNSTILE_ACTION,
+        expectedHostname: getTurnstileExpectedHostname(hostname),
+        remoteip: getClientIpForTurnstile(request),
+      });
+      if (!turnstileResult.success) {
+        return jsonError("Access was blocked. Please complete the challenge and try again.", 403);
+      }
+      shouldSetVerifiedCookie = true;
     }
 
     const anonymous = data.anonymous === "true";
@@ -252,10 +277,10 @@ export async function POST(request: NextRequest) {
       caption: `Sponsor proof — ${anonymous ? "Anonymous" : nickname || "—"}`,
     });
 
-    return NextResponse.json({ message: "Thanks! Your sponsorship details were submitted." });
+    return withVerifiedCookie(NextResponse.json({ message: "Thanks! Your sponsorship details were submitted." }));
   } catch (error) {
     const errMsg = error instanceof Error ? error.message : String(error);
     logger.error("Sponsor API error", { correlationId, errMsg });
-    return jsonError("Failed to submit your form. Please try again.", 500);
+    return withVerifiedCookie(jsonError("Failed to submit your form. Please try again.", 500));
   }
 }

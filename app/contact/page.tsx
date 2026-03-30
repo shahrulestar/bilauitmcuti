@@ -22,6 +22,8 @@ import {
 } from "@/components/turnstile-widget";
 
 const MAX_MESSAGE_LENGTH = 400;
+const TURNSTILE_DEV_SITE_KEY = "1x00000000000000000000AA";
+const CONTACT_TURNSTILE_COOKIE = "contact_turnstile_verified";
 
 export default function ContactPage() {
   const router = useRouter();
@@ -32,6 +34,7 @@ export default function ContactPage() {
   const [email, setEmail] = useState("");
   const [turnstileToken, setTurnstileToken] = useState("");
   const [turnstileNonce, setTurnstileNonce] = useState(0);
+  const [isTurnstileSessionVerified, setIsTurnstileSessionVerified] = useState(false);
   const [website, setWebsite] = useState("");
   const [startedAt, setStartedAt] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -40,10 +43,21 @@ export default function ContactPage() {
   const lastScrollTop = useRef(0);
   const turnstileRef = useRef<TurnstileWidgetHandle>(null);
 
-  const turnstileSiteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ?? "";
+  const turnstileSiteKey =
+    process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ??
+    (process.env.NODE_ENV === "development" ? TURNSTILE_DEV_SITE_KEY : "");
+  const requiresTurnstile = Boolean(turnstileSiteKey) && !isTurnstileSessionVerified;
 
   useEffect(() => {
     setStartedAt(Date.now());
+  }, []);
+
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    const hasVerifiedCookie = document.cookie
+      .split(";")
+      .some((item) => item.trim().startsWith(`${CONTACT_TURNSTILE_COOKIE}=1`));
+    if (hasVerifiedCookie) setIsTurnstileSessionVerified(true);
   }, []);
 
   const messageLength = message.length;
@@ -56,7 +70,8 @@ export default function ContactPage() {
   );
 
   const submitContactForm = useCallback(async () => {
-    if (!isFormValid || isSubmitting || !turnstileToken.trim()) return;
+    if (!isFormValid || isSubmitting) return;
+    if (requiresTurnstile && !turnstileToken.trim()) return;
     setIsSubmitting(true);
 
     try {
@@ -69,18 +84,24 @@ export default function ContactPage() {
           message: message.trim(),
           startedAt,
           website,
-          turnstileToken,
+          turnstileToken: requiresTurnstile ? turnstileToken : undefined,
           ...(email.trim().length > 0 ? { email: email.trim() } : {}),
         }),
       });
 
       const raw = (await response.json().catch(() => ({}))) as { message?: string; error?: string };
       if (!response.ok) {
+        if (response.status === 403) {
+          setIsTurnstileSessionVerified(false);
+          setTurnstileToken("");
+          setTurnstileNonce((prev) => prev + 1);
+        }
         toast.error(raw.error ?? "Unable to submit right now. Please try again.");
         return;
       }
 
       toast.success(raw.message ?? "Thanks! Your message was sent.");
+      setIsTurnstileSessionVerified(true);
       setMessage("");
       setCategory("");
       setWho("");
@@ -93,12 +114,23 @@ export default function ContactPage() {
     } finally {
       setIsSubmitting(false);
     }
-  }, [category, email, isFormValid, isSubmitting, message, startedAt, turnstileToken, website, who]);
+  }, [
+    category,
+    email,
+    isFormValid,
+    isSubmitting,
+    message,
+    requiresTurnstile,
+    startedAt,
+    turnstileToken,
+    website,
+    who,
+  ]);
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!isFormValid || isSubmitting) return;
-    if (!turnstileToken.trim()) {
+    if (requiresTurnstile && !turnstileToken.trim()) {
       setPendingSubmit(true);
       turnstileRef.current?.execute();
       return;
@@ -110,7 +142,7 @@ export default function ContactPage() {
     if (!pendingSubmit || !turnstileToken.trim() || isSubmitting) return;
     setPendingSubmit(false);
     void submitContactForm();
-  }, [pendingSubmit, turnstileToken, isSubmitting, submitContactForm]);
+  }, [pendingSubmit, requiresTurnstile, turnstileToken, isSubmitting, submitContactForm]);
 
   function handleReset() {
     setWho("");
@@ -256,15 +288,17 @@ export default function ContactPage() {
                   </div>
                 </div>
 
-                <div className="space-y-2">
-                  <TurnstileWidget
-                    ref={turnstileRef}
-                    key={turnstileNonce}
-                    siteKey={turnstileSiteKey}
-                    action="contact_form"
-                    onToken={setTurnstileToken}
-                  />
-                </div>
+                {requiresTurnstile ? (
+                  <div className="space-y-2">
+                    <TurnstileWidget
+                      ref={turnstileRef}
+                      key={turnstileNonce}
+                      siteKey={turnstileSiteKey}
+                      action="contact_form"
+                      onToken={setTurnstileToken}
+                    />
+                  </div>
+                ) : null}
 
                 <div className="hidden" aria-hidden>
                   <label htmlFor="website">Website</label>

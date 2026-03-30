@@ -14,6 +14,8 @@ export const runtime = "edge";
 
 const MAX_BODY_SIZE_BYTES = 10 * 1024;
 const MIN_SUBMIT_TIME_MS = 3000;
+const CONTACT_TURNSTILE_COOKIE = "contact_turnstile_verified";
+const CONTACT_TURNSTILE_COOKIE_MAX_AGE_SECONDS = 60 * 60 * 12;
 
 const contactRequestSchema = z.object({
   who: z.enum(CONTACT_WHO_OPTIONS),
@@ -22,7 +24,7 @@ const contactRequestSchema = z.object({
   startedAt: z.number().int().positive(),
   website: z.string().optional(),
   email: z.string().email().optional(),
-  turnstileToken: z.string().min(1),
+  turnstileToken: z.string().min(1).optional(),
 });
 
 function jsonError(message: string, status: number) {
@@ -84,6 +86,20 @@ async function sendToTelegram(text: string) {
 
 export async function POST(request: NextRequest) {
   const correlationId = `contact-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+  let shouldSetVerifiedCookie = false;
+  const withVerifiedCookie = (response: NextResponse): NextResponse => {
+    if (!shouldSetVerifiedCookie) return response;
+    response.cookies.set({
+      name: CONTACT_TURNSTILE_COOKIE,
+      value: "1",
+      maxAge: CONTACT_TURNSTILE_COOKIE_MAX_AGE_SECONDS,
+      path: "/",
+      sameSite: "lax",
+      secure: process.env.NODE_ENV === "production",
+      httpOnly: false,
+    });
+    return response;
+  };
   try {
     const contentType = request.headers.get("content-type");
     if (!contentType?.includes("application/json")) {
@@ -118,26 +134,35 @@ export async function POST(request: NextRequest) {
       return jsonError("Please take a moment before submitting the form.", 429);
     }
 
-    const hostname = request.headers.get("host") ?? "";
-    const expectedAction = "contact_form";
-    const turnstileResult = await verifyTurnstileToken({
-      token: parsed.data.turnstileToken,
-      expectedAction,
-      expectedHostname: getTurnstileExpectedHostname(hostname),
-      remoteip: getClientIpForTurnstile(request),
-    });
-    if (!turnstileResult.success) {
-      return jsonError("Access was blocked. Please complete the challenge and try again.", 403);
+    const hasVerifiedCookie =
+      request.cookies.get(CONTACT_TURNSTILE_COOKIE)?.value === "1";
+    if (!hasVerifiedCookie) {
+      const token = parsed.data.turnstileToken?.trim() ?? "";
+      if (!token) {
+        return jsonError("Please complete verification first.", 403);
+      }
+      const hostname = request.headers.get("host") ?? "";
+      const expectedAction = "contact_form";
+      const turnstileResult = await verifyTurnstileToken({
+        token,
+        expectedAction,
+        expectedHostname: getTurnstileExpectedHostname(hostname),
+        remoteip: getClientIpForTurnstile(request),
+      });
+      if (!turnstileResult.success) {
+        return jsonError("Access was blocked. Please complete the challenge and try again.", 403);
+      }
+      shouldSetVerifiedCookie = true;
     }
 
     const userAgent = request.headers.get("user-agent") ?? "unknown";
     const text = buildTelegramText(who, category, message.trim(), ip, userAgent, email);
     await sendToTelegram(text);
 
-    return NextResponse.json({ message: "Thanks! Your message has been submitted." });
+    return withVerifiedCookie(NextResponse.json({ message: "Thanks! Your message has been submitted." }));
   } catch (error) {
     const errMsg = error instanceof Error ? error.message : String(error);
     logger.error("Contact API error", { correlationId, errMsg });
-    return jsonError("Failed to submit your message. Please try again.", 500);
+    return withVerifiedCookie(jsonError("Failed to submit your message. Please try again.", 500));
   }
 }

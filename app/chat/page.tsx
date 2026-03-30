@@ -447,6 +447,8 @@ const LOADING_PHRASES = [
 
 const FETCH_TIMEOUT_MS = 60_000;
 const RETRY_DELAYS_MS = [400, 800, 1600];
+const TURNSTILE_DEV_SITE_KEY = "1x00000000000000000000AA";
+const CHAT_TURNSTILE_COOKIE = "chat_turnstile_verified";
 
 function getRandomLoadingPhrase(exclude?: string): string {
   const available = LOADING_PHRASES.filter((p) => p !== exclude);
@@ -586,6 +588,7 @@ export default function ChatPage() {
   const [input, setInput] = useState("");
   const [turnstileToken, setTurnstileToken] = useState("");
   const [turnstileNonce, setTurnstileNonce] = useState(0);
+  const [isTurnstileSessionVerified, setIsTurnstileSessionVerified] = useState(false);
   const [selectedProgram, setSelectedProgram] = useState<ProgramValue>("All");
   const [selectedSessions, setSelectedSessions] = useState<SessionId[]>(() =>
     getInitialChatSessions("All")
@@ -603,7 +606,18 @@ export default function ChatPage() {
   const currentGroup = getProgramGroup(selectedProgram);
   const [suggestions, setSuggestions] = useState<string[]>([]);
 
-  const turnstileSiteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ?? "";
+  const turnstileSiteKey =
+    process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ??
+    (process.env.NODE_ENV === "development" ? TURNSTILE_DEV_SITE_KEY : "");
+  const requiresTurnstile = Boolean(turnstileSiteKey) && !isTurnstileSessionVerified;
+
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    const hasVerifiedCookie = document.cookie
+      .split(";")
+      .some((item) => item.trim().startsWith(`${CHAT_TURNSTILE_COOKIE}=1`));
+    if (hasVerifiedCookie) setIsTurnstileSessionVerified(true);
+  }, []);
 
   const hydrateChatFromHomepageSources = useCallback(() => {
     if (typeof window === "undefined") return;
@@ -860,7 +874,10 @@ export default function ChatPage() {
 
   const sendMessage = useCallback(async (text: string) => {
     if (!text.trim() || isLoading) return;
-    if (!turnstileToken.trim()) return;
+    if (requiresTurnstile && !turnstileToken.trim()) {
+      turnstileRef.current?.execute();
+      return;
+    }
 
     const now = Date.now();
     const userMessage: Message = {
@@ -900,7 +917,7 @@ export default function ChatPage() {
         program: selectedProgram,
         selectedSessions,
         history,
-        turnstileToken,
+        turnstileToken: requiresTurnstile ? turnstileToken : undefined,
       });
       let content: string | null = null;
       let maxAttempts = 3;
@@ -923,6 +940,11 @@ export default function ChatPage() {
 
           if (!res.ok) {
             content = data.error || getChatErrorMessage(res, "Something went wrong. Please try again.");
+            if (res.status === 403) {
+              setIsTurnstileSessionVerified(false);
+              setTurnstileToken("");
+              setTurnstileNonce((prev) => prev + 1);
+            }
             if (res.status === 503 && maxAttempts === 3) {
               maxAttempts = 4;
             }
@@ -937,6 +959,7 @@ export default function ChatPage() {
             }
           } else {
             content = data.reply || "Sorry, I could not get a response.";
+            setIsTurnstileSessionVerified(true);
           }
           break;
         } catch (err) {
@@ -973,12 +996,20 @@ export default function ChatPage() {
       setMessages((prev) => [...prev, errorMessage]);
     } finally {
       setIsLoading(false);
-      if (didAttemptFetch) {
+      if (didAttemptFetch && requiresTurnstile && !isTurnstileSessionVerified) {
         setTurnstileToken("");
         setTurnstileNonce((prev) => prev + 1);
       }
     }
-  }, [isLoading, messages, selectedProgram, selectedSessions, turnstileToken]);
+  }, [
+    isLoading,
+    isTurnstileSessionVerified,
+    messages,
+    requiresTurnstile,
+    selectedProgram,
+    selectedSessions,
+    turnstileToken,
+  ]);
 
   const handleSubmit = async (e?: React.FormEvent) => {
     e?.preventDefault();
@@ -1055,18 +1086,31 @@ export default function ChatPage() {
                 Ask about the UiTM academic calendar. Select your program and start.
               </p>
             </div>
-            <div className="w-full max-w-[320px] px-3">
-              <TurnstileWidget
-                ref={turnstileRef}
-                key={turnstileNonce}
-                siteKey={turnstileSiteKey}
-                action="chat_message"
-                onToken={setTurnstileToken}
-              />
-            </div>
+            {requiresTurnstile ? (
+              <div className="w-full max-w-[320px] px-3">
+                <TurnstileWidget
+                  ref={turnstileRef}
+                  key={turnstileNonce}
+                  siteKey={turnstileSiteKey}
+                  action="chat_message"
+                  onToken={setTurnstileToken}
+                />
+              </div>
+            ) : null}
           </div>
         ) : (
           <div className="mx-auto max-w-[600px] space-y-6 pt-14">
+            {requiresTurnstile ? (
+              <div className="w-full max-w-[320px]">
+                <TurnstileWidget
+                  ref={turnstileRef}
+                  key={turnstileNonce}
+                  siteKey={turnstileSiteKey}
+                  action="chat_message"
+                  onToken={setTurnstileToken}
+                />
+              </div>
+            ) : null}
             {messages.map((msg) => (
               <div key={msg.id} className="space-y-1">
                 <div
@@ -1187,7 +1231,7 @@ export default function ChatPage() {
                       type="button"
                       disabled={
                         !turnstileSiteKey ||
-                        !turnstileToken.trim() ||
+                        (requiresTurnstile && !turnstileToken.trim()) ||
                         isLoading
                       }
                       onClick={() => sendMessage(suggestion)}
@@ -1215,18 +1259,6 @@ export default function ChatPage() {
               rows={1}
               className="chat-input w-full resize-none bg-transparent px-4 pt-3 pb-1 text-sm leading-relaxed placeholder:text-muted-foreground focus:outline-none disabled:opacity-50"
             />
-
-            {messages.length > 0 ? (
-              <div className="px-3 pb-2">
-                <TurnstileWidget
-                  ref={turnstileRef}
-                  key={turnstileNonce}
-                  siteKey={turnstileSiteKey}
-                  action="chat_message"
-                  onToken={setTurnstileToken}
-                />
-              </div>
-            ) : null}
 
             {/* Bottom bar */}
             <div className="flex items-center justify-between px-3 py-2">
@@ -1386,7 +1418,11 @@ export default function ChatPage() {
                 {/* Send button */}
                 <button
                   type="submit"
-                  disabled={!input.trim() || isLoading || !turnstileToken.trim()}
+                  disabled={
+                    !input.trim() ||
+                    isLoading ||
+                    (requiresTurnstile && !turnstileToken.trim())
+                  }
                   className="flex items-center justify-center w-8 h-8 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                   aria-label="Send message"
                 >
