@@ -309,7 +309,7 @@ export default function SponsorPage() {
                     onChange={(e) => setMessage(e.target.value.slice(0, SPONSOR_MAX_MESSAGE_LENGTH))}
                     maxLength={SPONSOR_MAX_MESSAGE_LENGTH}
                     rows={6}
-                    placeholder="Your message (shown in our notification)"
+                    placeholder="Share your message of support"
                     className="resize-none bg-background dark:bg-[#2A2A2A]"
                   />
                   <div className="text-xs text-muted-foreground">

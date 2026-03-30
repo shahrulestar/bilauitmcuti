@@ -725,7 +725,7 @@ export function CalendarControls({
                           variant="outline"
                           className="w-full justify-center text-center border-border bg-transparent text-foreground hover:bg-accent hover:text-accent-foreground transition-none"
                         >
-                          Feedback
+                          Send Feedback
                         </Button>
                       </Link>
 
