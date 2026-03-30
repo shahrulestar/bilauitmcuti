@@ -4,6 +4,7 @@ import { CONTACT_CATEGORY_OPTIONS, CONTACT_WHO_OPTIONS } from "@/lib/contact";
 import { getTelegramEnv } from "@/lib/env";
 import { logger } from "@/lib/logger";
 import { checkRateLimit } from "@/lib/rate-limit";
+import { verifyTurnstileToken } from "@/lib/turnstile";
 
 export const runtime = "edge";
 
@@ -16,6 +17,8 @@ const contactRequestSchema = z.object({
   message: z.string().min(1).max(400),
   startedAt: z.number().int().positive(),
   website: z.string().optional(),
+  email: z.string().email().optional(),
+  turnstileToken: z.string().min(1),
 });
 
 function jsonError(message: string, status: number) {
@@ -31,25 +34,17 @@ function getClientIp(request: NextRequest): string {
   );
 }
 
-function containsSpamContent(message: string): boolean {
-  const urlMatches = message.match(/(?:https?:\/\/|www\.)/gi) ?? [];
-  if (urlMatches.length > 2) return true;
-
-  if (/(.)\1{14,}/.test(message)) return true;
-
-  const lower = message.toLowerCase();
-  const blockedKeywords = ["casino", "forex", "crypto giveaway", "loan approved", "telegram admin"];
-  return blockedKeywords.some((keyword) => lower.includes(keyword));
-}
-
 function buildTelegramText(
   who: string,
   category: string,
   message: string,
   ip: string,
-  userAgent: string
+  userAgent: string,
+  email?: string
 ): string {
   const now = new Date().toISOString();
+  const trimmedEmail = email?.trim() ?? "";
+  const emailLine = trimmedEmail.length > 0 ? `Email: ${trimmedEmail}` : null;
   return [
     "New Contact Form Submission",
     `Time: ${now}`,
@@ -57,6 +52,7 @@ function buildTelegramText(
     `Category: ${category}`,
     `IP: ${ip}`,
     `User Agent: ${userAgent || "unknown"}`,
+    ...(emailLine ? [emailLine] : []),
     "",
     "Message:",
     message,
@@ -108,7 +104,7 @@ export async function POST(request: NextRequest) {
     const parsed = contactRequestSchema.safeParse(rawBody);
     if (!parsed.success) return jsonError("Invalid form values.", 400);
 
-    const { who, category, message, startedAt, website } = parsed.data;
+    const { who, category, message, startedAt, website, email } = parsed.data;
 
     if ((website ?? "").trim().length > 0) {
       return NextResponse.json({ message: "Thanks! Your message was sent." });
@@ -118,12 +114,21 @@ export async function POST(request: NextRequest) {
       return jsonError("Please take a moment before submitting the form.", 429);
     }
 
-    if (containsSpamContent(message)) {
-      return jsonError("Your message looks like spam. Please edit and try again.", 400);
+    const hostname = request.headers.get("host") ?? "";
+    const expectedHostname = "bilauitmcuti.com";
+    const hostNormalized = hostname.replace(/^www\./, "").split(":")[0];
+    const expectedAction = "contact_form";
+    const turnstileResult = await verifyTurnstileToken({
+      token: parsed.data.turnstileToken,
+      expectedAction,
+      expectedHostname: hostNormalized === expectedHostname ? expectedHostname : undefined,
+    });
+    if (!turnstileResult.success) {
+      return jsonError("Access was blocked. Please complete the challenge and try again.", 403);
     }
 
     const userAgent = request.headers.get("user-agent") ?? "unknown";
-    const text = buildTelegramText(who, category, message.trim(), ip, userAgent);
+    const text = buildTelegramText(who, category, message.trim(), ip, userAgent, email);
     await sendToTelegram(text);
 
     return NextResponse.json({ message: "Thanks! Your message has been submitted." });

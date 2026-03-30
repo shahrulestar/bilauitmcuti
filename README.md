@@ -27,6 +27,10 @@ Academic calendar web app for Universiti Teknologi MARA (UiTM) — Malaysia's la
 - Offline-capable via service worker
 - Dark and light theme with system detection
 
+### Contact & sponsor
+- **Contact** (`/contact`): feedback form; optional email; submissions are sent to Telegram when `TELEGRAM_*` is configured; protected by Cloudflare Turnstile
+- **Sponsor** (`/sponsor`): sponsorship form with optional nickname or anonymous mode, social platform + handle/URL, message, proof-of-payment upload (image or PDF), and Turnstile; a **Show payment QR** control reveals the static QR image at `public/sponsor-qr.png` (replace this file with your real QR). Submissions use the **same** Telegram bot token and chat ID as the contact form (`sendMessage` summary + `sendPhoto` or `sendDocument` for the proof file)
+
 ## Tech Stack
 
 - **Framework:** Next.js 16 (App Router), React 19, TypeScript
@@ -63,9 +67,13 @@ cp .env.example .env.local
 | Variable | Required | Purpose |
 |----------|----------|---------|
 | `GROQ_API_KEY` | Yes (for chat) | Groq API access; never expose to the client |
-| `TELEGRAM_BOT_TOKEN` | Optional | Contact form notifications |
-| `TELEGRAM_CHAT_ID` | Optional | Contact form notifications |
+| `TELEGRAM_BOT_TOKEN` | Optional | Contact and sponsor form notifications (same bot) |
+| `TELEGRAM_CHAT_ID` | Optional | Contact and sponsor form notifications (same chat) |
+| `NEXT_PUBLIC_TURNSTILE_SITE_KEY` | Yes (contact, chat, sponsor in production) | Cloudflare Turnstile site key (public) |
+| `TURNSTILE_SECRET_KEY` | Yes (for server verification) | Cloudflare Turnstile secret; never expose to the client |
 | `CALENDAR_API_BASE` | Optional | Server-only override for the calendar HTTP API origin (default `https://api.bilauitmcuti.com`). Do **not** use `NEXT_PUBLIC_*` — the browser calls same-origin `/api/v1/...` only. |
+
+Sponsor uploads: max proof file size **10 MB** (see `SPONSOR_MAX_FILE_BYTES` in `lib/sponsor.ts`); allowed types: common image formats and PDF.
 
 Example:
 
@@ -73,6 +81,8 @@ Example:
 GROQ_API_KEY=your_groq_api_key_here
 TELEGRAM_BOT_TOKEN=your_telegram_bot_token_here
 TELEGRAM_CHAT_ID=your_telegram_chat_id_here
+NEXT_PUBLIC_TURNSTILE_SITE_KEY=your_turnstile_site_key_here
+TURNSTILE_SECRET_KEY=your_turnstile_secret_key_here
 # CALENDAR_API_BASE=https://api.bilauitmcuti.com
 ```
 
@@ -109,7 +119,7 @@ pnpm deploy    # build + deploy (requires wrangler login)
 
 **Cloudflare Dashboard (Pages/Workers):** Connect your repo, then set:
 - **Build command:** `pnpm run deploy`
-- **Environment variables:** `GROQ_API_KEY`, optional Telegram and `CALENDAR_API_BASE` as secrets
+- **Environment variables:** `GROQ_API_KEY`, optional Telegram, Turnstile keys (`NEXT_PUBLIC_TURNSTILE_SITE_KEY`, `TURNSTILE_SECRET_KEY`), and `CALENDAR_API_BASE` as secrets
 - `CLOUDFLARE_API_TOKEN` is auto-injected when connected via Git
 
 **Troubleshooting:**
@@ -131,6 +141,12 @@ app/
   chat/
     page.tsx               # AI chat interface
     api/route.ts           # Chat API (rate limiting, validation, AI)
+  contact/
+    page.tsx               # Contact form (Telegram + Turnstile)
+    api/route.ts           # Contact POST handler
+  sponsor/
+    page.tsx               # Sponsor form (QR, proof upload, Telegram + Turnstile)
+    api/route.ts           # Sponsor multipart POST handler
   list/                    # List view page
   api/
     health/route.ts        # Health/readiness
@@ -160,6 +176,7 @@ lib/
 public/
   manifest.json            # PWA manifest
   sw.js                    # Service worker
+  sponsor-qr.png           # Placeholder payment QR for /sponsor (replace with your asset)
 ```
 
 ## CI

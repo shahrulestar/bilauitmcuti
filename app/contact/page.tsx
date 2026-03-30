@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ChevronLeft } from "lucide-react";
 import { toast } from "sonner";
@@ -16,6 +16,10 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { Toaster } from "@/components/ui/sonner";
 import { CONTACT_CATEGORY_OPTIONS, CONTACT_WHO_OPTIONS } from "@/lib/contact";
+import {
+  TurnstileWidget,
+  type TurnstileWidgetHandle,
+} from "@/components/turnstile-widget";
 
 const MAX_MESSAGE_LENGTH = 400;
 
@@ -24,9 +28,14 @@ export default function ContactPage() {
   const [who, setWho] = useState("");
   const [category, setCategory] = useState("");
   const [message, setMessage] = useState("");
+  const [email, setEmail] = useState("");
+  const [turnstileToken, setTurnstileToken] = useState("");
   const [website, setWebsite] = useState("");
   const [startedAt, setStartedAt] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const turnstileRef = useRef<TurnstileWidgetHandle>(null);
+
+  const turnstileSiteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ?? "";
 
   useEffect(() => {
     setStartedAt(Date.now());
@@ -34,8 +43,12 @@ export default function ContactPage() {
 
   const messageLength = message.length;
   const isFormValid = useMemo(
-    () => who.length > 0 && category.length > 0 && message.trim().length > 0,
-    [who, category, message]
+    () =>
+      who.length > 0 &&
+      category.length > 0 &&
+      message.trim().length > 0 &&
+      turnstileToken.trim().length > 0,
+    [who, category, message, turnstileToken]
   );
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -54,6 +67,8 @@ export default function ContactPage() {
           message: message.trim(),
           startedAt,
           website,
+          turnstileToken,
+          ...(email.trim().length > 0 ? { email: email.trim() } : {}),
         }),
       });
 
@@ -68,6 +83,7 @@ export default function ContactPage() {
       setCategory("");
       setWho("");
       setWebsite("");
+      turnstileRef.current?.reset();
       setStartedAt(Date.now());
     } catch {
       toast.error("Network issue detected. Please try again.");
@@ -80,7 +96,9 @@ export default function ContactPage() {
     setWho("");
     setCategory("");
     setMessage("");
+    setEmail("");
     setWebsite("");
+    turnstileRef.current?.reset();
     setStartedAt(Date.now());
   }
 
@@ -107,8 +125,14 @@ export default function ContactPage() {
             <CardHeader className="space-y-1 pb-4 px-3 sm:px-6">
               <div>
                 <CardTitle className="text-2xl font-semibold">Contact Form</CardTitle>
-                <CardDescription className="mt-1 text-base">
-                  Help us improve by sharing your feedback.
+                <CardDescription className="mt-1 text-base text-foreground">
+                  We&apos;d love to hear what you think. Help us improve by sharing your feedback, or send an email to{" "}
+                  <a
+                    href="mailto:hello@bilauitmcuti.com"
+                    className="text-primary underline-offset-4 hover:underline"
+                  >
+                    hello@bilauitmcuti.com
+                  </a>
                 </CardDescription>
               </div>
             </CardHeader>
@@ -131,6 +155,27 @@ export default function ContactPage() {
                       ))}
                     </SelectContent>
                   </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <label htmlFor="email" className="text-sm font-semibold">
+                    Email address{" "}
+                    <span className="font-normal text-muted-foreground">(optional)</span>
+                  </label>
+                  <input
+                    id="email"
+                    type="email"
+                    inputMode="email"
+                    placeholder="you@example.com"
+                    value={email}
+                    onChange={(event) => setEmail(event.target.value)}
+                    autoComplete="email"
+                    className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm outline-none transition-none focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:border-ring disabled:cursor-not-allowed disabled:opacity-50 dark:bg-[#2A2A2A]"
+                  />
+                  <div className="text-xs text-muted-foreground">
+                    Your email will only be used to follow up on your feedback. Leave it empty if you&apos;d prefer
+                    not to receive a reply.
+                  </div>
                 </div>
 
                 <div className="space-y-2">
@@ -169,6 +214,15 @@ export default function ContactPage() {
                   </div>
                 </div>
 
+                <div className="space-y-2">
+                  <TurnstileWidget
+                    ref={turnstileRef}
+                    siteKey={turnstileSiteKey}
+                    action="contact_form"
+                    onToken={setTurnstileToken}
+                  />
+                </div>
+
                 <div className="hidden" aria-hidden>
                   <label htmlFor="website">Website</label>
                   <input
@@ -196,6 +250,20 @@ export default function ContactPage() {
                   </Button>
                 </div>
               </form>
+            </CardContent>
+          </Card>
+
+          <Card className="mt-4 gap-0 rounded-[10px] shadow-none">
+            <CardHeader className="space-y-1 pb-4 px-3 sm:px-6">
+              <CardTitle className="text-xl font-semibold">Become Our Sponsors</CardTitle>
+              <CardDescription className="mt-1 text-base text-foreground">
+                Support the project and help keep the calendar free for everyone.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="pt-0 px-3 sm:px-6">
+              <Button type="button" className="w-full sm:w-auto" onClick={() => router.push("/sponsor")}>
+                Sponsor
+              </Button>
             </CardContent>
           </Card>
 

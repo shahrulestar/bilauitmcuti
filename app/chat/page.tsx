@@ -40,6 +40,10 @@ import {
   ContextMenuTrigger,
 } from "@/components/ui/context-menu";
 import useEmblaCarousel from "embla-carousel-react";
+import {
+  TurnstileWidget,
+  type TurnstileWidgetHandle,
+} from "@/components/turnstile-widget";
 
 function getChatErrorMessage(res: Response, fallback: string): string {
   if (res.status === 429) return "Too many requests. Please wait a moment before trying again.";
@@ -580,6 +584,7 @@ export default function ChatPage() {
   const calendarDataVersion = getSnapshot().version;
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
+  const [turnstileToken, setTurnstileToken] = useState("");
   const [selectedProgram, setSelectedProgram] = useState<ProgramValue>("All");
   const [selectedSessions, setSelectedSessions] = useState<SessionId[]>(() =>
     getInitialChatSessions("All")
@@ -596,6 +601,8 @@ export default function ChatPage() {
   const [reactions, setReactions] = useState<Record<string, "up" | "down" | null>>({});
   const currentGroup = getProgramGroup(selectedProgram);
   const [suggestions, setSuggestions] = useState<string[]>([]);
+
+  const turnstileSiteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ?? "";
 
   const hydrateChatFromHomepageSources = useCallback(() => {
     if (typeof window === "undefined") return;
@@ -753,6 +760,7 @@ export default function ChatPage() {
   const [disclaimerFade, setDisclaimerFade] = useState<"in" | "out">("in");
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const turnstileRef = useRef<TurnstileWidgetHandle>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const lastScrollTop = useRef(0);
   const groupAOptions = useMemo(() => programOptions.filter(p => p.group === 'A'), [programOptions]);
@@ -851,6 +859,7 @@ export default function ChatPage() {
 
   const sendMessage = async (text: string) => {
     if (!text.trim() || isLoading) return;
+    if (!turnstileToken.trim()) return;
 
     const now = Date.now();
     const userMessage: Message = {
@@ -864,6 +873,7 @@ export default function ChatPage() {
     setMessages(updatedMessages);
     setInput("");
     setIsLoading(true);
+    let didAttemptFetch = false;
 
     try {
       if (typeof navigator !== "undefined" && !navigator.onLine) {
@@ -881,6 +891,7 @@ export default function ChatPage() {
         return;
       }
 
+      didAttemptFetch = true;
       const history = prepareHistory(messages);
 
       const body = JSON.stringify({
@@ -888,6 +899,7 @@ export default function ChatPage() {
         program: selectedProgram,
         selectedSessions,
         history,
+        turnstileToken,
       });
       let content: string | null = null;
       let maxAttempts = 3;
@@ -960,6 +972,7 @@ export default function ChatPage() {
       setMessages((prev) => [...prev, errorMessage]);
     } finally {
       setIsLoading(false);
+      if (didAttemptFetch) turnstileRef.current?.reset();
     }
   };
 
@@ -1159,8 +1172,13 @@ export default function ChatPage() {
                     <button
                       key={suggestion}
                       type="button"
+                      disabled={
+                        !turnstileSiteKey ||
+                        !turnstileToken.trim() ||
+                        isLoading
+                      }
                       onClick={() => sendMessage(suggestion)}
-                      className="embla__slide flex-none text-xs px-3 py-1.5 rounded-full border border-border bg-secondary/50 hover:bg-secondary dark:bg-[#2A2A2A] dark:hover:bg-[#333] text-foreground transition-colors whitespace-nowrap"
+                      className="embla__slide flex-none text-xs px-3 py-1.5 rounded-full border border-border bg-secondary/50 hover:bg-secondary dark:bg-[#2A2A2A] dark:hover:bg-[#333] text-foreground transition-colors whitespace-nowrap disabled:opacity-40 disabled:pointer-events-none disabled:cursor-not-allowed"
                     >
                       {suggestion}
                     </button>
@@ -1184,6 +1202,15 @@ export default function ChatPage() {
               rows={1}
               className="chat-input w-full resize-none bg-transparent px-4 pt-3 pb-1 text-sm leading-relaxed placeholder:text-muted-foreground focus:outline-none disabled:opacity-50"
             />
+
+            <div className="px-3 pb-2">
+              <TurnstileWidget
+                ref={turnstileRef}
+                siteKey={turnstileSiteKey}
+                action="chat_message"
+                onToken={setTurnstileToken}
+              />
+            </div>
 
             {/* Bottom bar */}
             <div className="flex items-center justify-between px-3 py-2">
@@ -1343,7 +1370,7 @@ export default function ChatPage() {
                 {/* Send button */}
                 <button
                   type="submit"
-                  disabled={!input.trim() || isLoading}
+                  disabled={!input.trim() || isLoading || !turnstileToken.trim()}
                   className="flex items-center justify-center w-8 h-8 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                   aria-label="Send message"
                 >

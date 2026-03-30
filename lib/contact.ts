@@ -7,7 +7,7 @@ export const CONTACT_WHO_OPTIONS = [
   "Phd",
   "Lecturer",
   "Alumni",
-  "Normal People",
+  "Normal User",
 ] as const;
 
 export const CONTACT_CATEGORY_OPTIONS = [

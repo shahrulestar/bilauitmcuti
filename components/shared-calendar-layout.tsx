@@ -9,7 +9,6 @@ import { ListView } from '@/components/list-view';
 import { GridView } from '@/components/grid-view';
 import {
   getRoutePath,
-  isProgramValue,
   resolveProgramFromPathAndProps,
 } from '@/lib/route-utils';
 import type { ProgramValue } from '@/lib/route-utils';
@@ -217,12 +216,8 @@ export function SharedCalendarLayout({
   const router = useRouter();
 
   const routeSelectedProgram = useMemo((): ProgramValue => {
-    const fromUrl = resolveProgramFromPathAndProps(pathname, programFromRoute);
-    if (fromUrl !== 'All') return fromUrl;
-    const c = initialFiltersFromProps?.selectedProgram;
-    if (c && isProgramValue(c)) return c;
-    return 'All';
-  }, [pathname, programFromRoute, initialFiltersFromProps?.selectedProgram]);
+    return resolveProgramFromPathAndProps(pathname, programFromRoute);
+  }, [pathname, programFromRoute]);
 
   const [selectedProgram, setSelectedProgram] = useState(routeSelectedProgram);
   const programGroup = getGroupFromProgram(selectedProgram);
