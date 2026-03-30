@@ -106,8 +106,6 @@ export const TurnstileWidget = forwardRef<
     if (!existing) {
       const script = document.createElement("script");
       script.src = TURNSTILE_SCRIPT_SRC;
-      script.async = true;
-      script.defer = true;
       script.dataset.turnstileScript = "explicit";
       document.head.appendChild(script);
     }
@@ -144,14 +142,11 @@ export const TurnstileWidget = forwardRef<
         if (Date.now() - start < 8000) setTimeout(poll, 200);
         return;
       }
-      if (ts.ready) {
-        ts.ready(() => {
-          if (cancelled) return;
-          renderWidget();
-        });
-      } else {
-        renderWidget();
+      if (typeof ts.render !== "function") {
+        if (Date.now() - start < 8000) setTimeout(poll, 200);
+        return;
       }
+      renderWidget();
     };
 
     poll();
@@ -170,7 +165,6 @@ export const TurnstileWidget = forwardRef<
     <div
       ref={containerRef}
       className={className}
-      aria-hidden={false}
       data-turnstile-execution={execution}
     />
   );

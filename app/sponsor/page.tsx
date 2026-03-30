@@ -166,7 +166,11 @@ export default function SponsorPage() {
               </div>
             </CardHeader>
 
-            <CardContent className="pt-4 px-3 sm:px-6">
+            <CardContent className="px-3 sm:px-6">
+              <p className="mb-4 text-sm text-muted-foreground">
+                By sponsoring this project, your name and social media link will be featured as a token of our
+                appreciation. Contributions help cover hosting, domain, and development tool costs.
+              </p>
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="space-y-2">
                   <Button
@@ -371,6 +375,20 @@ export default function SponsorPage() {
               </form>
             </CardContent>
           </Card>
+
+          <section className="pt-6 text-center">
+            <h2 className="text-xl font-semibold">Our Sponsors</h2>
+            <h3 className="mt-2 text-lg font-medium">
+              <a
+                href="https://www.threads.com/@arezmie"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="underline-offset-4 hover:underline"
+              >
+                @arezmie
+              </a>
+            </h3>
+          </section>
         </div>
       </div>
     </div>

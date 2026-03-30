@@ -68,7 +68,8 @@ const nextConfig = {
           {
             key: 'Content-Security-Policy',
             // Calendar data: same-origin /api/v1/meta|calendar (legacy /api/calendar-proxy). Groq for chat.
-            value: "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https://api.groq.com; frame-ancestors 'self'; base-uri 'self'; form-action 'self';",
+            // Turnstile requires challenges.cloudflare.com for script/frame/connect.
+            value: "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://challenges.cloudflare.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https://api.groq.com https://challenges.cloudflare.com; frame-src https://challenges.cloudflare.com; frame-ancestors 'self'; base-uri 'self'; form-action 'self';",
           },
         ],
       },

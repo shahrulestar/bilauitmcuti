@@ -139,7 +139,7 @@ export default function ContactPage() {
               </div>
             </CardHeader>
 
-            <CardContent className="pt-4 px-3 sm:px-6">
+            <CardContent className="px-3 sm:px-6">
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="space-y-2">
                   <label htmlFor="who" className="text-sm font-semibold">
