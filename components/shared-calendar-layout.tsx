@@ -214,7 +214,7 @@ export function SharedCalendarLayout({
 
   const pathname = usePathname();
   const router = useRouter();
-  const isHomepage = pathname === '/';
+  const isHomepage = pathname === '/' || pathname === '/list';
   const [isPwaMode, setIsPwaMode] = useState(false);
 
   const routeSelectedProgram = useMemo((): ProgramValue => {

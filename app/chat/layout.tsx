@@ -2,11 +2,15 @@ import type { Metadata } from "next";
 import { ChatCalendarBootstrap } from "@/components/chat-calendar-bootstrap";
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://bilauitmcuti.com"),
   title: "Chat | Bila UiTM Cuti",
   description:
     "Ask AI about your UiTM academic calendar. Get instant answers about lecture dates, exam schedules, breaks, and registration periods for all programs.",
+  alternates: {
+    canonical: "https://bilauitmcuti.com/chat",
+  },
   openGraph: {
-    siteName: "Bila UiTM Cuti?",
+    siteName: "Bila UiTM Cuti",
     title: "Chat | Bila UiTM Cuti",
     description:
       "Ask AI about your UiTM academic calendar. Get instant answers about lecture dates, exam schedules, breaks, and registration periods.",

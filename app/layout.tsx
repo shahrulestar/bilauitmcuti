@@ -31,6 +31,17 @@ export const metadata: Metadata = {
   ],
   creator: 'Shahrul Estar',
   category: 'education',
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      'max-video-preview': -1,
+      'max-image-preview': 'large',
+      'max-snippet': -1,
+    },
+  },
   alternates: {
     canonical: 'https://bilauitmcuti.com',
   },
@@ -208,7 +219,7 @@ export default function RootLayout({
                     },
                     {
                       "@type": "Question",
-                      "name": "Macam mana nak guna Bila UiTM Cuti?",
+                      "name": "Macam mana nak guna Bila UiTM Cuti",
                       "acceptedAnswer": {
                         "@type": "Answer",
                         "text": "Layari bilauitmcuti.com, pilih program anda (Foundation, Diploma, Bachelor, dll), dan lihat kalendar dalam paparan grid atau senarai. Anda juga boleh install sebagai PWA untuk akses lebih pantas.",

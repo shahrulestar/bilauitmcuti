@@ -20,7 +20,7 @@ export async function generateMetadata({ params }: ProgramListPageProps): Promis
   }
   
   const programName = getProgramDisplayName(program);
-  const title = `${programName} | Bila UiTM Cuti?`;
+  const title = `${programName} | Bila UiTM Cuti`;
   const description = `Kalendar akademik UiTM untuk ${programName}. Lihat tarikh pendaftaran, jadual kuliah, tempoh peperiksaan, dan cuti.`;
   
   return {
@@ -30,7 +30,7 @@ export async function generateMetadata({ params }: ProgramListPageProps): Promis
       canonical: `https://bilauitmcuti.com/${program}/list`,
     },
     openGraph: {
-      siteName: 'Bila UiTM Cuti?',
+      siteName: 'Bila UiTM Cuti',
       title,
       description,
       type: 'website',
@@ -55,7 +55,7 @@ export async function generateMetadata({ params }: ProgramListPageProps): Promis
 }
 
 function ProgramListJsonLd({ program, programName }: { program: string; programName: string }) {
-  const title = `${programName} - List View | Bila UiTM Cuti?`;
+  const title = `${programName} - List View | Bila UiTM Cuti`;
   return (
     <script
       type="application/ld+json"
@@ -76,7 +76,7 @@ function ProgramListJsonLd({ program, programName }: { program: string; programN
               "name": title,
               "url": `https://bilauitmcuti.com/${program}/list`,
               "description": `Senarai aktiviti akademik UiTM untuk ${programName}. Pendaftaran, kuliah, peperiksaan, dan cuti dalam paparan senarai.`,
-              "isPartOf": { "@type": "WebSite", "name": "Bila UiTM Cuti?", "url": "https://bilauitmcuti.com" },
+              "isPartOf": { "@type": "WebSite", "name": "Bila UiTM Cuti", "url": "https://bilauitmcuti.com" },
             },
           ],
         }),

@@ -14,7 +14,7 @@ const programSlugs = [
 ] as const
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  const lastModified = new Date('2026-02-21')
+  const lastModified = new Date()
 
   const staticPages: MetadataRoute.Sitemap = [
     { url: baseUrl, lastModified, changeFrequency: 'weekly', priority: 1 },

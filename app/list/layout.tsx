@@ -10,7 +10,7 @@ export const metadata: Metadata = {
     canonical: 'https://bilauitmcuti.com/list',
   },
   openGraph: {
-    siteName: 'Bila UiTM Cuti?',
+    siteName: 'Bila UiTM Cuti',
     title: 'Bila UiTM Cuti',
     description: 'Interactive calendar showing UiTM academic schedules, registration dates, lecture periods, and examination dates.',
     type: 'website',
@@ -21,7 +21,7 @@ export const metadata: Metadata = {
         url: listCoverImage,
         width: 1200,
         height: 630,
-        alt: 'Bila UiTM Cuti? - Academic Calendar',
+        alt: 'Bila UiTM Cuti - Academic Calendar',
         type: 'image/png',
       },
     ],
@@ -33,7 +33,7 @@ export const metadata: Metadata = {
     images: [
       {
         url: listCoverImage,
-        alt: 'Bila UiTM Cuti? - Academic Calendar',
+        alt: 'Bila UiTM Cuti - Academic Calendar',
       },
     ],
   },
