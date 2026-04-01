@@ -1,3 +1,5 @@
+export const runtime = 'edge';
+
 // Export types for use in other components
 export type ViewMode = 'list' | 'grid';
 
@@ -32,3 +34,4 @@ export default function Page() {
     </>
   );
 }
+

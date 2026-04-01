@@ -1,3 +1,5 @@
+export const runtime = 'edge';
+
 import { CalendarWrapper } from '@/components/calendar-wrapper';
 import { notFound } from 'next/navigation';
 import { isValidProgramRoute, getProgramDisplayName } from '@/lib/route-utils';
@@ -100,3 +102,4 @@ export default async function ProgramListPage({ params }: ProgramListPageProps) 
     </>
   );
 }
+
