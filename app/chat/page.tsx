@@ -6,6 +6,7 @@ import { ChevronLeft, ChevronDown, ChevronUp, Send, ThumbsUp, ThumbsDown, Copy, 
 import { useCalendarHydrationVersion } from "@/components/calendar-hydration-context";
 import { getSnapshot, subscribe } from "@/lib/calendar-store";
 import {
+  formatGroupASessionTriggerLabel,
   formatSessionLabelWithId,
   getProgramOptions,
   getSessionOptionsForGroup,
@@ -1285,26 +1286,39 @@ export default function ChatPage() {
                   <div className="-mx-1 px-1">
                     <div className="mb-2">
                       <div className="text-xs font-semibold text-muted-foreground mb-2 px-2">GROUP A</div>
-                      {groupAOptions.map((opt) => (
+                      {groupAOptions.map((opt) => {
+                        const groupASessionSummary = formatGroupASessionTriggerLabel(
+                          opt.value,
+                          selectedProgram,
+                          selectedSessions
+                        );
+                        return (
                         <DropdownMenuSub
                           key={opt.value}
                           open={activeSubmenu === opt.value}
                           onOpenChange={(open) => setActiveSubmenu(open ? opt.value : null)}
                         >
                           <DropdownMenuSubTrigger
-                            className="cursor-pointer"
+                            className="cursor-pointer items-start"
                             onSelect={(event) => {
                               keepDropdownOpenRef.current = true;
                               event.preventDefault();
                             }}
                           >
-                            <span
-                              className={`font-medium text-sm ${
-                                opt.value === selectedProgram ? "text-primary" : "text-foreground"
-                              }`}
-                            >
-                              {opt.label}
-                            </span>
+                            <div className="flex min-w-0 flex-1 flex-col gap-1 text-left pr-1">
+                              <span
+                                className={`font-medium text-sm ${
+                                  opt.value === selectedProgram ? "text-primary" : "text-foreground"
+                                }`}
+                              >
+                                {opt.label}
+                              </span>
+                              {groupASessionSummary ? (
+                                <span className="min-w-0 text-xs text-muted-foreground text-balance leading-snug">
+                                  {groupASessionSummary}
+                                </span>
+                              ) : null}
+                            </div>
                           </DropdownMenuSubTrigger>
                           <DropdownMenuPortal>
                             <DropdownMenuSubContent className="min-w-[200px] bg-popover dark:bg-[#2A2A2A]">
@@ -1313,7 +1327,7 @@ export default function ChatPage() {
                                 return (
                                   <DropdownMenuItem
                                     key={sess.id}
-                                    className={`relative cursor-pointer pl-8 bg-transparent data-[highlighted]:bg-transparent ${isSelected ? "text-primary data-[highlighted]:text-primary" : "data-[highlighted]:text-foreground"}`}
+                                    className={`relative cursor-pointer items-start pl-8 bg-transparent data-[highlighted]:bg-transparent ${isSelected ? "text-primary data-[highlighted]:text-primary" : "data-[highlighted]:text-foreground"}`}
                                     onSelect={(event) => {
                                       keepDropdownOpenRef.current = true;
                                       event.preventDefault();
@@ -1323,17 +1337,20 @@ export default function ChatPage() {
                                     }
                                   >
                                     <span
-                                      className={`pointer-events-none absolute left-2 flex size-3.5 shrink-0 items-center justify-center rounded-full border ${isSelected ? "border-primary bg-primary" : "border-muted-foreground"}`}
+                                      className={`pointer-events-none absolute left-2 top-1.5 flex size-3.5 shrink-0 items-center justify-center rounded-full border ${isSelected ? "border-primary bg-primary" : "border-muted-foreground"}`}
                                       aria-hidden
                                     />
-                                    {formatSessionLabelWithId(sess)}
+                                    <span className="min-w-0 flex-1 text-balance leading-snug">
+                                      {formatSessionLabelWithId(sess)}
+                                    </span>
                                   </DropdownMenuItem>
                                 );
                               })}
                             </DropdownMenuSubContent>
                           </DropdownMenuPortal>
                         </DropdownMenuSub>
-                      ))}
+                        );
+                      })}
                     </div>
                   </div>
                   <div className="my-2 h-px bg-border -mx-3 w-[calc(100%+1.5rem)]" />
@@ -1345,15 +1362,17 @@ export default function ChatPage() {
                         onOpenChange={(open) => setActiveSubmenu(open ? "group-b-sessions" : null)}
                       >
                         <DropdownMenuSubTrigger
-                          className="cursor-pointer"
+                          className="cursor-pointer items-start"
                           onSelect={(event) => {
                             keepDropdownOpenRef.current = true;
                             event.preventDefault();
                           }}
                         >
-                          <div className="flex w-full items-center justify-between gap-3">
+                          <div className="flex min-w-0 flex-1 flex-col gap-1 text-left pr-1">
                             <span className="font-medium text-sm">Sessions</span>
-                            <span className="text-xs text-muted-foreground">{groupBSessionLabel}</span>
+                            <span className="min-w-0 text-xs text-muted-foreground text-balance leading-snug">
+                              {groupBSessionLabel}
+                            </span>
                           </div>
                         </DropdownMenuSubTrigger>
                         <DropdownMenuPortal>
@@ -1363,7 +1382,7 @@ export default function ChatPage() {
                               return (
                                 <DropdownMenuItem
                                   key={sess.id}
-                                  className={`relative cursor-pointer pl-8 bg-transparent data-[highlighted]:bg-transparent ${isSelected ? "text-primary data-[highlighted]:text-primary" : "data-[highlighted]:text-foreground"}`}
+                                  className={`relative cursor-pointer items-start pl-8 bg-transparent data-[highlighted]:bg-transparent ${isSelected ? "text-primary data-[highlighted]:text-primary" : "data-[highlighted]:text-foreground"}`}
                                   onSelect={(event) => {
                                     keepDropdownOpenRef.current = true;
                                     event.preventDefault();
@@ -1373,10 +1392,12 @@ export default function ChatPage() {
                                   }
                                 >
                                   <span
-                                    className={`pointer-events-none absolute left-2 flex size-3.5 shrink-0 items-center justify-center rounded-full border ${isSelected ? "border-primary bg-primary" : "border-muted-foreground"}`}
+                                    className={`pointer-events-none absolute left-2 top-1.5 flex size-3.5 shrink-0 items-center justify-center rounded-full border ${isSelected ? "border-primary bg-primary" : "border-muted-foreground"}`}
                                     aria-hidden
                                   />
-                                  {formatSessionLabelWithId(sess)}
+                                  <span className="min-w-0 flex-1 text-balance leading-snug">
+                                    {formatSessionLabelWithId(sess)}
+                                  </span>
                                 </DropdownMenuItem>
                               );
                             })}

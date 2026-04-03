@@ -269,6 +269,26 @@ export function formatSessionLabelWithId(session: Pick<SessionOptionLike, "id" |
   return `${baseLabel} (${session.id})`;
 }
 
+/**
+ * Label for a Group A program submenu row: session text with id(s) when that program is selected; otherwise empty.
+ */
+export function formatGroupASessionTriggerLabel(
+  programValue: string,
+  selectedProgram: string,
+  selectedSessions: SessionId[]
+): string {
+  if (selectedProgram !== programValue) return "";
+  const labels = selectedSessions
+    .filter((sessionId) => sessionId.startsWith("A-"))
+    .map((sessionId) => {
+      const session = getSessionOptionsForGroup("A").find((item) => item.id === sessionId);
+      return session ? formatSessionLabelWithId(session) : sessionId;
+    });
+  if (labels.length === 0) return "Select sessions";
+  if (labels.length === 1) return labels[0];
+  return `${labels.length} Selected`;
+}
+
 function effectiveSessionRange(
   sessionId: SessionId,
   label: string
