@@ -1226,7 +1226,7 @@ export default function ChatPage() {
 
       {/* Header - overlays on top of chat area */}
       <div className={`chat-header absolute top-0 left-0 right-0 z-10 px-4 md:px-0 ${headerVisible ? "translate-y-0" : "-translate-y-full"}`}>
-        <header className="flex items-center gap-3 pt-8 pb-3 mx-auto max-w-[1000px] w-full">
+        <header className="flex items-center gap-3 pt-8 pb-3 mx-auto max-w-[600px] w-full">
           <button
             onClick={() => router.push(getRoutePath(selectedProgram, "grid"))}
             className="flex items-center justify-center w-9 h-9 rounded-full bg-secondary hover:bg-secondary/80 dark:bg-[#2A2A2A] dark:hover:bg-[#333] transition-colors"
@@ -1240,7 +1240,7 @@ export default function ChatPage() {
       {/* Chat messages area */}
       <div ref={scrollContainerRef} onScroll={handleScroll} className="flex-1 overflow-y-auto px-4 md:px-0 pt-0 pb-6">
         {messages.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full gap-4 text-center mx-auto max-w-[1000px]">
+          <div className="flex flex-col items-center justify-center h-full gap-4 text-center mx-auto max-w-[600px]">
             <div>
               <h2 className="text-2xl font-semibold mb-1">Bila UiTM Cuti?</h2>
               <p className="text-sm text-muted-foreground max-w-xs">
@@ -1263,7 +1263,7 @@ export default function ChatPage() {
             ) : null}
           </div>
         ) : (
-          <div className="mx-auto max-w-[1000px] space-y-6 pt-14">
+          <div className="mx-auto max-w-[600px] space-y-6 pt-14">
             {requiresTurnstile ? (
               <div className="w-full max-w-[320px]">
                 <TurnstileWidget
@@ -1378,7 +1378,7 @@ export default function ChatPage() {
 
       {/* Input area - prompt form like ChatGPT with dropdown inside textarea */}
       <div className="chat-input-area relative px-4 md:px-0 pt-1 lg:pt-0.5 pb-6">
-        <div className="mx-auto max-w-[1000px]">
+        <div className="mx-auto max-w-[600px]">
           {/* Suggestion chips - swipeable carousel with edge fades */}
           {messages.length === 0 && (
             <div className="suggestions-carousel relative -mx-4 md:mx-0 mb-2">
