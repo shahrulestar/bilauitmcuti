@@ -154,10 +154,13 @@ function getModelResponseBudget(
   if (asksDetail) {
     return { maxTokens: MAX_TOKENS_LLAMA, temperature: 0.2 };
   }
+  if (isSimpleCalendarQuestion(message)) {
+    return { maxTokens: 600, temperature: 0.1 };
+  }
   return { maxTokens: 1600, temperature: 0.15 };
 }
 
-const RETRY_DELAYS_MS = [400, 800, 1600];
+const RETRY_DELAYS_MS = [350];
 
 function isFallbackWorthyError(error: unknown): boolean {
   const msg = normalizeErrorMessage(error);
@@ -207,6 +210,23 @@ async function askGroqWithPrimaryThenFallback(
   } catch (primaryErr) {
     if (!isFallbackWorthyError(primaryErr)) throw primaryErr;
     const rateLimitedPrimary = isGroqRateLimitError(primaryErr);
+    if (rateLimitedPrimary) {
+      logger.warn("Chat using rate-limit escape model", {
+        correlationId,
+        primaryModel: MODEL_LLAMA,
+        escapeModel: MODEL_LLAMA_RATE_LIMIT_ESCAPE,
+        reason: "primary_rate_limit",
+        err:
+          primaryErr instanceof Error ? primaryErr.message : String(primaryErr),
+      });
+      return await askGroqWithRetry(
+        message,
+        systemPrompt,
+        history,
+        options,
+        MODEL_LLAMA_RATE_LIMIT_ESCAPE
+      );
+    }
     logger.warn("Chat using fallback model", {
       correlationId,
       primaryModel: MODEL_LLAMA,
@@ -374,6 +394,28 @@ const COMPARE_KEYWORDS = [
 function isComparisonQuestion(message: string): boolean {
   const lower = message.toLowerCase();
   return COMPARE_KEYWORDS.some((kw) => lower.includes(kw));
+}
+
+function isSimpleCalendarQuestion(message: string): boolean {
+  const lower = message.toLowerCase().trim();
+  const simpleHints = [
+    "when",
+    "bila",
+    "tarikh",
+    "date",
+    "next",
+    "seterusnya",
+    "mula",
+    "start",
+    "end",
+    "akhir",
+    "cuti",
+    "break",
+    "exam",
+    "peperiksaan",
+  ];
+  const hasSimpleHint = simpleHints.some((kw) => lower.includes(kw));
+  return hasSimpleHint && lower.length <= 120;
 }
 
 function getActivityDedupeKey(a: Activity): string {
@@ -664,12 +706,12 @@ function computeQuickReference(activities: Activity[], todayISO: string): string
   return lines.join("\n");
 }
 
-/** Context char limits to avoid Groq 413. */
-const MAX_PRIMARY_CONTEXT_CHARS = 8_000;
-const MAX_SECONDARY_CONTEXT_CHARS = 4_500;
+/** Context char limits to avoid Groq 413 and reduce latency. */
+const MAX_PRIMARY_CONTEXT_CHARS = 4_500;
+const MAX_SECONDARY_CONTEXT_CHARS = 1_800;
 const MAX_COMPARISON_CONTEXT_CHARS = 2_000;
 /** Calendar prompt: uitm-info.json supplement (system-rules DATA PRIORITY). */
-const MAX_CALENDAR_UITM_SUPPLEMENT_CHARS = 4_000;
+const MAX_CALENDAR_UITM_SUPPLEMENT_CHARS = 2_000;
 
 function isKeyScheduleActivityForReference(a: Activity): boolean {
   return (
@@ -1051,6 +1093,7 @@ export async function POST(request: NextRequest) {
     const useCalendarPrompt = isCalendarQuestion(sanitizedMessage);
     const isCompareRequested =
       multipleSessionsSelected && isComparisonQuestion(sanitizedMessage);
+    const includeUitmSupplement = !useCalendarPrompt || !isSimpleCalendarQuestion(sanitizedMessage);
     const systemPrompt = useCalendarPrompt
       ? buildCalendarSystemPrompt(
           programLabel,
@@ -1066,7 +1109,7 @@ export async function POST(request: NextRequest) {
           comparisonContext,
           isCompareRequested,
           multipleSessionsSelected,
-          UITM_GENERAL_INFO,
+          includeUitmSupplement ? UITM_GENERAL_INFO : "",
           effectiveSessions.length
         )
       : buildResearchSystemPrompt(todayFormatted);

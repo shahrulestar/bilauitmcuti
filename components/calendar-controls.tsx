@@ -351,22 +351,22 @@ export function CalendarControls({
                       onOpenChange={(open) => setActiveSubmenu(open ? option.value : null)}
                     >
                       <DropdownMenuSubTrigger
-                        className={`cursor-pointer items-start rounded-md ${option.value === selectedProgram ? 'bg-muted' : ''}`}
+                        className="relative w-full max-w-full min-w-0 cursor-pointer items-center justify-between gap-0 rounded-md px-2 py-1.5"
                         onSelect={(event) => {
                           keepDropdownOpenRef.current = true;
                           event.preventDefault();
                         }}
                       >
-                        <div className="flex min-w-0 flex-1 flex-col gap-1 text-left pr-1">
+                        <div className="flex min-w-0 flex-1 flex-col gap-0.5 text-left">
                           <span
-                            className={`font-medium text-sm ${
+                            className={`min-w-0 truncate font-medium text-sm ${
                               option.value === selectedProgram ? 'text-primary' : textClass
                             }`}
                           >
                             {option.label}
                           </span>
                           {groupASessionSummary ? (
-                            <span className="min-w-0 text-xs text-muted-foreground text-balance leading-snug">
+                            <span className="min-w-0 truncate text-xs text-muted-foreground leading-snug whitespace-nowrap">
                               {groupASessionSummary}
                             </span>
                           ) : null}
@@ -454,13 +454,12 @@ export function CalendarControls({
                         })}
                       </DropdownMenuSubContent>
                     </DropdownMenuPortal>
-                  </DropdownMenuSub>
-                  <div className="my-2 h-px bg-border -mx-3 w-[calc(100%+1.5rem)]" />
+                    </DropdownMenuSub>
                   {/* Program list - direct click */}
-                  {groupBOptions.map((option) => (
+                  {groupBOptions.map((option, index) => (
                     <DropdownMenuItem
                       key={option.value}
-                      className={`cursor-pointer font-medium text-sm data-[highlighted]:bg-muted ${option.value === selectedProgram ? 'bg-muted text-primary data-[highlighted]:text-primary' : 'bg-transparent data-[highlighted]:text-foreground'}`}
+                      className={`relative cursor-pointer pr-8 font-medium text-sm data-[highlighted]:bg-transparent ${index === 0 ? 'mt-2' : ''} ${option.value === selectedProgram ? 'text-primary data-[highlighted]:text-primary' : 'text-foreground data-[highlighted]:text-foreground'}`}
                       onClick={() => {
                         setActiveSubmenu(null);
                         setDropdownOpen(false);
@@ -468,6 +467,12 @@ export function CalendarControls({
                       }}
                     >
                       {option.label}
+                      {option.value === selectedProgram ? (
+                        <span
+                          className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 flex size-3.5 shrink-0 items-center justify-center rounded-full border border-primary bg-primary"
+                          aria-hidden
+                        />
+                      ) : null}
                     </DropdownMenuItem>
                   ))}
                 </div>
@@ -522,7 +527,7 @@ export function CalendarControls({
                 <Button
                   variant="ghost"
                   size="icon"
-                  className={`${iconBaseClass} ${iconInactiveClass}`}
+                  className={`${iconBaseClass} ${iconInactiveClass} aria-expanded:!bg-transparent aria-expanded:!text-muted-foreground`}
                   title="Settings"
                   suppressHydrationWarning
                 >

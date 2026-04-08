@@ -1012,9 +1012,9 @@ export default function ChatPage() {
         turnstileToken: requiresTurnstile ? turnstileToken : undefined,
       });
       let content: string | null = null;
-      let maxAttempts = 3;
+      let maxAttempts = 2;
       const isRetryableStatus = (s: number) =>
-        s === 500 || s === 502 || s === 503 || s === 504 || s === 429;
+        s === 500 || s === 502 || s === 503 || s === 504;
 
       for (let attempt = 0; attempt < maxAttempts; attempt++) {
         const controller = new AbortController();
@@ -1550,22 +1550,22 @@ export default function ChatPage() {
                           onOpenChange={(open) => setActiveSubmenu(open ? opt.value : null)}
                         >
                           <DropdownMenuSubTrigger
-                            className="cursor-pointer items-start"
+                            className="relative w-full max-w-full min-w-0 cursor-pointer items-center justify-between gap-0 rounded-md px-2 py-1.5"
                             onSelect={(event) => {
                               keepDropdownOpenRef.current = true;
                               event.preventDefault();
                             }}
                           >
-                            <div className="flex min-w-0 flex-1 flex-col gap-1 text-left pr-1">
+                            <div className="flex min-w-0 flex-1 flex-col gap-0.5 text-left">
                               <span
-                                className={`font-medium text-sm ${
+                                className={`min-w-0 truncate font-medium text-sm ${
                                   opt.value === selectedProgram ? "text-primary" : "text-foreground"
                                 }`}
                               >
                                 {opt.label}
                               </span>
                               {groupASessionSummary ? (
-                                <span className="min-w-0 text-xs text-muted-foreground text-balance leading-snug">
+                                <span className="min-w-0 truncate text-xs text-muted-foreground leading-snug whitespace-nowrap">
                                   {groupASessionSummary}
                                 </span>
                               ) : null}
@@ -1657,12 +1657,11 @@ export default function ChatPage() {
                           </DropdownMenuSubContent>
                         </DropdownMenuPortal>
                       </DropdownMenuSub>
-                      <div className="my-2 h-px bg-border -mx-3 w-[calc(100%+1.5rem)]" />
                       {/* Program list - direct click */}
-                      {groupBOptions.map((opt) => (
+                      {groupBOptions.map((opt, index) => (
                         <DropdownMenuItem
                           key={opt.value}
-                          className={`cursor-pointer font-medium bg-transparent data-[highlighted]:bg-transparent ${opt.value === selectedProgram ? "text-primary data-[highlighted]:text-primary" : "data-[highlighted]:text-foreground"}`}
+                          className={`relative cursor-pointer pr-8 font-medium bg-transparent data-[highlighted]:bg-transparent ${index === 0 ? "mt-2" : ""} ${opt.value === selectedProgram ? "text-primary data-[highlighted]:text-primary" : "text-foreground data-[highlighted]:text-foreground"}`}
                           onClick={() => {
                             setActiveSubmenu(null);
                             setDropdownOpen(false);
@@ -1670,6 +1669,12 @@ export default function ChatPage() {
                           }}
                         >
                           {opt.label}
+                          {opt.value === selectedProgram ? (
+                            <span
+                              className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 flex size-3.5 shrink-0 items-center justify-center rounded-full border border-primary bg-primary"
+                              aria-hidden
+                            />
+                          ) : null}
                         </DropdownMenuItem>
                       ))}
                     </div>

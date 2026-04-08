@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { ChevronLeft, Monitor, Smartphone, TabletSmartphone, Sparkles, CalendarDays, LayoutGrid, List, Moon, Sun, MessageCircle, MapPin, MessageSquareText } from 'lucide-react';
+import { ChevronLeft, Monitor, Smartphone, TabletSmartphone, Sparkles } from 'lucide-react';
 
 export default function PWAPage() {
   const router = useRouter();
@@ -21,38 +21,45 @@ export default function PWAPage() {
 
   return (
     <div className="min-h-screen bg-background text-foreground">
-      <div className="mx-auto max-w-2xl px-4 py-8 sm:px-6">
+      <div className="mx-auto w-full max-w-[1000px] px-4 py-8 sm:px-6 lg:px-4">
         {/* Back */}
         <button
           onClick={() => router.push('/')}
-          className="mb-8 flex items-center justify-center w-9 h-9 rounded-full bg-secondary hover:bg-secondary/80 dark:bg-[#2A2A2A] dark:hover:bg-[#333] transition-colors"
+          className="mb-8 flex h-9 w-9 items-center justify-center rounded-full bg-secondary transition-colors hover:bg-secondary/80 dark:bg-[#2A2A2A] dark:hover:bg-[#333]"
           aria-label="Back to home"
         >
           <ChevronLeft className="w-5 h-5" />
         </button>
 
         {/* Hero */}
-        <div className="mb-10">
-          <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
-            Install <span className="text-[#8b5cf6]">Bila UiTM Cuti</span>
-          </h1>
-          <p className="mt-2 text-muted-foreground">
-            Add this web app to your home screen for a faster, app-like experience with the latest calendar, chat, and contact updates.
-          </p>
-          <p className="mt-2 text-sm text-muted-foreground">Last updated: March 2026</p>
+        <div className="relative mb-8 overflow-hidden rounded-2xl border border-border/70 bg-gradient-to-b from-secondary/70 to-background p-6 sm:p-8">
+          <div className="pointer-events-none absolute -right-16 -top-20 h-52 w-52 rounded-full bg-violet-500/10 blur-3xl" />
+          <div className="pointer-events-none absolute -left-16 bottom-0 h-40 w-40 rounded-full bg-blue-500/10 blur-3xl" />
+          <div className="relative">
+            <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-border/70 bg-background/80 px-3 py-1 text-xs text-muted-foreground">
+              <Sparkles className="h-3.5 w-3.5" />
+              Progressive Web App Guide
+            </div>
+            <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
+              Install <span className="text-[#8b5cf6]">Bila UiTM Cuti</span>
+            </h1>
+            <p className="mt-3 max-w-2xl text-muted-foreground">
+              Add this app to your home screen for a faster, native-like experience with the latest calendar, chat, and contact updates.
+            </p>
+          </div>
         </div>
 
         {/* Already installed banner */}
         {isInstalled && (
-          <div className="mb-8 rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-4 text-sm text-emerald-700 dark:text-emerald-400">
+          <div className="mb-8 rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-4 text-sm text-emerald-700 dark:text-emerald-400">
             You&apos;re already using Bila UiTM Cuti as an installed app.
           </div>
         )}
 
         {/* Installation Instructions */}
-        <div className="space-y-8">
+        <div className="space-y-6">
           {/* iOS */}
-          <section>
+          <section className="rounded-xl border border-border bg-card p-5 sm:p-6">
             <div className="mb-4 flex items-center gap-2">
               <Smartphone className="h-5 w-5 text-muted-foreground" />
               <h2 className="text-lg font-semibold">iPhone &amp; iPad</h2>
@@ -78,7 +85,7 @@ export default function PWAPage() {
           </section>
 
           {/* Android */}
-          <section>
+          <section className="rounded-xl border border-border bg-card p-5 sm:p-6">
             <div className="mb-4 flex items-center gap-2">
               <TabletSmartphone className="h-5 w-5 text-muted-foreground" />
               <h2 className="text-lg font-semibold">Android</h2>
@@ -104,7 +111,7 @@ export default function PWAPage() {
           </section>
 
           {/* Desktop */}
-          <section>
+          <section className="rounded-xl border border-border bg-card p-5 sm:p-6">
             <div className="mb-4 flex items-center gap-2">
               <Monitor className="h-5 w-5 text-muted-foreground" />
               <h2 className="text-lg font-semibold">Desktop &amp; Laptop</h2>
@@ -119,48 +126,8 @@ export default function PWAPage() {
             </div>
           </section>
 
-          {/* Divider */}
-          <hr className="border-border" />
-
-          {/* Features */}
-          <section>
-            <h2 className="mb-4 text-lg font-semibold">What you get</h2>
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <FeatureItem icon={<CalendarDays className="h-4 w-4" />} label="Academic calendar 2026 (updated Mar 2026)" />
-              <FeatureItem icon={<LayoutGrid className="h-4 w-4" />} label="Grid & list views" />
-              <FeatureItem icon={<Sparkles className="h-4 w-4" />} label="Group A & B schedules" />
-              <FeatureItem
-                icon={<List className="h-4 w-4" />}
-                label="Event filters (Registration, Lecture, Short Semester, Intersession, Exams & Break) + countdown"
-              />
-              <FeatureItem icon={<MapPin className="h-4 w-4" />} label="Regional holidays (Kedah, Kelantan & Terengganu)" />
-              <FeatureItem icon={<MessageCircle className="h-4 w-4" />} label="AI chat assistant" />
-              <FeatureItem icon={<MessageSquareText className="h-4 w-4" />} label="Contact & feedback form" />
-              <FeatureItem icon={<ThemeIcon />} label="Dark & light themes" />
-              <FeatureItem icon={<Smartphone className="h-4 w-4" />} label="Installable as native app" />
-            </div>
-          </section>
-
         </div>
       </div>
     </div>
-  );
-}
-
-function FeatureItem({ icon, label }: { icon: React.ReactNode; label: string }) {
-  return (
-    <div className="flex items-center gap-3 rounded-lg border bg-card p-3 text-sm">
-      <span className="text-muted-foreground">{icon}</span>
-      <span>{label}</span>
-    </div>
-  );
-}
-
-function ThemeIcon() {
-  return (
-    <>
-      <Sun className="h-4 w-4 dark:hidden" />
-      <Moon className="hidden h-4 w-4 dark:block" />
-    </>
   );
 }
