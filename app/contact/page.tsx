@@ -326,11 +326,11 @@ export default function ContactPage() {
                     variant="outline"
                     onClick={handleReset}
                     disabled={isSubmitting}
-                    className="w-full sm:w-auto"
+                    className="w-full sm:w-auto h-[38px]"
                   >
                     Reset
                   </Button>
-                  <Button type="submit" disabled={!isFormValid || isSubmitting} className="w-full sm:w-auto">
+                  <Button type="submit" disabled={!isFormValid || isSubmitting} className="w-full sm:w-auto h-[38px]">
                     {isSubmitting ? "Submitting..." : "Submit"}
                   </Button>
                 </div>
@@ -346,7 +346,7 @@ export default function ContactPage() {
               </CardDescription>
             </CardHeader>
             <CardContent className="pt-0 px-3 sm:px-6">
-              <Button type="button" className="w-full sm:w-auto" onClick={() => router.push("/sponsor")}>
+              <Button type="button" className="w-full sm:w-auto h-[38px]" onClick={() => router.push("/sponsor")}>
                 Sponsor
               </Button>
             </CardContent>

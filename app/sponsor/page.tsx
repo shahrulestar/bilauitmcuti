@@ -244,7 +244,7 @@ export default function SponsorPage() {
                   <Button
                     type="button"
                     variant="outline"
-                    className="w-full sm:w-auto"
+                    className="w-full sm:w-auto h-[38px]"
                     onClick={() => {
                       if (showQr) {
                         setShowQr(false);
@@ -387,7 +387,7 @@ export default function SponsorPage() {
                     type="file"
                     accept="image/*,application/pdf"
                     onChange={(e) => setProofFile(e.target.files?.[0] ?? null)}
-                    className="block w-full text-sm text-muted-foreground file:mr-3 file:rounded-md file:border file:border-border file:bg-secondary file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-foreground"
+                    className="block w-full text-sm text-muted-foreground file:mr-3 file:h-[38px] file:rounded-md file:border file:border-border file:bg-secondary file:px-3 file:text-sm file:font-medium file:text-foreground"
                   />
                   <div className="mt-2 text-xs text-muted-foreground">Image or PDF, max 10 MB.</div>
                 </div>
@@ -422,11 +422,11 @@ export default function SponsorPage() {
                     variant="outline"
                     onClick={handleReset}
                     disabled={isSubmitting}
-                    className="w-full sm:w-auto"
+                    className="w-full sm:w-auto h-[38px]"
                   >
                     Reset
                   </Button>
-                  <Button type="submit" disabled={!isFormValid || isSubmitting} className="w-full sm:w-auto">
+                  <Button type="submit" disabled={!isFormValid || isSubmitting} className="w-full sm:w-auto h-[38px]">
                     {isSubmitting ? "Submitting..." : "Submit"}
                   </Button>
                 </div>

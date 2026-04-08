@@ -390,7 +390,7 @@ export function CalendarControls({
                                 onClick={() => handleSessionToggle(option.value as ProgramValue, sess.id, 'A')}
                               >
                                 <span
-                                  className={`pointer-events-none absolute left-2 top-1.5 flex size-3.5 shrink-0 items-center justify-center rounded-full border ${isSelected ? 'border-primary bg-primary' : 'border-muted-foreground'}`}
+                                  className={`pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 flex size-3.5 shrink-0 items-center justify-center rounded-full border ${isSelected ? 'border-primary bg-primary' : 'border-muted-foreground'}`}
                                   aria-hidden
                                 />
                                 <SessionSubmenuItemLabel session={sess} />
@@ -445,7 +445,7 @@ export function CalendarControls({
                               onClick={() => handleSessionToggle(groupBProgramForSessions, sess.id, 'B')}
                             >
                               <span
-                                className={`pointer-events-none absolute left-2 top-1.5 flex size-3.5 shrink-0 items-center justify-center rounded-full border ${isSelected ? 'border-primary bg-primary' : 'border-muted-foreground'}`}
+                                className={`pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 flex size-3.5 shrink-0 items-center justify-center rounded-full border ${isSelected ? 'border-primary bg-primary' : 'border-muted-foreground'}`}
                                 aria-hidden
                               />
                               <SessionSubmenuItemLabel session={sess} />
@@ -757,7 +757,7 @@ export function CalendarControls({
                           variant="default"
                           onMouseEnter={() => router.prefetch('/pwa')}
                           onClick={() => router.push('/pwa')}
-                          className="w-full !h-7 justify-center text-center transition-none"
+                          className="w-full !h-[38px] justify-center text-center transition-none"
                         >
                           Download as PWA
                         </Button>
@@ -768,7 +768,7 @@ export function CalendarControls({
                         <Button
                           size="sm"
                           variant="secondary"
-                          className="w-full !h-7 justify-center text-center transition-none"
+                          className="w-full !h-[38px] justify-center text-center transition-none"
                         >
                           Send Feedback
                         </Button>

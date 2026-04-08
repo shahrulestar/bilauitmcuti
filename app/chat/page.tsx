@@ -28,6 +28,20 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Drawer,
+  DrawerContent,
+  DrawerDescription,
+  DrawerHeader,
+  DrawerTitle,
+} from "@/components/ui/drawer";
 import { Button } from "@/components/ui/button";
 import {
   Table,
@@ -564,6 +578,18 @@ interface Message {
   timestamp?: number;
 }
 
+interface MentionMatch {
+  start: number;
+  end: number;
+  query: string;
+}
+
+interface MentionItem {
+  id: SessionId;
+  label: string;
+  text: string;
+}
+
 function formatTime24(timestamp: number): string {
   const d = new Date(timestamp);
   return d.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", hour12: false });
@@ -574,6 +600,23 @@ function getInitialChatSessions(program: string): SessionId[] {
   const dateStr =
     typeof window !== "undefined" ? new Date().toISOString().slice(0, 10) : "2026-03-15";
   return [getSessionForCurrentDate(group, dateStr)];
+}
+
+function getActiveMentionMatch(value: string, caretIndex: number): MentionMatch | null {
+  if (caretIndex < 0) return null;
+  const prefix = value.slice(0, caretIndex);
+  const atIndex = prefix.lastIndexOf("@");
+  if (atIndex < 0) return null;
+  const charBefore = atIndex > 0 ? prefix[atIndex - 1] : "";
+  const isBoundary = atIndex === 0 || /\s/.test(charBefore);
+  if (!isBoundary) return null;
+  const query = prefix.slice(atIndex + 1);
+  if (/\s/.test(query)) return null;
+  return { start: atIndex, end: caretIndex, query };
+}
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
 export default function ChatPage() {
@@ -608,6 +651,11 @@ export default function ChatPage() {
   const [reactions, setReactions] = useState<Record<string, "up" | "down" | null>>({});
   const currentGroup = getProgramGroup(selectedProgram);
   const [suggestions, setSuggestions] = useState<string[]>([]);
+  const [isMentionOpen, setIsMentionOpen] = useState(false);
+  const [mentionQuery, setMentionQuery] = useState("");
+  const [activeMentionIndex, setActiveMentionIndex] = useState(0);
+  const [mentionMatch, setMentionMatch] = useState<MentionMatch | null>(null);
+  const [isMobileMentionPicker, setIsMobileMentionPicker] = useState(false);
 
   const isProduction = process.env.NODE_ENV === "production";
   const turnstileSiteKey = isProduction ? (process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ?? "") : "";
@@ -799,6 +847,55 @@ export default function ChatPage() {
     return `${labels.length} Selected`;
   }, [currentGroup, selectedSessions, calendarDataVersion]);
   const [emblaRef] = useEmblaCarousel({ dragFree: true, containScroll: "trimSnaps", align: "center" });
+  const allMentionTexts = useMemo(() => {
+    const groupA = getSessionOptionsForGroup("A").map((session) => formatSessionLabelWithId(session));
+    const groupB = getSessionOptionsForGroup("B").map((session) => formatSessionLabelWithId(session));
+    return [...groupA, ...groupB].sort((left, right) => right.length - left.length);
+  }, [calendarDataVersion]);
+
+  const mentionHighlightPattern = useMemo(() => {
+    if (allMentionTexts.length === 0) return null;
+    const escaped = allMentionTexts.map((item) => escapeRegExp(item));
+    return new RegExp(`(${escaped.join("|")})`, "g");
+  }, [allMentionTexts]);
+  const mentionItems = useMemo<MentionItem[]>(() => {
+    const sessions = getSessionOptionsForGroup(currentGroup);
+    const normalizedQuery = mentionQuery.trim().toLowerCase();
+    const mapped = sessions.map((session) => ({
+      id: session.id,
+      label: session.label,
+      text: formatSessionLabelWithId(session),
+    }));
+    if (!normalizedQuery) return mapped;
+    return mapped.filter((item) => {
+      const haystack = `${item.label} ${item.id} ${item.text}`.toLowerCase();
+      return haystack.includes(normalizedQuery);
+    });
+  }, [currentGroup, mentionQuery, calendarDataVersion]);
+
+  // Auto-resize textarea to fit content up to max height
+  const adjustTextareaHeight = useCallback(() => {
+    const el = textareaRef.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = `${Math.min(el.scrollHeight, 130)}px`;
+  }, []);
+
+  const handleMentionSelect = useCallback((item: MentionItem) => {
+    const textarea = textareaRef.current;
+    if (!textarea || !mentionMatch) return;
+    const nextValue = `${input.slice(0, mentionMatch.start)}${item.text} ${input.slice(mentionMatch.end)}`;
+    const nextCaret = mentionMatch.start + item.text.length + 1;
+    setInput(nextValue);
+    setIsMentionOpen(false);
+    setMentionMatch(null);
+    setMentionQuery("");
+    setTimeout(() => {
+      textarea.focus();
+      textarea.setSelectionRange(nextCaret, nextCaret);
+      adjustTextareaHeight();
+    }, 0);
+  }, [input, mentionMatch, adjustTextareaHeight]);
 
   const lastUserMsgId = useMemo(() => {
     for (let i = messages.length - 1; i >= 0; i--) {
@@ -836,14 +933,6 @@ export default function ChatPage() {
     }, 3000);
     return () => clearInterval(interval);
   }, [isLoading]);
-
-  // Auto-resize textarea to fit content up to max height
-  const adjustTextareaHeight = useCallback(() => {
-    const el = textareaRef.current;
-    if (!el) return;
-    el.style.height = "auto";
-    el.style.height = `${Math.min(el.scrollHeight, 130)}px`;
-  }, []);
 
   const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -1011,11 +1100,89 @@ export default function ChatPage() {
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (isMentionOpen) {
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        if (mentionItems.length === 0) return;
+        setActiveMentionIndex((prev) => (prev + 1) % mentionItems.length);
+        return;
+      }
+      if (e.key === "ArrowUp") {
+        e.preventDefault();
+        if (mentionItems.length === 0) return;
+        setActiveMentionIndex((prev) => (prev - 1 + mentionItems.length) % mentionItems.length);
+        return;
+      }
+      if (e.key === "Escape") {
+        e.preventDefault();
+        setIsMentionOpen(false);
+        return;
+      }
+      if ((e.key === "Enter" || e.key === "Tab") && mentionItems.length > 0) {
+        e.preventDefault();
+        const target = mentionItems[activeMentionIndex] ?? mentionItems[0];
+        if (!target) return;
+        handleMentionSelect(target);
+        return;
+      }
+    }
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       handleSubmit();
     }
   };
+
+  const updateMentionState = useCallback((value: string, caretIndex: number | null) => {
+    if (caretIndex == null) {
+      setIsMentionOpen(false);
+      setMentionMatch(null);
+      setMentionQuery("");
+      return;
+    }
+    const match = getActiveMentionMatch(value, caretIndex);
+    if (!match) {
+      setIsMentionOpen(false);
+      setMentionMatch(null);
+      setMentionQuery("");
+      return;
+    }
+    setMentionMatch(match);
+    setMentionQuery(match.query);
+    setActiveMentionIndex(0);
+    setIsMentionOpen(true);
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const media = window.matchMedia("(max-width: 768px)");
+    const sync = () => setIsMobileMentionPicker(media.matches);
+    sync();
+    media.addEventListener("change", sync);
+    return () => media.removeEventListener("change", sync);
+  }, []);
+  const mentionHighlightParts = useMemo(() => {
+    if (!mentionHighlightPattern || !input) return [{ text: input, isMention: false }];
+    const parts: { text: string; isMention: boolean }[] = [];
+    let lastIndex = 0;
+    input.replace(mentionHighlightPattern, (match, _group, offset) => {
+      if (offset > lastIndex) parts.push({ text: input.slice(lastIndex, offset), isMention: false });
+      parts.push({ text: match, isMention: true });
+      lastIndex = offset + match.length;
+      return match;
+    });
+    if (lastIndex < input.length) parts.push({ text: input.slice(lastIndex), isMention: false });
+    return parts;
+  }, [input, mentionHighlightPattern]);
+
+  useEffect(() => {
+    if (!isMentionOpen) return;
+    if (mentionItems.length === 0) {
+      setActiveMentionIndex(0);
+      return;
+    }
+    if (activeMentionIndex <= mentionItems.length - 1) return;
+    setActiveMentionIndex(0);
+  }, [isMentionOpen, mentionItems, activeMentionIndex]);
 
   const handleCopy = async (msgId: string, content: string) => {
     try {
@@ -1059,7 +1226,7 @@ export default function ChatPage() {
 
       {/* Header - overlays on top of chat area */}
       <div className={`chat-header absolute top-0 left-0 right-0 z-10 px-4 md:px-0 ${headerVisible ? "translate-y-0" : "-translate-y-full"}`}>
-        <header className="flex items-center gap-3 pt-8 pb-3 mx-auto max-w-[600px] w-full">
+        <header className="flex items-center gap-3 pt-8 pb-3 mx-auto max-w-[1000px] w-full">
           <button
             onClick={() => router.push(getRoutePath(selectedProgram, "grid"))}
             className="flex items-center justify-center w-9 h-9 rounded-full bg-secondary hover:bg-secondary/80 dark:bg-[#2A2A2A] dark:hover:bg-[#333] transition-colors"
@@ -1073,11 +1240,14 @@ export default function ChatPage() {
       {/* Chat messages area */}
       <div ref={scrollContainerRef} onScroll={handleScroll} className="flex-1 overflow-y-auto px-4 md:px-0 pt-0 pb-6">
         {messages.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full gap-4 text-center mx-auto max-w-[600px]">
+          <div className="flex flex-col items-center justify-center h-full gap-4 text-center mx-auto max-w-[1000px]">
             <div>
               <h2 className="text-2xl font-semibold mb-1">Bila UiTM Cuti?</h2>
               <p className="text-sm text-muted-foreground max-w-xs">
                 Ask about the UiTM academic calendar. Select your program and start.
+              </p>
+              <p className="text-sm text-muted-foreground max-w-xs">
+                Use @ to mention a calendar session.
               </p>
             </div>
             {requiresTurnstile ? (
@@ -1093,7 +1263,7 @@ export default function ChatPage() {
             ) : null}
           </div>
         ) : (
-          <div className="mx-auto max-w-[600px] space-y-6 pt-14">
+          <div className="mx-auto max-w-[1000px] space-y-6 pt-14">
             {requiresTurnstile ? (
               <div className="w-full max-w-[320px]">
                 <TurnstileWidget
@@ -1208,7 +1378,7 @@ export default function ChatPage() {
 
       {/* Input area - prompt form like ChatGPT with dropdown inside textarea */}
       <div className="chat-input-area relative px-4 md:px-0 pt-1 lg:pt-0.5 pb-6">
-        <div className="mx-auto max-w-[600px]">
+        <div className="mx-auto max-w-[1000px]">
           {/* Suggestion chips - swipeable carousel with edge fades */}
           {messages.length === 0 && (
             <div className="suggestions-carousel relative -mx-4 md:mx-0 mb-2">
@@ -1238,19 +1408,98 @@ export default function ChatPage() {
           )}
           <form
             onSubmit={handleSubmit}
-            className="rounded-[10px] border border-border bg-secondary dark:bg-[#2A2A2A] overflow-hidden"
+            className="relative rounded-[10px] border border-border bg-secondary dark:bg-[#2A2A2A] overflow-visible"
           >
+            <div
+              aria-hidden
+              className="pointer-events-none absolute inset-x-0 top-0 z-0 whitespace-pre-wrap break-words px-4 pt-3 pb-1 text-sm leading-relaxed"
+            >
+              {mentionHighlightParts.map((part, index) =>
+                part.isMention ? (
+                  <span key={`mention-${index}`} className="text-transparent">
+                    {part.text}
+                  </span>
+                ) : (
+                  <span key={`plain-${index}`} className="text-transparent">
+                    {part.text}
+                  </span>
+                )
+              )}
+            </div>
             {/* Auto-growing text input */}
             <textarea
               ref={textareaRef}
               value={input}
-              onChange={(e) => setInput(e.target.value)}
+              onChange={(e) => {
+                const nextValue = e.target.value;
+                setInput(nextValue);
+                updateMentionState(nextValue, e.target.selectionStart);
+              }}
+              onClick={(e) => updateMentionState(e.currentTarget.value, e.currentTarget.selectionStart)}
+              onKeyUp={(e) => updateMentionState(e.currentTarget.value, e.currentTarget.selectionStart)}
               onKeyDown={handleKeyDown}
               placeholder="Ask anything about your schedule"
               disabled={isLoading}
               rows={1}
-              className="chat-input w-full resize-none bg-transparent px-4 pt-3 pb-1 text-sm leading-relaxed placeholder:text-muted-foreground focus:outline-none disabled:opacity-50"
+              className="chat-input relative z-10 w-full resize-none bg-transparent px-4 pt-3 pb-1 text-sm leading-relaxed placeholder:text-muted-foreground focus:outline-none disabled:opacity-50"
             />
+            {isMobileMentionPicker ? (
+              <Drawer open={isMentionOpen} onOpenChange={setIsMentionOpen}>
+                <DrawerContent className="border border-zinc-300 bg-muted pb-[calc(env(safe-area-inset-bottom)+0.75rem)] ring-0 dark:border-zinc-700">
+                  <DrawerHeader>
+                    <DrawerTitle>Mention Session Calendar</DrawerTitle>
+                    <DrawerDescription>Select a session to insert into your message.</DrawerDescription>
+                  </DrawerHeader>
+                  <div className="max-h-[55vh] overflow-auto px-2 pb-3">
+                    {mentionItems.length > 0 ? (
+                      mentionItems.map((item, index) => (
+                        <button
+                          key={item.id}
+                          type="button"
+                          onClick={() => handleMentionSelect(item)}
+                          className={`flex w-full flex-col items-start rounded-sm px-2 py-2 text-left text-sm focus-visible:outline-none focus-visible:ring-0 ${
+                            index === activeMentionIndex ? "bg-accent text-accent-foreground" : "text-popover-foreground"
+                          }`}
+                        >
+                          <span className="font-medium">{item.label}</span>
+                          <span className="text-xs text-muted-foreground">{item.id}</span>
+                        </button>
+                      ))
+                    ) : (
+                      <div className="px-2 py-2 text-xs text-muted-foreground">No sessions found</div>
+                    )}
+                  </div>
+                </DrawerContent>
+              </Drawer>
+            ) : (
+              <Dialog open={isMentionOpen} onOpenChange={setIsMentionOpen}>
+                <DialogContent className="max-w-md gap-3 border border-zinc-300 bg-muted p-3 ring-0 dark:border-zinc-700" showCloseButton={false}>
+                  <DialogHeader>
+                    <DialogTitle>Mention Session Calendar</DialogTitle>
+                    <DialogDescription>Select a session to insert into your message.</DialogDescription>
+                  </DialogHeader>
+                  <div className="max-h-[320px] overflow-auto">
+                    {mentionItems.length > 0 ? (
+                      mentionItems.map((item, index) => (
+                        <button
+                          key={item.id}
+                          type="button"
+                          onClick={() => handleMentionSelect(item)}
+                          className={`flex w-full flex-col items-start rounded-sm px-2 py-2 text-left text-sm focus-visible:outline-none focus-visible:ring-0 ${
+                            index === activeMentionIndex ? "bg-accent text-accent-foreground" : "text-popover-foreground"
+                          }`}
+                        >
+                          <span className="font-medium">{item.label}</span>
+                          <span className="text-xs text-muted-foreground">{item.id}</span>
+                        </button>
+                      ))
+                    ) : (
+                      <div className="px-2 py-2 text-xs text-muted-foreground">No sessions found</div>
+                    )}
+                  </div>
+                </DialogContent>
+              </Dialog>
+            )}
 
             {/* Bottom bar */}
             <div className="flex items-center justify-between px-3 py-2">
@@ -1342,7 +1591,7 @@ export default function ChatPage() {
                                     }
                                   >
                                     <span
-                                      className={`pointer-events-none absolute left-2 top-1.5 flex size-3.5 shrink-0 items-center justify-center rounded-full border ${isSelected ? "border-primary bg-primary" : "border-muted-foreground"}`}
+                                      className={`pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 flex size-3.5 shrink-0 items-center justify-center rounded-full border ${isSelected ? "border-primary bg-primary" : "border-muted-foreground"}`}
                                       aria-hidden
                                     />
                                     <SessionSubmenuItemLabel session={sess} />
@@ -1398,7 +1647,7 @@ export default function ChatPage() {
                                   }
                                 >
                                   <span
-                                    className={`pointer-events-none absolute left-2 top-1.5 flex size-3.5 shrink-0 items-center justify-center rounded-full border ${isSelected ? "border-primary bg-primary" : "border-muted-foreground"}`}
+                                    className={`pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 flex size-3.5 shrink-0 items-center justify-center rounded-full border ${isSelected ? "border-primary bg-primary" : "border-muted-foreground"}`}
                                     aria-hidden
                                   />
                                   <SessionSubmenuItemLabel session={sess} />

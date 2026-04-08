@@ -4,7 +4,7 @@ const listCoverImage = '/list-cover.png';
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://bilauitmcuti.com'),
-  title: 'Bila UiTM Cuti',
+  title: 'Bila UiTM Cuti - Kalendar Akademik',
   description: 'Interactive UiTM academic calendar. View registration dates, lecture schedules, examination periods, and breaks. Includes regional schedule variations for Kedah, Kelantan, and Terengganu. Supports dark/light themes and offline access.',
   alternates: {
     canonical: 'https://bilauitmcuti.com/list',
