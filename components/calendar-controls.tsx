@@ -320,7 +320,7 @@ export function CalendarControls({
             <DropdownMenuTrigger asChild>
               <Button
                 variant="outline"
-                className={`w-fit max-w-[180px] sm:max-w-[260px] md:max-w-[300px] min-w-0 overflow-hidden !h-[38px] !py-1 border bg-secondary dark:bg-[#2A2A2A] hover:!bg-secondary dark:hover:!bg-[#2A2A2A] active:!bg-secondary dark:active:!bg-[#2A2A2A] border-border focus:outline-none focus:ring-0 focus-visible:outline-none focus-visible:ring-0 ${isHomepage ? '!border !border-border dark:!border-zinc-600 !shadow-none' : ''} ${textClass} flex items-center justify-between gap-2 rounded-lg transition-none`}
+                className={`w-fit max-w-[180px] sm:max-w-[260px] md:max-w-[300px] min-w-0 overflow-hidden !h-[38px] !py-1 border bg-secondary dark:bg-[#2A2A2A] hover:!bg-secondary dark:hover:!bg-[#2A2A2A] active:!bg-secondary dark:active:!bg-[#2A2A2A] !border !border-border dark:!border-zinc-600 focus:outline-none focus:ring-0 focus-visible:outline-none focus-visible:ring-0 !shadow-none ${textClass} flex items-center justify-between gap-2 rounded-lg transition-none`}
                 suppressHydrationWarning
               >
                 <span className="block min-w-0 flex-1 truncate text-left font-medium text-sm">
