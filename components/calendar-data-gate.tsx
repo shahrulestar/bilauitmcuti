@@ -11,7 +11,7 @@ import {
 import {
   calendarProgramQueryForRoute,
   fetchCalendarSession,
-  fetchMeta,
+  fetchMetaCached,
 } from "@/lib/calendar-api";
 import { getSnapshot, mergeSessions, setMeta } from "@/lib/calendar-store";
 import type { Activity, SessionId } from "@/lib/data";
@@ -169,7 +169,7 @@ export function CalendarDataGate({
         }
 
         if (s.sessionOptions.length === 0) {
-          const meta = await fetchMeta({ entire: true });
+          const meta = await fetchMetaCached({ entire: true });
           if (cancelled) return;
           setMeta(meta);
         }

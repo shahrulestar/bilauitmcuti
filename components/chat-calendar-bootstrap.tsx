@@ -23,7 +23,8 @@ function metaFromCalendarJson(): MetaResponse {
 /**
  * Keeps program/session dropdowns aligned with the homepage: same source as SSR and
  * CalendarDataGate — `/api/v1/meta?all=true` (see `fetchMetaCached({ entire: true })`).
- * Refetches on every /chat visit so the catalogue matches even after navigating from other routes.
+ * Fetches meta when the store is still empty; skips a redundant GET when the catalogue
+ * was already hydrated (e.g. from the calendar). Prefetch of `/` and `/list` still runs.
  */
 export function ChatCalendarBootstrap() {
   const router = useRouter();
@@ -33,12 +34,16 @@ export function ChatCalendarBootstrap() {
 
     void (async () => {
       try {
-        const meta = await fetchMetaCached({ entire: true });
-        if (cancelled) return;
-        if (meta.sessionOptions.length > 0) {
-          setMeta(meta);
-        } else if (getSnapshot().sessionOptions.length === 0) {
-          setMeta(metaFromCalendarJson());
+        if (getSnapshot().sessionOptions.length > 0) {
+          /* Catalogue already hydrated (e.g. from homepage) — skip redundant meta GET. */
+        } else {
+          const meta = await fetchMetaCached({ entire: true });
+          if (cancelled) return;
+          if (meta.sessionOptions.length > 0) {
+            setMeta(meta);
+          } else if (getSnapshot().sessionOptions.length === 0) {
+            setMeta(metaFromCalendarJson());
+          }
         }
       } catch {
         if (cancelled) return;

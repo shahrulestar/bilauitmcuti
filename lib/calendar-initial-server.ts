@@ -2,8 +2,8 @@ import { parseFiltersFromCookie } from "@/lib/cookie-utils";
 import {
   calendarProgramQueryForRoute,
   fetchCalendarSession,
-  fetchMetaCached,
 } from "@/lib/calendar-api";
+import { fetchMetaCachedEntireForRsc } from "@/lib/calendar-server-meta";
 import type { CalendarSnapshot } from "@/lib/calendar-store";
 import type { Activity, SessionId } from "@/lib/data";
 import { pickSessionIdForDateFromApiOptions } from "@/lib/data";
@@ -40,7 +40,7 @@ function resolveProgramForServer(
 function resolveInitialSessionIds(
   program: ProgramValue,
   filters: ReturnType<typeof parseFiltersFromCookie>,
-  meta: Awaited<ReturnType<typeof fetchMetaCached>>,
+  meta: Awaited<ReturnType<typeof fetchMetaCachedEntireForRsc>>,
   currentDateStr: string
 ): SessionId[] {
   const programGroup = getGroupFromProgram(program);
@@ -116,7 +116,7 @@ export async function loadInitialCalendarSnapshot(params: {
   currentDateStr: string;
 }): Promise<InitialCalendarLoadResult> {
   try {
-    const meta = await fetchMetaCached({ entire: true });
+    const meta = await fetchMetaCachedEntireForRsc();
     const filters = parseFiltersFromCookie(params.cookieValue, meta.defaultSession);
     const program = resolveProgramForServer(params.programFromRoute, filters);
     const selectedSessions = resolveInitialSessionIds(

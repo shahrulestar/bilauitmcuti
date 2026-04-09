@@ -100,10 +100,13 @@ export function normalizeApiActivity(raw: Record<string, unknown>): Activity {
 async function fetchJsonWithRetry(url: string): Promise<unknown> {
   let attempt = 0;
   const maxAttempts = 4;
+  const isServer = typeof window === "undefined";
   while (attempt < maxAttempts) {
     const res = await fetch(url, {
-      cache: "no-store",
       headers: { Accept: "application/json" },
+      ...(isServer
+        ? { next: { revalidate: 120 } }
+        : { cache: "no-store" }),
     });
 
     if (res.status === 429) {

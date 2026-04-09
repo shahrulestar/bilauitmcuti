@@ -105,16 +105,23 @@ export async function calendarProxyForward(
   const target = `${upstreamOrigin()}/api/${apiSuffix}${search}`;
   const res = await fetch(target, {
     headers: { Accept: "application/json" },
-    cache: "no-store",
+    next: { revalidate: 120 },
   });
 
   const body = await res.text();
+  const baseHeaders: Record<string, string> = {
+    "Content-Type": res.headers.get("Content-Type") ?? "application/json",
+  };
+  if (res.ok) {
+    /** Shared caches (CDN) may reuse JSON for a short window; browsers revalidate (max-age=0). */
+    baseHeaders["Cache-Control"] =
+      "public, max-age=0, s-maxage=60, stale-while-revalidate=300";
+  } else {
+    baseHeaders["Cache-Control"] = "no-store";
+  }
   return new Response(body, {
     status: res.status,
-    headers: {
-      "Content-Type": res.headers.get("Content-Type") ?? "application/json",
-      "Cache-Control": "no-store",
-    },
+    headers: baseHeaders,
   });
 }
 
