@@ -388,65 +388,69 @@ function FormattedMessage({ content }: { content: string }) {
 }
 
 const SUGGESTIONS_GROUP_A = [
-  "When is course registration for new and returning students (Group A)?",
-  "When is registered course validation / confirmation (Group A)?",
-  "When is late add/drop outside normal period (Group A)?",
-  "When is the fee payment deadline (Group A)?",
-  "When are GT and GT2 (Group A)?",
-  "When is RPGT and when are results out (Group A)?",
-  "When does Lecture 1 start and end (Group A)?",
-  "When are Lectures 2–5 (Group A)?",
-  "How many lecture weeks in this session (Group A)?",
-  "Show the full lecture timeline (Group A).",
-  "When is mid-semester break (Group A)?",
-  "When is Aidil Fitri special break (Group A)?",
-  "When is revision week (Group A)?",
-  "When is semester break (Group A)?",
-  "When is midterm exam (Group A)?",
-  "When is final exam (Group A)?",
-  "When can students print the exam slip (Group A)?",
-  "List all exam-related dates (Group A).",
-  "What is MDS and when is it (Group A)?",
-  "What is SuFO and when must it be done (Group A)?",
+  "What are the registration dates for new vs returning students (Group A)?",
+  "When must I validate or confirm my registered courses (Group A)?",
+  "What is the late add/drop window after the normal period (Group A)?",
+  "When is the last day to pay semester fees (Group A)?",
+  "What dates are Grade Transaction (GT) and GT2 (Group A)?",
+  "When is RPGT and when are RPGT results released (Group A)?",
+  "What are the start and end dates for Lecture Week 1 (Group A)?",
+  "When do Lecture Weeks 2 through 5 run (Group A)?",
+  "How many lecture weeks are in this academic session (Group A)?",
+  "Summarize the lecture-phase timeline for this session (Group A).",
+  "When does mid-semester break fall (Group A)?",
+  "When is the special Aidilfitri recess (Group A)?",
+  "When is revision week scheduled (Group A)?",
+  "When does between-semester break start and end (Group A)?",
+  "When is the mid-semester examination (Group A)?",
+  "When is the final examination period (Group A)?",
+  "From when can I print or download my exam slip (Group A)?",
+  "Give every exam-related deadline I should know (Group A).",
+  "Explain MDS and its dates this session (Group A).",
+  "What is SuFO and what is the submission deadline (Group A)?",
 ];
 
 const SUGGESTIONS_GROUP_B = [
-  "When is ePJJ/PLK new student registration (Group B)?",
-  "When is bachelor's course registration (Group B)?",
-  "When is Pre-Diploma/Diploma registration (Group B)?",
-  "When is registered course validation (Group B)?",
-  "When is late add/drop outside normal period (Group B)?",
-  "When are fee deadline, GT, RPGT, and GT2 (Group B)?",
-  "When does Lecture 1 start and end (Group B)?",
-  "When are Lectures 2 and 3 (Group B)?",
-  "When is Short Semester (Group B)?",
-  "When are Intersession Classes (Group B)?",
-  "When is mid-semester break / festive break (Group B)?",
-  "When is revision week (Group B)?",
+  "When does ePJJ/PLK new-intake registration open (Group B)?",
+  "When can bachelor's students register for courses (Group B)?",
+  "When is Pre-Diploma and Diploma registration (Group B)?",
+  "When should registered courses be validated (Group B)?",
+  "What is the late add/drop period after the normal window (Group B)?",
+  "Summarize fee payment, GT, RPGT, and GT2 dates (Group B).",
+  "What are Lecture Week 1 start and end dates (Group B)?",
+  "When do Lecture Weeks 2 and 3 take place (Group B)?",
+  "When does Short Semester run this cycle (Group B)?",
+  "When are Intersession classes scheduled (Group B)?",
+  "When are mid-semester and festive breaks (Group B)?",
+  "When is revision week for this cohort (Group B)?",
   "When is semester break (Group B)?",
-  "Do break dates differ for Kedah, Kelantan, and Terengganu (Group B)?",
-  "When is EET Speaking (Group B)?",
-  "When are final assessment / written EET (Group B)?",
-  "When can students print the exam slip (Group B)?",
-  "List all exam-related dates (Group B).",
-  "What is MDS and when is it (Group B)?",
-  "What is SuFO and when must it be done (Group B)?",
+  "Are recess dates different for UiTM in Kedah, Kelantan, or Terengganu (Group B)?",
+  "When is EET Speaking held (Group B)?",
+  "When are final written EET or assessments (Group B)?",
+  "From when is the exam slip available to print (Group B)?",
+  "List every exam-related date for Group B.",
+  "Explain MDS timing for Group B.",
+  "What is SuFO and when is it due (Group B)?",
 ];
 
-const SUGGESTIONS_GENERAL = [
+/** Neutral UITM info — combined with Group A or Group B pools only (never cross-mixed). */
+const SUGGESTIONS_GENERAL_NEUTRAL = [
   "List all UiTM campuses",
   "What courses does UiTM offer?",
-  "Apa itu program Asasi UiTM?",
   "How many faculties in UiTM?",
   "What is MDS programme?",
-  "Apa syarat masuk Diploma?",
   "Tell me about UiTM Shah Alam",
-  "Apa itu e-PJJ UiTM?",
   "Senarai fakulti UiTM",
-  "When does Semester 1 start for Group B?",
   "When is Hari Raya break?",
   "Bila pendaftaran kursus dibuka?",
-  "What programs are in Group A?",
+];
+
+const SUGGESTIONS_GENERAL_EXTRA_A = ["Apa itu program Asasi UiTM?", "What programs are in Group A?"];
+
+const SUGGESTIONS_GENERAL_EXTRA_B = [
+  "Apa syarat masuk Diploma?",
+  "Apa itu e-PJJ UiTM?",
+  "When does Semester 1 start for Group B?",
   "What programs are in Group B?",
 ];
 
@@ -551,10 +555,12 @@ function mergeSessionMapsFromHomepage(
 }
 
 function getRandomSuggestions(group: "A" | "B", exclude: string[]): string[] {
-  const groupPool = group === "A" ? SUGGESTIONS_GROUP_A : SUGGESTIONS_GROUP_B;
-  const combined = [...groupPool, ...SUGGESTIONS_GENERAL];
-  const available = combined.filter((s) => !exclude.includes(s));
-  const pool = available.length >= 5 ? available : combined;
+  const groupPool =
+    group === "A"
+      ? [...SUGGESTIONS_GROUP_A, ...SUGGESTIONS_GENERAL_NEUTRAL, ...SUGGESTIONS_GENERAL_EXTRA_A]
+      : [...SUGGESTIONS_GROUP_B, ...SUGGESTIONS_GENERAL_NEUTRAL, ...SUGGESTIONS_GENERAL_EXTRA_B];
+  const available = groupPool.filter((s) => !exclude.includes(s));
+  const pool = available.length >= 5 ? available : groupPool;
   const shuffled = [...pool].sort(() => Math.random() - 0.5);
   return shuffled.slice(0, 5);
 }
@@ -650,6 +656,10 @@ export default function ChatPage() {
   const [headerVisible, setHeaderVisible] = useState(true);
   const [reactions, setReactions] = useState<Record<string, "up" | "down" | null>>({});
   const currentGroup = getProgramGroup(selectedProgram);
+  const suggestionGroup = useMemo((): "A" | "B" => {
+    const opt = getProgramOptions().find((p) => p.value === selectedProgram);
+    return opt?.group ?? getProgramGroup(selectedProgram);
+  }, [selectedProgram, calendarDataVersion]);
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [isMentionOpen, setIsMentionOpen] = useState(false);
   const [mentionQuery, setMentionQuery] = useState("");
@@ -769,10 +779,10 @@ export default function ChatPage() {
     });
   }, [selectedProgram, sessionsByProgram]);
 
-  // Randomize suggestions on mount and when program/group changes
+  // Randomize suggestions on mount and when program/group changes (pool follows programOptions.group)
   useLayoutEffect(() => {
-    setSuggestions(getRandomSuggestions(currentGroup, []));
-  }, [currentGroup]);
+    setSuggestions(getRandomSuggestions(suggestionGroup, []));
+  }, [suggestionGroup]);
   const [loadingPhrase, setLoadingPhrase] = useState("");
 
   const handleSessionToggle = useCallback(

@@ -1,7 +1,6 @@
-import Groq, { APIError, RateLimitError } from "groq-sdk";
 import { getEnv } from "@/lib/env";
 
-const groq = new Groq({ apiKey: getEnv().GROQ_API_KEY });
+const GROQ_CHAT_COMPLETIONS_URL = "https://api.groq.com/openai/v1/chat/completions";
 
 /** Primary: fast, cost-efficient. */
 export const MODEL_LLAMA = "llama-3.1-8b-instant" as const;
@@ -11,8 +10,14 @@ export const MODEL_LLAMA_FALLBACK = "llama-3.3-70b-versatile" as const;
 export const MODEL_LLAMA_RATE_LIMIT_ESCAPE = "llama-3.1-70b-versatile" as const;
 
 export function isGroqRateLimitError(error: unknown): boolean {
-  if (error instanceof RateLimitError) return true;
-  if (error instanceof APIError && error.status === 429) return true;
+  const status =
+    error !== null &&
+    typeof error === "object" &&
+    "status" in error &&
+    typeof (error as { status?: unknown }).status === "number"
+      ? (error as { status: number }).status
+      : undefined;
+  if (status === 429) return true;
   const msg = error instanceof Error ? error.message.toLowerCase() : String(error).toLowerCase();
   return (
     msg.includes("429") ||
@@ -33,13 +38,8 @@ const DEFAULT_TEMPERATURE = 0.2;
 /** Timeout for GROQ API calls (Cloudflare Workers ~30–60s limit). */
 const GROQ_REQUEST_TIMEOUT_MS = 55_000;
 
-function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
-  return Promise.race([
-    promise,
-    new Promise<never>((_, reject) =>
-      setTimeout(() => reject(new Error("Request timed out")), ms)
-    ),
-  ]);
+interface GroqChatCompletionResponse {
+  choices?: Array<{ message?: { content?: string | null } }>;
 }
 
 export interface ChatMessage {
@@ -74,26 +74,82 @@ function buildMessages(
   return messages;
 }
 
+async function groqChatCompletion(params: {
+  model: string;
+  messages: { role: "system" | "user" | "assistant"; content: string }[];
+  max_tokens: number;
+  temperature: number;
+}): Promise<string> {
+  const apiKey = getEnv().GROQ_API_KEY;
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), GROQ_REQUEST_TIMEOUT_MS);
+  try {
+    const res = await fetch(GROQ_CHAT_COMPLETIONS_URL, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: params.model,
+        messages: params.messages,
+        max_tokens: params.max_tokens,
+        temperature: params.temperature,
+      }),
+      signal: controller.signal,
+    });
+
+    const rawText = await res.text();
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(rawText) as unknown;
+    } catch {
+      const err = new Error(rawText.slice(0, 500) || `Groq HTTP ${res.status}`);
+      Object.assign(err, { status: res.status });
+      throw err;
+    }
+
+    if (!res.ok) {
+      const msg =
+        typeof parsed === "object" &&
+        parsed !== null &&
+        "error" in parsed &&
+        typeof (parsed as { error?: { message?: unknown } }).error?.message === "string"
+          ? (parsed as { error: { message: string } }).error.message
+          : `Groq API error ${res.status}`;
+      const err = new Error(msg);
+      Object.assign(err, { status: res.status });
+      throw err;
+    }
+
+    const data = parsed as GroqChatCompletionResponse;
+    const content = data?.choices?.[0]?.message?.content;
+    if (!content) {
+      throw new Error("Empty response from model");
+    }
+    return content;
+  } catch (e) {
+    if (e instanceof Error && e.name === "AbortError") {
+      throw new Error("Request timed out");
+    }
+    throw e;
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
 async function callModel(
   model: string,
   messages: { role: "system" | "user" | "assistant"; content: string }[],
   maxTokens: number,
   temperature: number
 ): Promise<string> {
-  const response = await withTimeout(
-    groq.chat.completions.create({
-      model,
-      messages,
-      max_tokens: maxTokens,
-      temperature,
-    }),
-    GROQ_REQUEST_TIMEOUT_MS
-  );
-  const content = response?.choices?.[0]?.message?.content;
-  if (!content) {
-    throw new Error("Empty response from model");
-  }
-  return content;
+  return groqChatCompletion({
+    model,
+    messages,
+    max_tokens: maxTokens,
+    temperature,
+  });
 }
 
 export async function askGroq(

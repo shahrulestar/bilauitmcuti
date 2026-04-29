@@ -291,6 +291,40 @@ function sanitizeMessage(message: string): string {
     .trim();
 }
 
+/** Lightweight heuristic so the model reliably mirrors Malay vs English on each turn. */
+function getLanguageTurnDirective(message: string): string {
+  const s = message.trim();
+  if (!s) return "";
+
+  const malayHits =
+    (
+      s.match(
+        /\b(yang|dan|atau|untuk|dengan|tidak|bukan|bila|apa|bagaimana|berapa|bilakah|saja|saya|awak|anda|cuti|semester|kalendar|peperiksaan|kuliah|pendaftaran|pelajar|sesi|minggu|hari|daripada|kepada|ialah|adalah|dapat|boleh|akan|telah|sudah|belum|kerana|juga|serta|nak|lah|kah)\b/gi
+      ) ?? []
+    ).length;
+
+  const englishHits =
+    (
+      s.match(
+        /\b(when|what|where|which|why|who)\b|\bhow\s+(do|does|did|is|are|was|were|can|could|should|will)\b|\b(does|did)\b|\b(is|are|was|were)\s+(the|there|it)\b|\b(the|a|an)\s+(calendar|registration|session|exam|break)\b|\bcalendar\b|\bregistration\b|\bsession\b|\bexam\b|\bbreak\b|\bwhich\b/gi
+      ) ?? []
+    ).length;
+
+  const prefersMalay =
+    malayHits > englishHits || (malayHits >= 2 && englishHits <= 1);
+  const prefersEnglish =
+    englishHits > malayHits || (englishHits >= 2 && malayHits === 0);
+
+  if (prefersMalay && !prefersEnglish) {
+    return "\n\nLANGUAGE DIRECTIVE (this user message): Reply entirely in Bahasa Melayu standard (Malaysia spelling). Keep proper nouns and usual abbreviations as-is (UiTM, GT, RPGT, EET, MDS, SuFO, course codes).";
+  }
+  if (prefersEnglish && !prefersMalay) {
+    return "\n\nLANGUAGE DIRECTIVE (this user message): Reply entirely in English.";
+  }
+
+  return "\n\nLANGUAGE DIRECTIVE (this user message): Mirror the user's Malay/English blend from their latest message; if evenly mixed, prefer Bahasa Melayu for syllabus vocabulary when calendar terms are mostly Malay.";
+}
+
 const CALENDAR_STRONG_KEYWORDS = [
   "cuti",
   "semester",
@@ -1145,7 +1179,8 @@ export async function POST(request: NextRequest) {
     );
     const systemPromptWithCompletion =
       systemPrompt +
-      "\n\nIMPORTANT: Finish every sentence and paragraph completely—never stop mid-thought or mid-list. For simple questions stay concise; for detailed or long questions use enough length to answer fully without truncating.";
+      "\n\nIMPORTANT: Finish every sentence and paragraph completely—never stop mid-thought or mid-list. For simple questions stay concise; for detailed or long questions use enough length to answer fully without truncating." +
+      getLanguageTurnDirective(sanitizedMessage);
     const rawReply = await askGroqWithPrimaryThenFallback(
       sanitizedMessage,
       systemPromptWithCompletion,
