@@ -163,13 +163,13 @@ export default function RootLayout({
                     },
                     {
                       '@type': 'SiteNavigationElement',
-                      name: 'Pre-Diploma',
-                      url: 'https://bilauitmcuti.com/pre-diploma',
+                      name: 'Diploma',
+                      url: 'https://bilauitmcuti.com/diploma',
                     },
                     {
                       '@type': 'SiteNavigationElement',
-                      name: 'Diploma',
-                      url: 'https://bilauitmcuti.com/diploma',
+                      name: 'Bachelor',
+                      url: 'https://bilauitmcuti.com/bachelor',
                     },
                     {
                       '@type': 'SiteNavigationElement',
@@ -180,16 +180,6 @@ export default function RootLayout({
                       '@type': 'SiteNavigationElement',
                       name: 'PhD',
                       url: 'https://bilauitmcuti.com/phd',
-                    },
-                    {
-                      '@type': 'SiteNavigationElement',
-                      name: 'Calendar',
-                      url: 'https://bilauitmcuti.com',
-                    },
-                    {
-                      '@type': 'SiteNavigationElement',
-                      name: 'List View',
-                      url: 'https://bilauitmcuti.com/list',
                     },
                   ],
                 },

@@ -3,6 +3,7 @@ import type { Metadata } from 'next';
 export const metadata: Metadata = {
   title: 'Install App | Bila UiTM Cuti',
   description: 'Add Bila UiTM Cuti to your home screen for faster access to the UiTM academic calendar.',
+  robots: { index: false, follow: true },
   alternates: {
     canonical: 'https://bilauitmcuti.com/pwa',
   },

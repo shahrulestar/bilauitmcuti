@@ -3,6 +3,7 @@ export const runtime = 'edge';
 import { CalendarWrapper } from '@/components/calendar-wrapper';
 import { notFound } from 'next/navigation';
 import { isValidProgramRoute, getProgramDisplayName } from '@/lib/route-utils';
+import { getProgramCanonicalUrl, getProgramPageTitle, getProgramSeoDescription } from '@/lib/program-seo';
 import type { Metadata } from 'next';
 
 
@@ -20,22 +21,22 @@ export async function generateMetadata({ params }: ProgramPageProps): Promise<Me
     return {};
   }
   
-  const programName = getProgramDisplayName(program);
-  const title = `${programName} | Bila UiTM Cuti`;
-  const description = `Kalendar akademik UiTM untuk ${programName}. Lihat tarikh pendaftaran, jadual kuliah, tempoh peperiksaan, dan cuti.`;
-  
+  const title = getProgramPageTitle(program);
+  const description = getProgramSeoDescription(program);
+  const canonical = getProgramCanonicalUrl(program);
+
   return {
     title,
     description,
     alternates: {
-      canonical: `https://bilauitmcuti.com/${program}`,
+      canonical,
     },
     openGraph: {
       siteName: 'Bila UiTM Cuti',
       title,
       description,
       type: 'website',
-      url: `https://bilauitmcuti.com/${program}`,
+      url: canonical,
       locale: 'ms_MY',
       images: [
         {
@@ -55,8 +56,11 @@ export async function generateMetadata({ params }: ProgramPageProps): Promise<Me
   };
 }
 
-function ProgramJsonLd({ program, programName }: { program: string; programName: string }) {
-  const title = `${programName} | Bila UiTM Cuti`;
+function ProgramJsonLd({ program }: { program: string }) {
+  const title = getProgramPageTitle(program);
+  const description = getProgramSeoDescription(program);
+  const canonical = getProgramCanonicalUrl(program);
+  const programName = getProgramDisplayName(program);
   return (
     <script
       type="application/ld+json"
@@ -68,14 +72,14 @@ function ProgramJsonLd({ program, programName }: { program: string; programName:
               "@type": "BreadcrumbList",
               "itemListElement": [
                 { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://bilauitmcuti.com" },
-                { "@type": "ListItem", "position": 2, "name": programName, "item": `https://bilauitmcuti.com/${program}` },
+                { "@type": "ListItem", "position": 2, "name": programName, "item": canonical },
               ],
             },
             {
               "@type": "WebPage",
               "name": title,
-              "url": `https://bilauitmcuti.com/${program}`,
-              "description": `Kalendar akademik UiTM untuk ${programName}. Lihat tarikh pendaftaran, jadual kuliah, tempoh peperiksaan, dan cuti.`,
+              "url": canonical,
+              "description": description,
               "isPartOf": { "@type": "WebSite", "name": "Bila UiTM Cuti", "url": "https://bilauitmcuti.com" },
             },
           ],
@@ -96,7 +100,7 @@ export default async function ProgramPage({ params }: ProgramPageProps) {
   
   return (
     <>
-      <ProgramJsonLd program={program} programName={programName} />
+      <ProgramJsonLd program={program} />
       <CalendarWrapper viewMode="grid" programFromRoute={program} />
     </>
   );

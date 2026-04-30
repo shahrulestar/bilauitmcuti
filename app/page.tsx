@@ -22,10 +22,10 @@ export default function Page() {
             <Link href="/foundation-professional">Foundation/Professional</Link>
           </li>
           <li>
-            <Link href="/pre-diploma">Pre-Diploma</Link>
+            <Link href="/diploma">Diploma</Link>
           </li>
           <li>
-            <Link href="/diploma">Diploma</Link>
+            <Link href="/bachelor">Bachelor</Link>
           </li>
           <li>
             <Link href="/master">Master</Link>
