@@ -39,11 +39,11 @@ export const metadata: Metadata = {
   manifest: '/manifest.json',
   authors: [
     {
-      name: 'Shahrul Estar',
-      url: 'https://shahrulestar.com',
+      name: 'Bila UiTM Cuti',
+      url: 'https://bilauitmcuti.com',
     },
   ],
-  creator: 'Shahrul Estar',
+  creator: 'Bila UiTM Cuti',
   category: 'education',
   robots: {
     index: true,
