@@ -3,7 +3,7 @@
 import React, { memo } from "react"
 import { ChevronDown, ChevronUp } from 'lucide-react';
 
-import { useState, useEffect, useLayoutEffect, useMemo, useSyncExternalStore, useRef } from 'react';
+import { useState, useEffect, useMemo, useSyncExternalStore, useRef } from 'react';
 import {
   Tooltip,
   TooltipContent,
@@ -30,12 +30,10 @@ interface TooltipActivityListProps {
   showCountdown: boolean;
   currentDateStr: string | null;
   showKKT: boolean;
-  /** Tooltip: mobile chevron paging. Drawer (PWA): full list, height grows with content up to max then scrolls. */
+  /** Tooltip: mobile chevron paging. Drawer (PWA): full list, sheet height follows content (no inner scroll). */
   listMode: 'paginated' | 'full';
-  /** Lecture week chip; rendered inside this list, top-aligned. */
+  /** Lecture week chip; rendered inside this list (scrolls with activities). */
   weekNum?: number | null;
-  /** When true (drawer scroll), week row stays at top of the scrollport. */
-  weekRowSticky?: boolean;
 }
 
 function TooltipActivityList({
@@ -47,7 +45,6 @@ function TooltipActivityList({
   showKKT,
   listMode,
   weekNum = null,
-  weekRowSticky = false,
 }: TooltipActivityListProps) {
   const PAGE_SIZE = 7;
   const [startIndex, setStartIndex] = useState(0);
@@ -79,19 +76,9 @@ function TooltipActivityList({
   return (
     <div
       data-grid-day-activities
-      className="w-full min-w-0 border-0 py-1 shadow-none outline-none ring-0 ring-offset-0"
+      className="w-full min-w-0 border-0 py-1 text-left shadow-none outline-none ring-0 ring-offset-0"
     >
       <div className="flex min-w-0 flex-col gap-2 border-0 shadow-none outline-none ring-0 ring-offset-0">
-        {weekNum != null ? (
-          <div
-            className={`text-left border-0 shadow-none outline-none ring-0 ring-offset-0 [box-shadow:none] ${weekRowSticky ? 'sticky top-0 z-10 bg-popover [transform:translateZ(0)]' : ''}`}
-          >
-            <span className="inline-block rounded-full px-2 py-0.5 text-[10px] font-medium lg:text-xs bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-200">
-              Week {weekNum}
-            </span>
-          </div>
-        ) : null}
-
         {shouldPaginate && hasPrev ? (
           <div className="pb-1">
             <button
@@ -102,6 +89,17 @@ function TooltipActivityList({
             >
               <ChevronUp className="h-4 w-4" />
             </button>
+          </div>
+        ) : null}
+
+        {weekNum != null ? (
+          <div className="grid grid-cols-[auto_minmax(0,1fr)] items-start gap-2 border-0 shadow-none outline-none ring-0 ring-offset-0 [box-shadow:none]">
+            <div className="mt-1 h-2 w-2 shrink-0 rounded-full bg-transparent" aria-hidden />
+            <div className="min-w-0 text-left">
+              <span className="inline-block rounded-full bg-zinc-100 px-2 py-0.5 text-[10px] font-medium text-zinc-700 dark:bg-zinc-800 dark:text-zinc-200 lg:text-xs">
+                Week {weekNum}
+              </span>
+            </div>
           </div>
         ) : null}
 
@@ -208,32 +206,6 @@ function GridDayActivitiesPanel({
   showKKT,
   surface,
 }: GridDayActivitiesPanelProps) {
-  const drawerScrollRef = useRef<HTMLDivElement>(null);
-  const [drawerWeekSticky, setDrawerWeekSticky] = useState(false);
-  const activitiesLen = activities.length;
-
-  useLayoutEffect(() => {
-    if (surface !== 'drawer') {
-      setDrawerWeekSticky(false);
-      return;
-    }
-    const el = drawerScrollRef.current;
-    if (!el) return;
-    const sync = () => {
-      setDrawerWeekSticky(el.scrollHeight > Math.floor(el.clientHeight) + 2);
-    };
-    sync();
-    const t = window.setTimeout(sync, 0);
-    const ro = new ResizeObserver(() => {
-      sync();
-    });
-    ro.observe(el);
-    return () => {
-      clearTimeout(t);
-      ro.disconnect();
-    };
-  }, [surface, dateStr, activitiesLen, weekNum]);
-
   if (surface === 'tooltip') {
     return (
       <TooltipActivityList
@@ -245,28 +217,21 @@ function GridDayActivitiesPanel({
         showKKT={showKKT}
         listMode="paginated"
         weekNum={weekNum}
-        weekRowSticky={false}
       />
     );
   }
 
   return (
-    <div
-      ref={drawerScrollRef}
-      className="max-h-[min(50vh,380px)] w-full min-h-0 overflow-y-auto overflow-x-hidden overscroll-contain border-0 bg-popover pr-2 text-left shadow-none outline-none ring-0 [-webkit-overflow-scrolling:touch]"
-    >
-      <TooltipActivityList
-        dateKey={dateStr}
-        activities={activities}
-        selectedProgram={selectedProgram}
-        showCountdown={showCountdown}
-        currentDateStr={currentDateStr}
-        showKKT={showKKT}
-        listMode="full"
-        weekNum={weekNum}
-        weekRowSticky={drawerWeekSticky}
-      />
-    </div>
+    <TooltipActivityList
+      dateKey={dateStr}
+      activities={activities}
+      selectedProgram={selectedProgram}
+      showCountdown={showCountdown}
+      currentDateStr={currentDateStr}
+      showKKT={showKKT}
+      listMode="full"
+      weekNum={weekNum}
+    />
   );
 }
 
@@ -1004,9 +969,9 @@ export const GridView = memo(function GridView({
           if (!open) setDrawerDateKey(null);
         }}
       >
-        <DrawerContent className="[&::after]:hidden overflow-x-hidden">
-          <div className="flex flex-col gap-3 border-0 bg-popover px-4 pb-6 pt-1 text-center shadow-none outline-none ring-0 ring-offset-0 md:text-left">
-            <DrawerTitle className="border-0 font-heading font-medium text-foreground shadow-none outline-none ring-0 ring-offset-0">
+        <DrawerContent className="[&::after]:hidden overflow-x-hidden data-[vaul-drawer-direction=bottom]:max-h-none data-[vaul-drawer-direction=top]:max-h-none">
+          <div className="flex w-full flex-col gap-3 border-0 bg-popover px-4 pb-6 pt-0 text-left shadow-none outline-none ring-0 ring-offset-0">
+            <DrawerTitle className="w-full border-0 text-center font-heading font-medium text-foreground shadow-none outline-none ring-0 ring-offset-0 md:text-left">
               {drawerDateKey ? formatDateLabel(drawerDateKey) : ''}
             </DrawerTitle>
             <DrawerDescription className="sr-only border-0 shadow-none">

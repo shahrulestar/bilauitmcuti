@@ -39,7 +39,6 @@ import {
   Drawer,
   DrawerContent,
   DrawerDescription,
-  DrawerHeader,
   DrawerTitle,
 } from "@/components/ui/drawer";
 import { Button } from "@/components/ui/button";
@@ -1455,29 +1454,33 @@ export default function ChatPage() {
             />
             {isMobileMentionPicker ? (
               <Drawer open={isMentionOpen} onOpenChange={setIsMentionOpen}>
-                <DrawerContent className="border-0 bg-muted pb-[calc(env(safe-area-inset-bottom)+0.75rem)] shadow-none ring-0">
-                  <DrawerHeader>
-                    <DrawerTitle>Mention Session Calendar</DrawerTitle>
-                    <DrawerDescription>Select a session to insert into your message.</DrawerDescription>
-                  </DrawerHeader>
-                  <div className="max-h-[55vh] overflow-auto space-y-2 px-2 pb-3">
-                    {mentionItems.length > 0 ? (
-                      mentionItems.map((item, index) => (
-                        <button
-                          key={item.id}
-                          type="button"
-                          onClick={() => handleMentionSelect(item)}
-                          className={`flex w-full flex-col items-start rounded-md border border-border px-2 py-2 text-left text-sm text-secondary-foreground transition-colors focus-visible:outline-none focus-visible:ring-0 ${
-                            index === activeMentionIndex ? "bg-secondary/80" : "bg-secondary md:hover:bg-secondary/80"
-                          }`}
-                        >
-                          <span className="font-medium">{item.label}</span>
-                          <span className="text-xs text-muted-foreground">{item.id}</span>
-                        </button>
-                      ))
-                    ) : (
-                      <div className="px-2 py-2 text-xs text-muted-foreground">No sessions found</div>
-                    )}
+                <DrawerContent className="[&::after]:hidden overflow-x-hidden">
+                  <div className="flex flex-col gap-3 border-0 bg-popover px-4 pb-6 pt-0 text-center shadow-none outline-none ring-0 ring-offset-0 md:text-left">
+                    <DrawerTitle className="border-0 font-heading font-medium text-foreground shadow-none outline-none ring-0 ring-offset-0">
+                      Mention Session Calendar
+                    </DrawerTitle>
+                    <DrawerDescription className="sr-only border-0 shadow-none">
+                      Select a session to insert into your message.
+                    </DrawerDescription>
+                    <div className="max-h-[min(50vh,380px)] w-full min-h-0 space-y-2 overflow-y-auto overflow-x-hidden overscroll-contain border-0 bg-popover pr-2 text-left shadow-none outline-none ring-0 [-webkit-overflow-scrolling:touch]">
+                      {mentionItems.length > 0 ? (
+                        mentionItems.map((item, index) => (
+                          <button
+                            key={item.id}
+                            type="button"
+                            onClick={() => handleMentionSelect(item)}
+                            className={`flex w-full flex-col items-start rounded-md border border-border px-2 py-2 text-left text-sm text-secondary-foreground transition-colors focus-visible:outline-none focus-visible:ring-0 ${
+                              index === activeMentionIndex ? "bg-secondary/80" : "bg-secondary md:hover:bg-secondary/80"
+                            }`}
+                          >
+                            <span className="font-medium">{item.label}</span>
+                            <span className="text-xs text-muted-foreground">{item.id}</span>
+                          </button>
+                        ))
+                      ) : (
+                        <div className="py-2 text-xs text-muted-foreground">No sessions found</div>
+                      )}
+                    </div>
                   </div>
                 </DrawerContent>
               </Drawer>

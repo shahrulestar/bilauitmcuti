@@ -3,6 +3,9 @@ import { initOpenNextCloudflareForDev } from '@opennextjs/cloudflare';
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  experimental: {
+    optimizePackageImports: ['lucide-react'],
+  },
   env: {
     NEXT_PUBLIC_BUILD_ID: Date.now().toString(),
   },

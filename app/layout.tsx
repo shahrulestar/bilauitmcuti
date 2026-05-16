@@ -2,7 +2,6 @@ import React from "react"
 import type { Metadata, Viewport } from 'next'
 import Script from 'next/script'
 import { ThemeProvider } from '@/components/theme-provider'
-import { LenisProvider } from '@/components/providers/lenis-provider'
 import { ThemeShortcut } from '@/components/theme-shortcut'
 import { VersionBanner } from '@/components/version-banner'
 import './globals.css'
@@ -312,10 +311,8 @@ export default function RootLayout({
           storageKey="theme"
           disableTransitionOnChange={false}
         >
-          <LenisProvider>
-            <ThemeShortcut />
-            {children}
-          </LenisProvider>
+          <ThemeShortcut />
+          {children}
         </ThemeProvider>
         <Script
           src={`https://www.googletagmanager.com/gtag/js?id=${GA_MEASUREMENT_ID}`}
