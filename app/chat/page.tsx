@@ -1455,7 +1455,7 @@ export default function ChatPage() {
             />
             {isMobileMentionPicker ? (
               <Drawer open={isMentionOpen} onOpenChange={setIsMentionOpen}>
-                <DrawerContent className="border border-zinc-300 bg-muted pb-[calc(env(safe-area-inset-bottom)+0.75rem)] ring-0 dark:border-zinc-700">
+                <DrawerContent className="border-0 bg-muted pb-[calc(env(safe-area-inset-bottom)+0.75rem)] shadow-none ring-0">
                   <DrawerHeader>
                     <DrawerTitle>Mention Session Calendar</DrawerTitle>
                     <DrawerDescription>Select a session to insert into your message.</DrawerDescription>

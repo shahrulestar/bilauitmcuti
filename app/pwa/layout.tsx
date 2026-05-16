@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Install App | Bila UiTM Cuti',
+  title: 'Install App - Bila UiTM Cuti',
   description: 'Add Bila UiTM Cuti to your home screen for faster access to the UiTM academic calendar.',
   robots: { index: false, follow: true },
   alternates: {
@@ -9,7 +9,7 @@ export const metadata: Metadata = {
   },
   openGraph: {
     siteName: 'Bila UiTM Cuti',
-    title: 'Install App | Bila UiTM Cuti',
+    title: 'Install App - Bila UiTM Cuti',
     description: 'Add Bila UiTM Cuti to your home screen for a faster, app-like experience.',
     type: 'website',
     url: 'https://bilauitmcuti.com/pwa',
@@ -18,7 +18,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Install App | Bila UiTM Cuti',
+    title: 'Install App - Bila UiTM Cuti',
     description: 'Add Bila UiTM Cuti to your home screen for a faster, app-like experience.',
     images: ['https://bilauitmcuti.com/all-cover.png'],
   },

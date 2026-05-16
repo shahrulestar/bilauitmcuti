@@ -10,6 +10,7 @@ import {
 import { Button } from '@/components/ui/button';
 
 const PWA_DISMISS_KEY = 'pwa-prompt-dismissed';
+const PWA_PROMPT_APPEAR_DELAY_MS = 3000;
 
 function isCalendarRoute(pathname: string): boolean {
   if (pathname === '/' || pathname === '/list') return true;
@@ -31,6 +32,7 @@ export function PwaPromptAlert() {
   const [isMounted, setIsMounted] = useState(false);
   const [isDismissed, setIsDismissed] = useState<boolean | null>(null);
   const [isStandaloneMode, setIsStandaloneMode] = useState(false);
+  const [isAppearDelayComplete, setIsAppearDelayComplete] = useState(false);
 
   useEffect(() => {
     setIsMounted(true);
@@ -56,6 +58,21 @@ export function PwaPromptAlert() {
     return isCalendarRoute(pathname);
   }, [isMounted, isDismissed, isStandaloneMode, pathname]);
 
+  useEffect(() => {
+    if (!shouldShow) {
+      setIsAppearDelayComplete(false);
+      return;
+    }
+
+    const timerId = window.setTimeout(() => {
+      setIsAppearDelayComplete(true);
+    }, PWA_PROMPT_APPEAR_DELAY_MS);
+
+    return () => {
+      window.clearTimeout(timerId);
+    };
+  }, [shouldShow]);
+
   function handleDismiss() {
     try {
       localStorage.setItem(PWA_DISMISS_KEY, 'true');
@@ -70,7 +87,7 @@ export function PwaPromptAlert() {
     router.push('/pwa');
   }
 
-  if (!shouldShow) return null;
+  if (!shouldShow || !isAppearDelayComplete) return null;
 
   return (
     <div className="fixed inset-x-0 bottom-0 z-50 px-4 pb-[max(env(safe-area-inset-bottom),1rem)]">

@@ -30,7 +30,7 @@ export function getProgramSeoDescription(programSlug: string): string {
 }
 
 export function getProgramPageTitle(programSlug: string): string {
-  return `${getProgramDisplayName(programSlug)} | Bila UiTM Cuti`
+  return `${getProgramDisplayName(programSlug)} - Bila UiTM Cuti`
 }
 
 export function getProgramCanonicalUrl(programSlug: string): string {
