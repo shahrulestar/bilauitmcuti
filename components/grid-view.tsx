@@ -969,7 +969,7 @@ export const GridView = memo(function GridView({
           if (!open) setDrawerDateKey(null);
         }}
       >
-        <DrawerContent className="[&::after]:hidden overflow-x-hidden data-[vaul-drawer-direction=bottom]:max-h-none data-[vaul-drawer-direction=top]:max-h-none">
+        <DrawerContent className="min-h-[240px] [&::after]:hidden overflow-x-hidden data-[vaul-drawer-direction=bottom]:max-h-none data-[vaul-drawer-direction=top]:max-h-none">
           <div className="flex w-full flex-col gap-3 border-0 bg-popover px-4 pb-6 pt-0 text-left shadow-none outline-none ring-0 ring-offset-0">
             <DrawerTitle className="w-full border-0 text-center font-heading font-medium text-foreground shadow-none outline-none ring-0 ring-offset-0 md:text-left">
               {drawerDateKey ? formatDateLabel(drawerDateKey) : ''}
