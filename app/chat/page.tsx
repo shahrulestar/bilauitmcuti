@@ -978,7 +978,6 @@ export default function ChatPage() {
       turnstileRef.current?.execute();
       return;
     }
-    if (requiresTurnstile) setIsTurnstileSessionVerified(true);
 
     const now = Date.now();
     const userMessage: Message = {
@@ -1013,17 +1012,18 @@ export default function ChatPage() {
       didAttemptFetch = true;
       const history = prepareHistory(messages);
 
+      const trimmedToken = turnstileToken.trim();
       const body = JSON.stringify({
         message: text.trim(),
         program: selectedProgram,
         selectedSessions,
         history,
-        turnstileToken: requiresTurnstile ? turnstileToken : undefined,
+        turnstileToken: trimmedToken ? trimmedToken : undefined,
       });
       let content: string | null = null;
-      let maxAttempts = 2;
+      let maxAttempts = 3;
       const isRetryableStatus = (s: number) =>
-        s === 500 || s === 502 || s === 503 || s === 504;
+        s === 429 || s === 500 || s === 502 || s === 503 || s === 504;
 
       for (let attempt = 0; attempt < maxAttempts; attempt++) {
         const controller = new AbortController();
@@ -1034,6 +1034,7 @@ export default function ChatPage() {
             headers: { "Content-Type": "application/json" },
             body,
             signal: controller.signal,
+            credentials: "include",
           });
           clearTimeout(timeoutId);
 
@@ -1056,6 +1057,8 @@ export default function ChatPage() {
           } else {
             content = data.reply || "Sorry, I could not get a response.";
             setIsTurnstileSessionVerified(true);
+            setTurnstileToken("");
+            turnstileRef.current?.reset();
           }
           break;
         } catch (err) {
@@ -1211,10 +1214,17 @@ export default function ChatPage() {
   };
 
   const handleDelete = useCallback((msgId: string) => {
-    const msgIndex = messages.findIndex((m) => m.id === msgId);
-    if (msgIndex === -1) return;
-    setMessages(messages.slice(0, msgIndex));
-  }, [messages]);
+    setMessages((prev) => {
+      const idx = prev.findIndex((m) => m.id === msgId);
+      if (idx === -1) return prev;
+      const target = prev[idx];
+      const next = prev[idx + 1];
+      const removePairedAssistant =
+        target.role === "user" && next?.role === "assistant";
+      const removeCount = removePairedAssistant ? 2 : 1;
+      return [...prev.slice(0, idx), ...prev.slice(idx + removeCount)];
+    });
+  }, []);
 
   const handleEdit = useCallback((msgId: string) => {
     const msgIndex = messages.findIndex((m) => m.id === msgId);

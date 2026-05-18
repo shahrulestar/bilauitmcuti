@@ -2,7 +2,89 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { ChevronLeft, Monitor, Smartphone, TabletSmartphone, Sparkles } from 'lucide-react';
+import { ChevronLeft } from 'lucide-react';
+
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
+
+const benefits = [
+  'Open the app from your home screen in one tap.',
+  'Keep the UiTM academic calendar close at hand.',
+  'Use the in-app chat assistant without installing from an app store.',
+];
+
+const iosInstallSteps: React.ReactNode[] = [
+  <>
+    Open <strong className="font-semibold text-foreground">Safari</strong> and visit{' '}
+    <strong className="font-semibold text-foreground">bilauitmcuti.com</strong>
+  </>,
+  <>
+    Tap the <strong className="font-semibold text-foreground">Share</strong> button (square with arrow up)
+  </>,
+  <>
+    Choose <strong className="font-semibold text-foreground">&ldquo;Add to Home Screen&rdquo;</strong>
+  </>,
+  <>
+    Tap <strong className="font-semibold text-foreground">Add</strong> to finish
+  </>,
+];
+
+const androidInstallSteps: React.ReactNode[] = [
+  <>
+    Open <strong className="font-semibold text-foreground">Chrome</strong> and visit{' '}
+    <strong className="font-semibold text-foreground">bilauitmcuti.com</strong>
+  </>,
+  <>
+    Tap the <strong className="font-semibold text-foreground">menu</strong> (three dots)
+  </>,
+  <>
+    Select <strong className="font-semibold text-foreground">&ldquo;Install app&rdquo;</strong> or{' '}
+    <strong className="font-semibold text-foreground">&ldquo;Add to Home Screen&rdquo;</strong>
+  </>,
+  <>Confirm when prompted</>,
+];
+
+function NumberedInstallList({ steps }: { steps: React.ReactNode[] }) {
+  return (
+    <ol className="space-y-3">
+      {steps.map((body, index) => (
+        <li key={index} className="flex gap-3">
+          <span
+            className="flex size-7 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-medium text-muted-foreground"
+            aria-hidden
+          >
+            {index + 1}
+          </span>
+          <span className="min-w-0 pt-0.5 text-sm leading-relaxed text-muted-foreground">{body}</span>
+        </li>
+      ))}
+    </ol>
+  );
+}
+
+interface PlatformCardProps {
+  title: string;
+  subtitle: string;
+  children: React.ReactNode;
+}
+
+function PlatformCard({ title, subtitle, children }: PlatformCardProps) {
+  return (
+    <Card size="sm" className="h-full">
+      <CardHeader>
+        <CardTitle className="text-base">{title}</CardTitle>
+        <CardDescription>{subtitle}</CardDescription>
+      </CardHeader>
+      <CardContent>{children}</CardContent>
+    </Card>
+  );
+}
 
 export default function PWAPage() {
   const router = useRouter();
@@ -21,111 +103,77 @@ export default function PWAPage() {
 
   return (
     <div className="min-h-screen bg-background text-foreground">
-      <div className="mx-auto w-full max-w-[1000px] px-4 py-8 sm:px-6 lg:px-4">
-        {/* Back */}
+      <div className="mx-auto w-full max-w-5xl px-4 py-8 sm:px-6 lg:px-8">
         <button
+          type="button"
           onClick={() => router.push('/')}
-          className="mb-8 flex h-9 w-9 items-center justify-center rounded-full bg-secondary transition-colors hover:bg-secondary/80 dark:bg-[#2A2A2A] dark:hover:bg-[#333]"
+          className="mb-6 flex h-9 w-9 items-center justify-center rounded-full bg-secondary transition-colors hover:bg-secondary/80 dark:bg-[#2A2A2A] dark:hover:bg-[#333]"
           aria-label="Back to home"
         >
-          <ChevronLeft className="w-5 h-5" />
+          <ChevronLeft className="h-5 w-5" />
         </button>
 
-        {/* Hero */}
-        <div className="relative mb-8 overflow-hidden rounded-2xl border border-border/70 bg-gradient-to-b from-secondary/70 to-background p-6 sm:p-8">
-          <div className="pointer-events-none absolute -right-16 -top-20 h-52 w-52 rounded-full bg-violet-500/10 blur-3xl" />
-          <div className="pointer-events-none absolute -left-16 bottom-0 h-40 w-40 rounded-full bg-blue-500/10 blur-3xl" />
-          <div className="relative">
-            <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-border/70 bg-background/80 px-3 py-1 text-xs text-muted-foreground">
-              <Sparkles className="h-3.5 w-3.5" />
-              Progressive Web App Guide
-            </div>
-            <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
-              Install <span className="text-[#8b5cf6]">Bila UiTM Cuti</span>
-            </h1>
-            <p className="mt-3 max-w-2xl text-muted-foreground">
-              Add this app to your home screen for a faster, native-like experience with the latest calendar, chat, and contact updates.
+        <Card>
+          <CardHeader>
+            <CardTitle asChild className="text-2xl sm:text-3xl">
+              <h1>Install Bila UiTM Cuti</h1>
+            </CardTitle>
+            <CardDescription className="text-base text-pretty">
+              Progressive Web App — add this site to your home screen for quick access to the calendar and chat. No app
+              store install is required.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ul className="list-inside list-disc space-y-2 text-sm text-muted-foreground">
+              {benefits.map((line) => (
+                <li key={line}>{line}</li>
+              ))}
+            </ul>
+          </CardContent>
+        </Card>
+
+        {isInstalled ? (
+          <Alert className="mt-8" role="status">
+            <AlertTitle>Installed app</AlertTitle>
+            <AlertDescription>
+              You are running Bila UiTM Cuti in standalone mode. You can return here from the main site if you need these
+              steps on another device.
+            </AlertDescription>
+          </Alert>
+        ) : null}
+
+        <div className="mt-10 space-y-6">
+          <div className="space-y-2">
+            <h2 className="text-lg font-semibold tracking-tight sm:text-xl">Install on your device</h2>
+            <p className="max-w-2xl text-sm text-muted-foreground sm:text-base">
+              Choose your platform. Use <span className="font-medium text-foreground">bilauitmcuti.com</span> in a
+              supported browser.
             </p>
           </div>
-        </div>
 
-        {/* Already installed banner */}
-        {isInstalled && (
-          <div className="mb-8 rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-4 text-sm text-emerald-700 dark:text-emerald-400">
-            You&apos;re already using Bila UiTM Cuti as an installed app.
+          <div className="grid gap-6 lg:grid-cols-3">
+            <PlatformCard title="iPhone & iPad" subtitle="Safari">
+              <NumberedInstallList steps={iosInstallSteps} />
+            </PlatformCard>
+
+            <PlatformCard title="Android" subtitle="Chrome (recommended)">
+              <NumberedInstallList steps={androidInstallSteps} />
+            </PlatformCard>
+
+            <PlatformCard title="Desktop & laptop" subtitle="Chrome, Edge, or Safari">
+              <ul className="space-y-4 text-sm leading-relaxed text-muted-foreground">
+                <li>
+                  <strong className="font-semibold text-foreground">Chrome / Edge:</strong> Use the install icon in the
+                  address bar, or open the menu and choose &ldquo;Install app&rdquo; / &ldquo;Install Bila UiTM
+                  Cuti&rdquo;.
+                </li>
+                <li>
+                  <strong className="font-semibold text-foreground">Safari (macOS):</strong> File or Share menu →{' '}
+                  <span className="text-foreground">&ldquo;Add to Dock&rdquo;</span> (wording may vary by macOS version).
+                </li>
+              </ul>
+            </PlatformCard>
           </div>
-        )}
-
-        {/* Installation Instructions */}
-        <div className="space-y-6">
-          {/* iOS */}
-          <section className="rounded-xl border border-border bg-card p-5 sm:p-6">
-            <div className="mb-4 flex items-center gap-2">
-              <Smartphone className="h-5 w-5 text-muted-foreground" />
-              <h2 className="text-lg font-semibold">iPhone &amp; iPad</h2>
-            </div>
-            <ol className="space-y-2 text-sm text-muted-foreground">
-              <li className="flex gap-3">
-                <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-medium">1</span>
-                Open <strong className="font-semibold text-foreground">Safari</strong> and go to <strong className="font-semibold text-foreground">bilauitmcuti.com</strong>
-              </li>
-              <li className="flex gap-3">
-                <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-medium">2</span>
-                Tap the <strong className="font-semibold text-foreground">Share</strong> button (arrow pointing up)
-              </li>
-              <li className="flex gap-3">
-                <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-medium">3</span>
-                Select <strong className="font-semibold text-foreground">&ldquo;Add to Home Screen&rdquo;</strong>
-              </li>
-              <li className="flex gap-3">
-                <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-medium">4</span>
-                Tap <strong className="font-semibold text-foreground">Add</strong> to confirm
-              </li>
-            </ol>
-          </section>
-
-          {/* Android */}
-          <section className="rounded-xl border border-border bg-card p-5 sm:p-6">
-            <div className="mb-4 flex items-center gap-2">
-              <TabletSmartphone className="h-5 w-5 text-muted-foreground" />
-              <h2 className="text-lg font-semibold">Android</h2>
-            </div>
-            <ol className="space-y-2 text-sm text-muted-foreground">
-              <li className="flex gap-3">
-                <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-medium">1</span>
-                Open <strong className="font-semibold text-foreground">Chrome</strong> and go to <strong className="font-semibold text-foreground">bilauitmcuti.com</strong>
-              </li>
-              <li className="flex gap-3">
-                <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-medium">2</span>
-                Tap the <strong className="font-semibold text-foreground">menu</strong> (three dots)
-              </li>
-              <li className="flex gap-3">
-                <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-medium">3</span>
-                Select <strong className="font-semibold text-foreground">&ldquo;Install app&rdquo;</strong> or <strong className="font-semibold text-foreground">&ldquo;Add to Home Screen&rdquo;</strong>
-              </li>
-              <li className="flex gap-3">
-                <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-medium">4</span>
-                Confirm the installation
-              </li>
-            </ol>
-          </section>
-
-          {/* Desktop */}
-          <section className="rounded-xl border border-border bg-card p-5 sm:p-6">
-            <div className="mb-4 flex items-center gap-2">
-              <Monitor className="h-5 w-5 text-muted-foreground" />
-              <h2 className="text-lg font-semibold">Desktop &amp; Laptop</h2>
-            </div>
-            <div className="space-y-2 text-sm text-muted-foreground">
-              <p>
-                <strong className="font-semibold text-foreground">Chrome / Edge:</strong> Click the install icon in the address bar, or go to the browser menu and select &ldquo;Install app&rdquo;.
-              </p>
-              <p>
-                <strong className="font-semibold text-foreground">Safari (macOS):</strong> Share &rarr; Add to Dock.
-              </p>
-            </div>
-          </section>
-
         </div>
       </div>
     </div>

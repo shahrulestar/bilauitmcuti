@@ -5,7 +5,7 @@ import { ThemeProvider } from '@/components/theme-provider'
 import { ThemeShortcut } from '@/components/theme-shortcut'
 import { VersionBanner } from '@/components/version-banner'
 import './globals.css'
-import { Geist, Geist_Mono, Inter } from "next/font/google"
+import { Geist, Geist_Mono } from "next/font/google"
 import { cn } from "@/lib/utils"
 
 const geistSans = Geist({
@@ -17,8 +17,6 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
   variable: "--font-geist-mono",
 })
-
-const inter = Inter({ subsets: ["latin"], variable: "--font-sans" })
 
 const GA_MEASUREMENT_ID = 'G-D94Q17TQ22'
 
@@ -119,7 +117,7 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en" className={cn(geistSans.variable, geistMono.variable, "font-sans", inter.variable)} suppressHydrationWarning>
+    <html lang="en" className={cn(geistSans.variable, geistMono.variable, "font-sans")} suppressHydrationWarning>
       <head>
         <meta name="theme-color" content="#ffffff" />
         <meta name="application-name" content="Bila UiTM Cuti" />
