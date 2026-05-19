@@ -3,7 +3,8 @@
 import React, { memo } from "react"
 import { ChevronDown, ChevronUp } from 'lucide-react';
 
-import { useState, useEffect, useMemo, useSyncExternalStore, useRef } from 'react';
+import { useState, useEffect, useLayoutEffect, useMemo, useSyncExternalStore, useRef } from 'react';
+import { cn } from '@/lib/utils';
 import {
   Tooltip,
   TooltipContent,
@@ -16,9 +17,10 @@ import {
   DrawerDescription,
   DrawerTitle,
 } from '@/components/ui/drawer';
+import { Button } from '@/components/ui/button';
 import { useCalendarHydrationVersion } from '@/components/calendar-hydration-context';
 import { getSnapshot, subscribe } from '@/lib/calendar-store';
-import { getActivitiesForDateMultiSessions, getMonthsForSessions, getDaysUntilStart, formatCountdown, getProgramBadgeConfig, getProgramBadgesConfig, type Activity, type ActivityType, type SessionId } from '@/lib/data';
+import { getActivitiesForDateMultiSessions, getMonthsForSessions, getDaysUntilStart, formatCountdown, getProgramBadgeConfig, getProgramBadgesConfig, type Activity, type ActivityFilterOptions, type ActivityType, type SessionId } from '@/lib/data';
 import { fetchLectureWeeks } from '@/lib/calendar-api';
 import { buildDateToWeekNumberMap } from '@/lib/lecture-weeks-resolve';
 import { useIsStandaloneDisplayMode } from '@/lib/use-standalone-display-mode';
@@ -166,6 +168,39 @@ function normalizeProgramType(programType: string | undefined, selectedProgram: 
   return programType;
 }
 
+function getActivityPriority(activity: Activity, allDayActivities?: Activity[]): number {
+  const { type, name } = activity;
+  if (type === 'examination') return 0;
+  if (type === 'break') return 1;
+  if (type === 'lecture') {
+    if (/^(Lecture|Kuliah)\s+\d+$/.test(name)) return 2;
+    if ((name.includes('Short Semester') || name.includes('Semester Pendek')) && allDayActivities) {
+      const hasSemesterPendek = allDayActivities.some(a => a.name.includes('Short Semester') || a.name.includes('Semester Pendek'));
+      const hasLectureIntersesi = allDayActivities.some(a => a.name.includes('Intersession Classes') || a.name.includes('Intersesi'));
+      const hasCutiSemester = allDayActivities.some(a => a.name.includes('Cuti Semester'));
+      if (hasSemesterPendek && (hasLectureIntersesi || hasCutiSemester)) return 1;
+    }
+    if (name.includes('Short Semester') || name.includes('Semester Pendek')) return 3;
+    if (name.includes('Intersession Classes') || name.includes('Intersesi')) return 4;
+    return 5;
+  }
+  if (type === 'registration') return 6;
+  return 7;
+}
+
+function resolveDayActivitiesForDrawer(
+  dateStr: string,
+  sessionIds: SessionId[],
+  showKKT: boolean,
+  filters: ActivityFilterOptions,
+  selectedProgram: string,
+): Activity[] {
+  if (sessionIds.length === 0) return [];
+  const activities = getActivitiesForDateMultiSessions(dateStr, sessionIds, showKKT, filters);
+  activities.sort((a, b) => getActivityPriority(a, activities) - getActivityPriority(b, activities));
+  return dedupDayActivities(activities, selectedProgram);
+}
+
 function dedupDayActivities(activities: Activity[], selectedProgram: string): Activity[] {
   const seenKey = new Set<string>();
   return activities.filter((a) => {
@@ -247,6 +282,59 @@ function formatDateLabel(dateStr: string): string {
   });
 }
 
+/** Smooth height transition for drawer body; footer stays pinned below. */
+function ActivityDrawerAnimatedSection({
+  animateKey,
+  children,
+  className,
+}: {
+  animateKey: string;
+  children: React.ReactNode;
+  className?: string;
+}) {
+  const innerRef = useRef<HTMLDivElement>(null);
+  const [height, setHeight] = useState<number | undefined>(undefined);
+  const [reduceMotion, setReduceMotion] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const sync = () => setReduceMotion(mq.matches);
+    sync();
+    mq.addEventListener('change', sync);
+    return () => mq.removeEventListener('change', sync);
+  }, []);
+
+  useLayoutEffect(() => {
+    const inner = innerRef.current;
+    if (!inner) return;
+
+    const measure = () => {
+      setHeight(inner.scrollHeight);
+    };
+
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(inner);
+    return () => ro.disconnect();
+  }, [animateKey]);
+
+  return (
+    <div
+      className={cn(
+        'overflow-hidden',
+        !reduceMotion && 'transition-[height] duration-300 ease-in-out',
+        className
+      )}
+      style={{ height: reduceMotion ? 'auto' : height === undefined ? 'auto' : height }}
+    >
+      <div ref={innerRef} className="flex flex-col gap-3">
+        {children}
+      </div>
+    </div>
+  );
+}
+
 interface GridViewProps {
   selectedProgram: string;
   selectedSessions: SessionId[];
@@ -264,7 +352,7 @@ interface GridViewProps {
   initialCurrentDate?: string;
 }
 
-function MiniCalendar({ month, year, selectedProgram, selectedSessions, showKKT, onDateClick, selectedDate, showRegistration, showLecture, showSemesterPendek, showKuliahIntersesi, showExamination, showOthersExams, showBreak, showCountdown, selectedStates = [], initialCurrentDate, tooltipOpenKey, hoveredDateStr, setTooltipOpenKey, setHoveredDateStr, calendarDataVersion, suppressHoverDuringScrollRef, lectureWeekByDate, isStandalonePwa, onOpenActivityDrawer }: { month: number; year: number; selectedProgram: string; selectedSessions: SessionId[]; showKKT: boolean; onDateClick: (date: string) => void; selectedDate: string | null; showRegistration: boolean; showLecture: boolean; showSemesterPendek: boolean; showKuliahIntersesi: boolean; showExamination: boolean; showOthersExams: boolean; showBreak: boolean; showCountdown: boolean; selectedStates?: string[]; initialCurrentDate?: string; tooltipOpenKey: string | null; hoveredDateStr: string | null; setTooltipOpenKey: React.Dispatch<React.SetStateAction<string | null>>; setHoveredDateStr: React.Dispatch<React.SetStateAction<string | null>>; calendarDataVersion: number; suppressHoverDuringScrollRef: React.MutableRefObject<boolean>; lectureWeekByDate: Map<string, number> | null; isStandalonePwa: boolean; onOpenActivityDrawer: (dateStr: string, activities: Activity[]) => void }) {
+function MiniCalendar({ month, year, selectedProgram, selectedSessions, showKKT, onDateClick, selectedDate, showRegistration, showLecture, showSemesterPendek, showKuliahIntersesi, showExamination, showOthersExams, showBreak, showCountdown, selectedStates = [], initialCurrentDate, tooltipOpenKey, hoveredDateStr, setTooltipOpenKey, setHoveredDateStr, calendarDataVersion, suppressHoverDuringScrollRef, lectureWeekByDate, isStandalonePwa, onOpenActivityDrawer }: { month: number; year: number; selectedProgram: string; selectedSessions: SessionId[]; showKKT: boolean; onDateClick: (date: string) => void; selectedDate: string | null; showRegistration: boolean; showLecture: boolean; showSemesterPendek: boolean; showKuliahIntersesi: boolean; showExamination: boolean; showOthersExams: boolean; showBreak: boolean; showCountdown: boolean; selectedStates?: string[]; initialCurrentDate?: string; tooltipOpenKey: string | null; hoveredDateStr: string | null; setTooltipOpenKey: React.Dispatch<React.SetStateAction<string | null>>; setHoveredDateStr: React.Dispatch<React.SetStateAction<string | null>>; calendarDataVersion: number; suppressHoverDuringScrollRef: React.MutableRefObject<boolean>; lectureWeekByDate: Map<string, number> | null; isStandalonePwa: boolean; onOpenActivityDrawer: (dateStr: string) => void }) {
   const [hasHoverCapability, setHasHoverCapability] = useState(false);
   const [hasTouchInput, setHasTouchInput] = useState(false);
 
@@ -425,26 +513,6 @@ function MiniCalendar({ month, year, selectedProgram, selectedSessions, showKKT,
       calendarDataVersion,
     ]
   );
-
-  const getActivityPriority = (activity: Activity, allDayActivities?: Activity[]): number => {
-    const { type, name } = activity;
-    if (type === 'examination') return 0;
-    if (type === 'break') return 1;
-    if (type === 'lecture') {
-      if (/^(Lecture|Kuliah)\s+\d+$/.test(name)) return 2;
-      if ((name.includes('Short Semester') || name.includes('Semester Pendek')) && allDayActivities) {
-        const hasSemesterPendek = allDayActivities.some(a => a.name.includes('Short Semester') || a.name.includes('Semester Pendek'));
-        const hasLectureIntersesi = allDayActivities.some(a => a.name.includes('Intersession Classes') || a.name.includes('Intersesi'));
-        const hasCutiSemester = allDayActivities.some(a => a.name.includes('Cuti Semester'));
-        if (hasSemesterPendek && (hasLectureIntersesi || hasCutiSemester)) return 1;
-      }
-      if (name.includes('Short Semester') || name.includes('Semester Pendek')) return 3;
-      if (name.includes('Intersession Classes') || name.includes('Intersesi')) return 4;
-      return 5;
-    }
-    if (type === 'registration') return 6;
-    return 7;
-  };
 
   const daysInMonth = new Date(year, month, 0).getDate();
   const firstDayOfMonth = new Date(year, month - 1, 1).getDay();
@@ -683,7 +751,7 @@ function MiniCalendar({ month, year, selectedProgram, selectedSessions, showKKT,
                 if (isStandalonePwa) {
                   onDateClick(dateStr);
                   if (uniqueDayActivities.length > 0) {
-                    onOpenActivityDrawer(dateStr, uniqueDayActivities);
+                    onOpenActivityDrawer(dateStr);
                   }
                   return;
                 }
@@ -804,9 +872,14 @@ export const GridView = memo(function GridView({
   const [hoveredDateStr, setHoveredDateStr] = useState<string | null>(null);
   const [lectureWeekByDate, setLectureWeekByDate] = useState<Map<string, number> | null>(null);
   const [drawerDateKey, setDrawerDateKey] = useState<string | null>(null);
-  const [drawerActivities, setDrawerActivities] = useState<Activity[]>([]);
   const [drawerCurrentDateStr, setDrawerCurrentDateStr] = useState<string | null>(initialCurrentDate ?? null);
+  const [drawerShellMinHeight, setDrawerShellMinHeight] = useState(0);
+  const drawerShellRef = useRef<HTMLDivElement>(null);
   const isStandalonePwa = useIsStandaloneDisplayMode();
+
+  useEffect(() => {
+    if (!drawerDateKey) setDrawerShellMinHeight(0);
+  }, [drawerDateKey]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -825,9 +898,9 @@ export const GridView = memo(function GridView({
     return () => clearInterval(interval);
   }, []);
 
-  const handleOpenActivityDrawer = (dateStr: string, activities: Activity[]) => {
-    setDrawerActivities(activities);
+  const handleOpenActivityDrawer = (dateStr: string) => {
     setDrawerDateKey(dateStr);
+    setSelectedDate(dateStr);
   };
 
   const suppressHoverDuringScrollRef = useRef(false);
@@ -926,6 +999,87 @@ export const GridView = memo(function GridView({
     ]
   );
 
+  const gridFilterOptions = useMemo<ActivityFilterOptions>(
+    () => ({
+      selectedProgram,
+      showRegistration,
+      showLecture,
+      showSemesterPendek,
+      showKuliahIntersesi,
+      showExamination,
+      showOthersExams,
+      showBreak,
+    }),
+    [
+      selectedProgram,
+      showRegistration,
+      showLecture,
+      showSemesterPendek,
+      showKuliahIntersesi,
+      showExamination,
+      showOthersExams,
+      showBreak,
+    ]
+  );
+
+  const activityDateKeys = useMemo<string[]>(() => {
+    void calendarDataVersion;
+    if (selectedSessions.length === 0) return [];
+    const keys: string[] = [];
+    for (const { month, year } of months) {
+      const daysInMonth = new Date(year, month, 0).getDate();
+      for (let day = 1; day <= daysInMonth; day++) {
+        const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        const activities = getActivitiesForDateMultiSessions(dateStr, selectedSessions, showKKT, gridFilterOptions);
+        if (activities.length > 0) keys.push(dateStr);
+      }
+    }
+    return keys;
+  }, [months, selectedSessions, showKKT, gridFilterOptions, calendarDataVersion]);
+
+  const drawerActivities = useMemo<Activity[]>(() => {
+    if (!drawerDateKey) return [];
+    void calendarDataVersion;
+    return resolveDayActivitiesForDrawer(drawerDateKey, selectedSessions, showKKT, gridFilterOptions, selectedProgram);
+  }, [drawerDateKey, selectedSessions, showKKT, gridFilterOptions, selectedProgram, calendarDataVersion]);
+
+  useLayoutEffect(() => {
+    if (!drawerDateKey || !isStandalonePwa) return;
+    const el = drawerShellRef.current;
+    if (!el) return;
+
+    const measure = () => {
+      const h = el.getBoundingClientRect().height;
+      setDrawerShellMinHeight((prev) => Math.max(prev, Math.ceil(h)));
+    };
+
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [
+    drawerDateKey,
+    drawerActivities,
+    isStandalonePwa,
+    lectureWeekByDate,
+    showCountdown,
+    showKKT,
+    selectedProgram,
+    calendarDataVersion,
+  ]);
+
+  const drawerNavIndex = drawerDateKey ? activityDateKeys.indexOf(drawerDateKey) : -1;
+  const canGoPrev = drawerNavIndex > 0;
+  const canGoNext = drawerNavIndex >= 0 && drawerNavIndex < activityDateKeys.length - 1;
+
+  const navigateDrawerActivityDate = (delta: -1 | 1) => {
+    if (drawerNavIndex < 0) return;
+    const nextKey = activityDateKeys[drawerNavIndex + delta];
+    if (!nextKey) return;
+    setDrawerDateKey(nextKey);
+    setSelectedDate(nextKey);
+  };
+
   return (
     <TooltipProvider>
       <div className="space-y-8 transition-none" style={{ transition: 'none' }}>
@@ -969,26 +1123,75 @@ export const GridView = memo(function GridView({
           if (!open) setDrawerDateKey(null);
         }}
       >
-        <DrawerContent className="min-h-[240px] [&::after]:hidden overflow-x-hidden data-[vaul-drawer-direction=bottom]:max-h-none data-[vaul-drawer-direction=top]:max-h-none">
-          <div className="flex w-full flex-col gap-3 border-0 bg-popover px-4 pb-6 pt-0 text-left shadow-none outline-none ring-0 ring-offset-0">
-            <DrawerTitle className="w-full border-0 text-center font-heading font-medium text-foreground shadow-none outline-none ring-0 ring-offset-0 md:text-left">
-              {drawerDateKey ? formatDateLabel(drawerDateKey) : ''}
-            </DrawerTitle>
-            <DrawerDescription className="sr-only border-0 shadow-none">
-              Activities for the selected date
-            </DrawerDescription>
+        <DrawerContent
+          className={cn(
+            'flex min-h-[240px] flex-col [&::after]:hidden overflow-x-hidden data-[vaul-drawer-direction=bottom]:max-h-none data-[vaul-drawer-direction=top]:max-h-none',
+            isStandalonePwa && drawerDateKey && 'min-h-[42vh] max-h-[85vh]'
+          )}
+        >
+          <div
+            ref={drawerShellRef}
+            style={
+              isStandalonePwa && drawerDateKey && drawerShellMinHeight > 0
+                ? { minHeight: drawerShellMinHeight }
+                : undefined
+            }
+            className={cn(
+              'flex w-full min-w-0 max-w-full flex-1 min-h-0 flex-col border-0 bg-popover text-left shadow-none outline-none ring-0 ring-offset-0',
+              isStandalonePwa && drawerDateKey && 'min-h-[42vh] max-h-[85vh]'
+            )}
+          >
             {drawerDateKey ? (
-              <GridDayActivitiesPanel
-                dateStr={drawerDateKey}
-                activities={drawerActivities}
-                weekNum={lectureWeekByDate?.get(drawerDateKey) ?? null}
-                selectedProgram={selectedProgram}
-                showCountdown={showCountdown}
-                currentDateStr={drawerCurrentDateStr}
-                showKKT={showKKT}
-                surface="drawer"
-              />
+              <div className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto">
+                <ActivityDrawerAnimatedSection
+                animateKey={`${drawerDateKey}-${drawerActivities.length}-${lectureWeekByDate?.get(drawerDateKey) ?? 'none'}`}
+                className="w-full min-w-0 max-w-full px-4 pt-0"
+              >
+                <DrawerTitle className="w-full border-0 text-center font-heading font-medium text-foreground shadow-none outline-none ring-0 ring-offset-0 md:text-left">
+                  {formatDateLabel(drawerDateKey)}
+                </DrawerTitle>
+                <DrawerDescription className="sr-only border-0 shadow-none">
+                  Activities for the selected date
+                </DrawerDescription>
+                <GridDayActivitiesPanel
+                  dateStr={drawerDateKey}
+                  activities={drawerActivities}
+                  weekNum={lectureWeekByDate?.get(drawerDateKey) ?? null}
+                  selectedProgram={selectedProgram}
+                  showCountdown={showCountdown}
+                  currentDateStr={drawerCurrentDateStr}
+                  showKKT={showKKT}
+                  surface="drawer"
+                />
+              </ActivityDrawerAnimatedSection>
+              </div>
             ) : null}
+            {isStandalonePwa && drawerDateKey ? (
+              <div className="mt-auto grid w-full shrink-0 min-w-0 max-w-full grid-cols-2 gap-2 bg-popover px-4 pb-6 pt-2">
+                <Button
+                  type="button"
+                  size="default"
+                  variant="outline"
+                  disabled={!canGoPrev}
+                  onClick={() => navigateDrawerActivityDate(-1)}
+                  className="h-[38px] min-w-0 w-full justify-center border-border bg-background text-black shadow-xs transition-all hover:bg-muted hover:text-foreground dark:border-input dark:bg-input/30 dark:text-foreground dark:hover:bg-input/50"
+                >
+                  Previous
+                </Button>
+                <Button
+                  type="button"
+                  size="default"
+                  variant="outline"
+                  disabled={!canGoNext}
+                  onClick={() => navigateDrawerActivityDate(1)}
+                  className="h-[38px] min-w-0 w-full justify-center border-border bg-background text-black shadow-xs transition-all hover:bg-muted hover:text-foreground dark:border-input dark:bg-input/30 dark:text-foreground dark:hover:bg-input/50"
+                >
+                  Next
+                </Button>
+              </div>
+            ) : (
+              <div className="pb-6" aria-hidden />
+            )}
           </div>
         </DrawerContent>
       </Drawer>
