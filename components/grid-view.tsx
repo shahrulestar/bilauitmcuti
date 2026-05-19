@@ -1,9 +1,9 @@
 'use client';
 
 import React, { memo } from "react"
+import { ChevronDown, ChevronUp } from 'lucide-react';
 
 import { useState, useEffect, useMemo, useSyncExternalStore, useRef } from 'react';
-import { cn } from '@/lib/utils';
 import {
   Tooltip,
   TooltipContent,
@@ -19,16 +19,18 @@ import { buildDateToWeekNumberMap } from '@/lib/lecture-weeks-resolve';
 const MAX_VISIBLE_ACTIVITY_ITEMS = 5;
 
 interface TooltipActivityListProps {
+  dateKey: string;
   activities: Activity[];
   selectedProgram: string;
   showCountdown: boolean;
   currentDateStr: string | null;
   showKKT: boolean;
-  /** Lecture week chip; rendered inside this list (scrolls with activities). */
+  /** Lecture week chip; rendered inside this list (paginates with activities). */
   weekNum?: number | null;
 }
 
 function TooltipActivityList({
+  dateKey,
   activities,
   selectedProgram,
   showCountdown,
@@ -36,19 +38,41 @@ function TooltipActivityList({
   showKKT,
   weekNum = null,
 }: TooltipActivityListProps) {
-  const needsScroll = activities.length > MAX_VISIBLE_ACTIVITY_ITEMS;
+  const [startIndex, setStartIndex] = useState(0);
+
+  useEffect(() => {
+    setStartIndex(0);
+  }, [dateKey, activities.length, weekNum]);
+
+  const shouldPaginate = activities.length > MAX_VISIBLE_ACTIVITY_ITEMS;
+  const hasPrev = startIndex > 0;
+  const hasNext = startIndex + MAX_VISIBLE_ACTIVITY_ITEMS < activities.length;
+  const visibleActivities = shouldPaginate
+    ? activities.slice(startIndex, startIndex + MAX_VISIBLE_ACTIVITY_ITEMS)
+    : activities;
 
   return (
     <div
       data-grid-day-activities
       className="w-full min-w-0 border-0 py-1 text-left shadow-none outline-none ring-0 ring-offset-0"
     >
-      <div
-        className={cn(
-          'flex min-w-0 flex-col gap-2 border-0 shadow-none outline-none ring-0 ring-offset-0',
-          needsScroll && 'max-h-[min(50vh,17.5rem)] overflow-y-auto overscroll-y-contain pr-0.5'
-        )}
-      >
+      <div className="flex min-w-0 flex-col gap-2 border-0 shadow-none outline-none ring-0 ring-offset-0">
+        {shouldPaginate && hasPrev ? (
+          <div className="pb-1">
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                setStartIndex((prev) => Math.max(0, prev - 1));
+              }}
+              className="flex h-6 w-full items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+              aria-label="Show previous events"
+            >
+              <ChevronUp className="h-4 w-4" />
+            </button>
+          </div>
+        ) : null}
+
         {weekNum != null ? (
           <div className="grid grid-cols-[auto_minmax(0,1fr)] items-start gap-2 border-0 shadow-none outline-none ring-0 ring-offset-0 [box-shadow:none]">
             <div className="mt-1 h-2 w-2 shrink-0 rounded-full bg-transparent" aria-hidden />
@@ -60,7 +84,7 @@ function TooltipActivityList({
           </div>
         ) : null}
 
-        {activities.map((activity, idx) => {
+        {visibleActivities.map((activity, idx) => {
           const dotColor =
             activity.type === 'registration' ? 'bg-[#d1d5db]' :
             activity.type === 'lecture' ? 'bg-[#8b5cf6]' :
@@ -98,6 +122,24 @@ function TooltipActivityList({
             </div>
           );
         })}
+
+        {shouldPaginate && hasNext ? (
+          <div className="pt-1">
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                setStartIndex((prev) =>
+                  Math.min(activities.length - MAX_VISIBLE_ACTIVITY_ITEMS, prev + 1)
+                );
+              }}
+              className="flex h-6 w-full items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+              aria-label="Show next events"
+            >
+              <ChevronDown className="h-4 w-4" />
+            </button>
+          </div>
+        ) : null}
       </div>
     </div>
   );
@@ -618,6 +660,7 @@ function MiniCalendar({ month, year, selectedProgram, selectedSessions, showKKT,
                     style={{ pointerEvents: 'auto' } as React.CSSProperties & { '--radix-tooltip-content-transform-origin'?: string }}
                   >
                     <TooltipActivityList
+                      dateKey={dateStr}
                       activities={uniqueDayActivities}
                       weekNum={lectureWeekByDate?.get(dateStr) ?? null}
                       selectedProgram={selectedProgram}
