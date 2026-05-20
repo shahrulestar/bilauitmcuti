@@ -1,4 +1,5 @@
 import type { NextRequest } from "next/server";
+import { getCloudflareContextSync } from "@/lib/cloudflare-context";
 
 const RATE_LIMIT_DAILY_MS = 24 * 60 * 60 * 1000;
 const RATE_LIMIT_MAX_PER_DAY = 120;
@@ -8,12 +9,14 @@ const RATE_LIMIT_GLOBAL_MAX_PER_DAY = 5000;
 const KV_PREFIX = "rl:";
 const KV_GLOBAL_KEY = "rl:global";
 
+type RequestLike = Pick<NextRequest, "headers"> | Request;
+
 export interface RateLimitResult {
   limited: boolean;
   message: string;
 }
 
-export function getRateLimitKey(ip: string, request: NextRequest): string {
+export function getRateLimitKey(ip: string, request: RequestLike): string {
   if (ip !== "unknown") return ip;
   const ua = request.headers.get("user-agent") ?? "";
   const lang = request.headers.get("accept-language") ?? "";
@@ -40,7 +43,7 @@ function cleanupStaleEntries(): void {
   globalDailyTimestamps = globalDailyTimestamps.filter((t) => now - t < RATE_LIMIT_DAILY_MS);
 }
 
-export function checkRateLimitMemory(ip: string, request: NextRequest): RateLimitResult {
+export function checkRateLimitMemory(ip: string, request: RequestLike): RateLimitResult {
   const now = Date.now();
   if (rateLimitMap.size > CLEANUP_THRESHOLD) cleanupStaleEntries();
 
@@ -68,7 +71,7 @@ type KVNamespace = { get: (k: string) => Promise<string | null>; put: (k: string
 
 export async function checkRateLimitKV(
   ip: string,
-  request: NextRequest,
+  request: RequestLike,
   kv: KVNamespace
 ): Promise<RateLimitResult> {
   const now = Date.now();
@@ -113,14 +116,9 @@ export async function checkRateLimitKV(
 }
 
 /** Uses KV when available (Cloudflare), otherwise in-memory. */
-export async function checkRateLimit(ip: string, request: NextRequest): Promise<RateLimitResult> {
-  try {
-    const { getCloudflareContext } = await import("@opennextjs/cloudflare");
-    const ctx = getCloudflareContext();
-    const kv = (ctx.env as { RATE_LIMIT_KV?: KVNamespace }).RATE_LIMIT_KV;
-    if (kv) return await checkRateLimitKV(ip, request, kv);
-  } catch {
-    // No Cloudflare context (next dev, etc.)
-  }
+export async function checkRateLimit(ip: string, request: RequestLike): Promise<RateLimitResult> {
+  const ctx = getCloudflareContextSync();
+  const kv = ctx?.env?.RATE_LIMIT_KV;
+  if (kv) return await checkRateLimitKV(ip, request, kv);
   return checkRateLimitMemory(ip, request);
 }

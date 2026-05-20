@@ -14,13 +14,12 @@
     "test:smoke": "echo smoke-placeholder",
     "start": "next start",
     "preview": "opennextjs-cloudflare build && opennextjs-cloudflare preview",
-    "deploy": "opennextjs-cloudflare build && opennextjs-cloudflare deploy",
-    "upload": "opennextjs-cloudflare build && opennextjs-cloudflare upload",
+    "deploy": "opennextjs-cloudflare build && wrangler deploy --config workers/chat-api/wrangler.jsonc && opennextjs-cloudflare deploy",
+    "upload": "opennextjs-cloudflare build && wrangler deploy --config workers/chat-api/wrangler.jsonc && opennextjs-cloudflare upload",
     "cf-typegen": "wrangler types --env-interface CloudflareEnv cloudflare-env.d.ts",
     "calendar:import": "node scripts/txt-to-calendar.mjs"
   },
   "dependencies": {
-    "@opennextjs/cloudflare": "^1.17.1",
     "@radix-ui/react-avatar": "1.1.2",
     "@radix-ui/react-context-menu": "2.2.4",
     "@radix-ui/react-dialog": "1.1.4",
@@ -42,6 +41,7 @@
     "vaul": "^1.1.2"
   },
   "devDependencies": {
+    "@opennextjs/cloudflare": "^1.17.1",
     "@tailwindcss/postcss": "^4.1.9",
     "@types/node": "^22",
     "@types/react": "^19",

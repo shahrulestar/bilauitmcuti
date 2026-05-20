@@ -1,0 +1,7 @@
+{
+  "$schema": "../../node_modules/wrangler/config-schema.json",
+  "name": "bilauitmcuti-chat-api",
+  "main": "index.ts",
+  "compatibility_date": "2025-11-01",
+  "compatibility_flags": ["global_fetch_strictly_public"]
+}

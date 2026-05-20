@@ -10,6 +10,8 @@ yarn.lock
 /out/
 /.open-next/
 .wrangler/
+.wrangler-chat-bundle/
+**/.wrangler-chat-bundle/
 
 # production
 /build
