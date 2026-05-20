@@ -3,7 +3,7 @@
 import { useState, useEffect, useLayoutEffect, useCallback, useMemo, useSyncExternalStore } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { CalendarHeader } from '@/components/calendar-header';
-import { CalendarControls } from '@/components/calendar-controls';
+import { CalendarControls, PWA_PROGRAM_DRAWER_OPEN_KEY } from '@/components/calendar-controls';
 import { PwaPromptAlert } from '@/components/pwa-prompt-alert';
 import { ListView } from '@/components/list-view';
 import { GridView } from '@/components/grid-view';
@@ -223,8 +223,14 @@ export function SharedCalendarLayout({
   const [selectedProgram, setSelectedProgram] = useState(routeSelectedProgram);
   const programGroup = getGroupFromProgram(selectedProgram);
 
-  // Keep optimistic state aligned with actual route state.
+  // Keep optimistic state aligned with route; skip while PWA program drawer is open (URL may lag).
   useEffect(() => {
+    if (
+      typeof window !== 'undefined' &&
+      sessionStorage.getItem(PWA_PROGRAM_DRAWER_OPEN_KEY) === '1'
+    ) {
+      return;
+    }
     setSelectedProgram(routeSelectedProgram);
   }, [routeSelectedProgram]);
 
@@ -479,8 +485,11 @@ export function SharedCalendarLayout({
 
       setSelectedSessions(resolvedSessions);
       const newPath = getRoutePath(program, activeViewMode);
-      if (newPath !== pathname) {
-        router.replace(newPath, { scroll: false });
+      const isProgramDrawerOpen =
+        typeof window !== 'undefined' &&
+        sessionStorage.getItem(PWA_PROGRAM_DRAWER_OPEN_KEY) === '1';
+      if (newPath !== pathname && !isProgramDrawerOpen) {
+        window.history.replaceState(null, '', newPath);
         window.scrollTo(0, 0);
       }
     },
@@ -585,7 +594,11 @@ export function SharedCalendarLayout({
     >
     <div className={`min-h-screen ${bgClass} transition-none relative`} style={{ transition: 'none' }}>
       <div className="mx-auto max-w-[1000px] px-4 py-8 sm:px-6 lg:px-4 transition-none" style={{ transition: 'none' }}>
-        <CalendarHeader />
+        <CalendarHeader
+          selectedSessions={selectedSessions}
+          programGroup={programGroup}
+          initialCurrentDate={initialCurrentDate}
+        />
         <PwaPromptAlert />
 
         <CalendarControls

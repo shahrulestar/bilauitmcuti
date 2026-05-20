@@ -24,6 +24,7 @@ interface ContactRequest {
   website?: string;
   email?: string;
   turnstileToken?: string;
+  rating: number;
 }
 
 const WHO_SET = new Set<string>(CONTACT_WHO_OPTIONS);
@@ -44,7 +45,14 @@ function parseContactRequest(raw: unknown): { success: true; data: ContactReques
   const email = o.email != null ? String(o.email) : undefined;
   const turnstileToken = o.turnstileToken != null && String(o.turnstileToken).trim().length > 0
     ? String(o.turnstileToken) : undefined;
-  return { success: true, data: { who, category, message, startedAt, website, email, turnstileToken } };
+  const parsedRating = Number(o.rating);
+  if (!Number.isInteger(parsedRating) || parsedRating < 1 || parsedRating > 5) {
+    return { success: false };
+  }
+  return {
+    success: true,
+    data: { who, category, message, startedAt, website, email, turnstileToken, rating: parsedRating },
+  };
 }
 
 function jsonError(message: string, status: number) {
@@ -66,6 +74,7 @@ function buildTelegramText(
   message: string,
   ip: string,
   userAgent: string,
+  rating: number,
   email?: string
 ): string {
   const now = new Date().toISOString();
@@ -76,6 +85,7 @@ function buildTelegramText(
     `Time: ${now}`,
     `Who: ${who}`,
     `Category: ${category}`,
+    `Rating: ${rating}/5`,
     `IP: ${ip}`,
     `User Agent: ${userAgent || "unknown"}`,
     ...(emailLine ? [emailLine] : []),
@@ -144,7 +154,7 @@ export async function POST(request: NextRequest) {
     const parsed = parseContactRequest(rawBody);
     if (!parsed.success) return jsonError("Invalid form values.", 400);
 
-    const { who, category, message, startedAt, website, email } = parsed.data;
+    const { who, category, message, startedAt, website, email, rating } = parsed.data;
 
     if ((website ?? "").trim().length > 0) {
       return NextResponse.json({ message: "Thanks! Your message was sent." });
@@ -177,7 +187,7 @@ export async function POST(request: NextRequest) {
     }
 
     const userAgent = request.headers.get("user-agent") ?? "unknown";
-    const text = buildTelegramText(who, category, message.trim(), ip, userAgent, email);
+    const text = buildTelegramText(who, category, message.trim(), ip, userAgent, rating, email);
     await sendToTelegram(text);
 
     return withVerifiedCookie(NextResponse.json({ message: "Thanks! Your message has been submitted." }));

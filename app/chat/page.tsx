@@ -16,6 +16,7 @@ import {
 import type { SessionId } from "@/lib/data";
 import { getFiltersFromCookie, type FilterStates } from "@/lib/cookie-utils";
 import { getRoutePath, isProgramValue, type ProgramValue } from "@/lib/route-utils";
+import { cn } from "@/lib/utils";
 import { sessionSubmenuItemClass } from "@/lib/session-submenu-item-class";
 import { SessionSubmenuItemLabel } from "@/components/session-submenu-item-label";
 import {
@@ -40,6 +41,8 @@ import {
   DrawerContent,
   DrawerDescription,
   DrawerTitle,
+  drawerBodyClassName,
+  drawerContentClassName,
 } from "@/components/ui/drawer";
 import { Button } from "@/components/ui/button";
 import {
@@ -61,6 +64,7 @@ import {
   TurnstileWidget,
   type TurnstileWidgetHandle,
 } from "@/components/turnstile-widget";
+import { useEngagementPrompt } from "@/components/engagement-prompt-provider";
 
 function getChatErrorMessage(res: Response, fallback: string): string {
   if (res.status === 429) return "Too many requests. Please wait a moment before trying again.";
@@ -633,6 +637,7 @@ export default function ChatPage() {
   );
 
   const router = useRouter();
+  const { recordEngagementAction } = useEngagementPrompt();
   const programOptions = getProgramOptions();
   const calendarDataVersion = getSnapshot().version;
   const [messages, setMessages] = useState<Message[]>([]);
@@ -816,8 +821,9 @@ export default function ChatPage() {
         setSessionsByProgram((prevMap) => ({ ...prevMap, [sessionMemoryKey]: inGroup }));
         return inGroup;
       });
+      recordEngagementAction("session_change");
     },
-    [sessionsByProgram]
+    [sessionsByProgram, recordEngagementAction]
   );
 
   const handleProgramSelect = useCallback((program: ProgramValue) => {
@@ -826,7 +832,8 @@ export default function ChatPage() {
     setSelectedProgram(program);
     const resolved = resolveSessionsForProgram(program, [], sessionsByProgram, dateStr);
     setSelectedSessions(resolved);
-  }, [sessionsByProgram]);
+    recordEngagementAction("program_change");
+  }, [sessionsByProgram, recordEngagementAction]);
 
   const currentProgramLabel = useMemo(() => {
     const opt = programOptions.find((p) => p.value === selectedProgram);
@@ -993,6 +1000,7 @@ export default function ChatPage() {
     setMessages(updatedMessages);
     setInput("");
     setIsLoading(true);
+    recordEngagementAction("chat_send");
     let didAttemptFetch = false;
 
     try {
@@ -1109,6 +1117,7 @@ export default function ChatPage() {
     isLoading,
     isTurnstileSessionVerified,
     messages,
+    recordEngagementAction,
     requiresTurnstile,
     selectedProgram,
     selectedSessions,
@@ -1171,7 +1180,8 @@ export default function ChatPage() {
     setMentionQuery(match.query);
     setActiveMentionIndex(0);
     setIsMentionOpen(true);
-  }, []);
+    recordEngagementAction("chat_mention_open");
+  }, [recordEngagementAction]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -1473,15 +1483,13 @@ export default function ChatPage() {
             />
             {isMobileMentionPicker ? (
               <Drawer open={isMentionOpen} onOpenChange={setIsMentionOpen}>
-                <DrawerContent className="[&::after]:hidden overflow-x-hidden">
-                  <div className="flex flex-col gap-3 border-0 bg-popover px-4 pb-6 pt-0 text-center shadow-none outline-none ring-0 ring-offset-0 md:text-left">
-                    <DrawerTitle className="border-0 font-heading font-medium text-foreground shadow-none outline-none ring-0 ring-offset-0">
-                      Mention Session Calendar
-                    </DrawerTitle>
+                <DrawerContent className={drawerContentClassName}>
+                  <div className={cn(drawerBodyClassName, 'gap-3 text-center md:text-left')}>
+                    <DrawerTitle>Mention Session Calendar</DrawerTitle>
                     <DrawerDescription className="sr-only border-0 shadow-none">
                       Select a session to insert into your message.
                     </DrawerDescription>
-                    <div className="max-h-[min(50vh,380px)] w-full min-h-0 space-y-2 overflow-y-auto overflow-x-hidden overscroll-contain border-0 bg-popover pr-2 text-left shadow-none outline-none ring-0 [-webkit-overflow-scrolling:touch]">
+                    <div className="w-full space-y-2 text-left">
                       {mentionItems.length > 0 ? (
                         mentionItems.map((item, index) => (
                           <button
@@ -1510,7 +1518,7 @@ export default function ChatPage() {
                     <DialogTitle>Mention Session Calendar</DialogTitle>
                     <DialogDescription>Select a session to insert into your message.</DialogDescription>
                   </DialogHeader>
-                  <div className="max-h-[320px] overflow-auto space-y-2">
+                  <div className="max-h-[80vh] overflow-auto space-y-2">
                     {mentionItems.length > 0 ? (
                       mentionItems.map((item, index) => (
                         <button

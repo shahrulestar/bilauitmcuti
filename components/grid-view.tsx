@@ -1,7 +1,7 @@
 'use client';
 
 import React, { memo } from "react"
-import { ChevronDown, ChevronUp } from 'lucide-react';
+import { ChevronDown, ChevronLeft, ChevronRight, ChevronUp } from 'lucide-react';
 
 import { useState, useEffect, useLayoutEffect, useMemo, useSyncExternalStore, useRef } from 'react';
 import { cn } from '@/lib/utils';
@@ -16,6 +16,8 @@ import {
   DrawerContent,
   DrawerDescription,
   DrawerTitle,
+  drawerBodyClassName,
+  drawerContentClassName,
 } from '@/components/ui/drawer';
 import { Button } from '@/components/ui/button';
 import { useCalendarHydrationVersion } from '@/components/calendar-hydration-context';
@@ -23,7 +25,8 @@ import { getSnapshot, subscribe } from '@/lib/calendar-store';
 import { getActivitiesForDateMultiSessions, getMonthsForSessions, getDaysUntilStart, formatCountdown, getProgramBadgeConfig, getProgramBadgesConfig, type Activity, type ActivityFilterOptions, type ActivityType, type SessionId } from '@/lib/data';
 import { fetchLectureWeeks } from '@/lib/calendar-api';
 import { buildDateToWeekNumberMap } from '@/lib/lecture-weeks-resolve';
-import { useIsStandaloneDisplayMode } from '@/lib/use-standalone-display-mode';
+import { useMobileViewport } from '@/lib/use-mobile-viewport';
+import { useEngagementPrompt } from '@/components/engagement-prompt-provider';
 
 interface TooltipActivityListProps {
   dateKey: string;
@@ -32,8 +35,9 @@ interface TooltipActivityListProps {
   showCountdown: boolean;
   currentDateStr: string | null;
   showKKT: boolean;
-  /** Tooltip: mobile chevron paging. Drawer (PWA): full list, sheet height follows content (no inner scroll). */
+  /** Tooltip: mobile chevron paging. Drawer (mobile viewport): full list, sheet height follows content (no inner scroll). */
   listMode: 'paginated' | 'full';
+  surface: 'tooltip' | 'drawer';
   /** Lecture week chip; rendered inside this list (scrolls with activities). */
   weekNum?: number | null;
 }
@@ -46,8 +50,13 @@ function TooltipActivityList({
   currentDateStr,
   showKKT,
   listMode,
+  surface,
   weekNum = null,
 }: TooltipActivityListProps) {
+  const isDrawer = surface === 'drawer';
+  const drawerTextClass = 'text-[12px]';
+  const badgeTextClass = isDrawer ? drawerTextClass : 'text-[10px] lg:text-xs';
+  const activityTextClass = isDrawer ? drawerTextClass : 'text-xs';
   const PAGE_SIZE = 7;
   const [startIndex, setStartIndex] = useState(0);
   const [isMobile, setIsMobile] = useState(false);
@@ -98,7 +107,7 @@ function TooltipActivityList({
           <div className="grid grid-cols-[auto_minmax(0,1fr)] items-start gap-2 border-0 shadow-none outline-none ring-0 ring-offset-0 [box-shadow:none]">
             <div className="mt-1 h-2 w-2 shrink-0 rounded-full bg-transparent" aria-hidden />
             <div className="min-w-0 text-left">
-              <span className="inline-block rounded-full bg-zinc-100 px-2 py-0.5 text-[10px] font-medium text-zinc-700 dark:bg-zinc-800 dark:text-zinc-200 lg:text-xs">
+              <span className={cn('inline-block rounded-full bg-zinc-100 px-2 py-0.5 font-medium text-zinc-700 dark:bg-zinc-800 dark:text-zinc-200', badgeTextClass)}>
                 Week {weekNum}
               </span>
             </div>
@@ -132,13 +141,13 @@ function TooltipActivityList({
                 {badgeConfigs.length > 0 ? (
                   <div className="mb-1 flex flex-wrap gap-1">
                     {badgeConfigs.map((cfg) => (
-                      <div key={cfg.label} className={`inline-block rounded-full px-2 py-0.5 text-[10px] font-medium lg:text-xs ${cfg.bgClass} ${cfg.textClass}`}>
+                      <div key={cfg.label} className={cn('inline-block rounded-full px-2 py-0.5 font-medium', badgeTextClass, cfg.bgClass, cfg.textClass)}>
                         {cfg.label}
                       </div>
                     ))}
                   </div>
                 ) : null}
-                <p className={`text-xs leading-relaxed whitespace-normal text-wrap break-words [overflow-wrap:anywhere] transition-none ${lineClampClass}`}>{displayName}</p>
+                <p className={cn(activityTextClass, 'leading-relaxed whitespace-normal text-wrap break-words [overflow-wrap:anywhere] transition-none', lineClampClass)}>{displayName}</p>
               </div>
             </div>
           );
@@ -251,6 +260,7 @@ function GridDayActivitiesPanel({
         currentDateStr={currentDateStr}
         showKKT={showKKT}
         listMode="paginated"
+        surface="tooltip"
         weekNum={weekNum}
       />
     );
@@ -265,6 +275,7 @@ function GridDayActivitiesPanel({
       currentDateStr={currentDateStr}
       showKKT={showKKT}
       listMode="full"
+      surface="drawer"
       weekNum={weekNum}
     />
   );
@@ -352,7 +363,7 @@ interface GridViewProps {
   initialCurrentDate?: string;
 }
 
-function MiniCalendar({ month, year, selectedProgram, selectedSessions, showKKT, onDateClick, selectedDate, showRegistration, showLecture, showSemesterPendek, showKuliahIntersesi, showExamination, showOthersExams, showBreak, showCountdown, selectedStates = [], initialCurrentDate, tooltipOpenKey, hoveredDateStr, setTooltipOpenKey, setHoveredDateStr, calendarDataVersion, suppressHoverDuringScrollRef, lectureWeekByDate, isStandalonePwa, onOpenActivityDrawer }: { month: number; year: number; selectedProgram: string; selectedSessions: SessionId[]; showKKT: boolean; onDateClick: (date: string) => void; selectedDate: string | null; showRegistration: boolean; showLecture: boolean; showSemesterPendek: boolean; showKuliahIntersesi: boolean; showExamination: boolean; showOthersExams: boolean; showBreak: boolean; showCountdown: boolean; selectedStates?: string[]; initialCurrentDate?: string; tooltipOpenKey: string | null; hoveredDateStr: string | null; setTooltipOpenKey: React.Dispatch<React.SetStateAction<string | null>>; setHoveredDateStr: React.Dispatch<React.SetStateAction<string | null>>; calendarDataVersion: number; suppressHoverDuringScrollRef: React.MutableRefObject<boolean>; lectureWeekByDate: Map<string, number> | null; isStandalonePwa: boolean; onOpenActivityDrawer: (dateStr: string) => void }) {
+function MiniCalendar({ month, year, selectedProgram, selectedSessions, showKKT, onDateClick, selectedDate, showRegistration, showLecture, showSemesterPendek, showKuliahIntersesi, showExamination, showOthersExams, showBreak, showCountdown, selectedStates = [], initialCurrentDate, tooltipOpenKey, hoveredDateStr, setTooltipOpenKey, setHoveredDateStr, calendarDataVersion, suppressHoverDuringScrollRef, lectureWeekByDate, useDayActivityDrawer, onOpenActivityDrawer }: { month: number; year: number; selectedProgram: string; selectedSessions: SessionId[]; showKKT: boolean; onDateClick: (date: string) => void; selectedDate: string | null; showRegistration: boolean; showLecture: boolean; showSemesterPendek: boolean; showKuliahIntersesi: boolean; showExamination: boolean; showOthersExams: boolean; showBreak: boolean; showCountdown: boolean; selectedStates?: string[]; initialCurrentDate?: string; tooltipOpenKey: string | null; hoveredDateStr: string | null; setTooltipOpenKey: React.Dispatch<React.SetStateAction<string | null>>; setHoveredDateStr: React.Dispatch<React.SetStateAction<string | null>>; calendarDataVersion: number; suppressHoverDuringScrollRef: React.MutableRefObject<boolean>; lectureWeekByDate: Map<string, number> | null; useDayActivityDrawer: boolean; onOpenActivityDrawer: (dateStr: string) => void }) {
   const [hasHoverCapability, setHasHoverCapability] = useState(false);
   const [hasTouchInput, setHasTouchInput] = useState(false);
 
@@ -376,7 +387,7 @@ function MiniCalendar({ month, year, selectedProgram, selectedSessions, showKKT,
     };
   }, []);
 
-  const isDesktopHoverMode = hasHoverCapability && !hasTouchInput && !isStandalonePwa;
+  const isDesktopHoverMode = hasHoverCapability && !hasTouchInput && !useDayActivityDrawer;
 
   useEffect(() => {
     if (isDesktopHoverMode) return;
@@ -385,10 +396,10 @@ function MiniCalendar({ month, year, selectedProgram, selectedSessions, showKKT,
   }, [isDesktopHoverMode, setHoveredDateStr, setTooltipOpenKey]);
 
   useEffect(() => {
-    if (!isStandalonePwa) return;
+    if (!useDayActivityDrawer) return;
     setHoveredDateStr(null);
     setTooltipOpenKey(null);
-  }, [isStandalonePwa, setHoveredDateStr, setTooltipOpenKey]);
+  }, [useDayActivityDrawer, setHoveredDateStr, setTooltipOpenKey]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -748,7 +759,7 @@ function MiniCalendar({ month, year, selectedProgram, selectedSessions, showKKT,
               data-mini-calendar-trigger={dateStr ?? undefined}
               onClick={() => {
                 if (!dateStr) return;
-                if (isStandalonePwa) {
+                if (useDayActivityDrawer) {
                   onDateClick(dateStr);
                   if (uniqueDayActivities.length > 0) {
                     onOpenActivityDrawer(dateStr);
@@ -793,7 +804,7 @@ function MiniCalendar({ month, year, selectedProgram, selectedSessions, showKKT,
             </div>
           );
 
-          if (isStandalonePwa) {
+          if (useDayActivityDrawer) {
             return (
               <div key={index} suppressHydrationWarning>
                 {calendarCell}
@@ -873,13 +884,14 @@ export const GridView = memo(function GridView({
   const [lectureWeekByDate, setLectureWeekByDate] = useState<Map<string, number> | null>(null);
   const [drawerDateKey, setDrawerDateKey] = useState<string | null>(null);
   const [drawerCurrentDateStr, setDrawerCurrentDateStr] = useState<string | null>(initialCurrentDate ?? null);
-  const [drawerShellMinHeight, setDrawerShellMinHeight] = useState(0);
-  const drawerShellRef = useRef<HTMLDivElement>(null);
-  const isStandalonePwa = useIsStandaloneDisplayMode();
-
-  useEffect(() => {
-    if (!drawerDateKey) setDrawerShellMinHeight(0);
-  }, [drawerDateKey]);
+  const drawerSwipeAreaRef = useRef<HTMLDivElement>(null);
+  const drawerSwipeGestureRef = useRef<{
+    startX: number | null;
+    startY: number | null;
+    tracking: boolean;
+  }>({ startX: null, startY: null, tracking: false });
+  const isMobileViewport = useMobileViewport();
+  const { recordEngagementAction } = useEngagementPrompt();
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -901,7 +913,12 @@ export const GridView = memo(function GridView({
   const handleOpenActivityDrawer = (dateStr: string) => {
     setDrawerDateKey(dateStr);
     setSelectedDate(dateStr);
+    recordEngagementAction('grid_cell_open');
   };
+
+  useEffect(() => {
+    if (!isMobileViewport) setDrawerDateKey(null);
+  }, [isMobileViewport]);
 
   const suppressHoverDuringScrollRef = useRef(false);
   const scrollSettleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -1043,31 +1060,6 @@ export const GridView = memo(function GridView({
     return resolveDayActivitiesForDrawer(drawerDateKey, selectedSessions, showKKT, gridFilterOptions, selectedProgram);
   }, [drawerDateKey, selectedSessions, showKKT, gridFilterOptions, selectedProgram, calendarDataVersion]);
 
-  useLayoutEffect(() => {
-    if (!drawerDateKey || !isStandalonePwa) return;
-    const el = drawerShellRef.current;
-    if (!el) return;
-
-    const measure = () => {
-      const h = el.getBoundingClientRect().height;
-      setDrawerShellMinHeight((prev) => Math.max(prev, Math.ceil(h)));
-    };
-
-    measure();
-    const ro = new ResizeObserver(measure);
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, [
-    drawerDateKey,
-    drawerActivities,
-    isStandalonePwa,
-    lectureWeekByDate,
-    showCountdown,
-    showKKT,
-    selectedProgram,
-    calendarDataVersion,
-  ]);
-
   const drawerNavIndex = drawerDateKey ? activityDateKeys.indexOf(drawerDateKey) : -1;
   const canGoPrev = drawerNavIndex > 0;
   const canGoNext = drawerNavIndex >= 0 && drawerNavIndex < activityDateKeys.length - 1;
@@ -1078,7 +1070,81 @@ export const GridView = memo(function GridView({
     if (!nextKey) return;
     setDrawerDateKey(nextKey);
     setSelectedDate(nextKey);
+    recordEngagementAction('grid_drawer_nav');
   };
+
+  const navigateDrawerActivityDateRef = useRef(navigateDrawerActivityDate);
+  navigateDrawerActivityDateRef.current = navigateDrawerActivityDate;
+
+  useEffect(() => {
+    if (!drawerDateKey) return;
+    const el = drawerSwipeAreaRef.current;
+    if (!el) return;
+
+    const SWIPE_COMMIT_PX = 40;
+    const SWIPE_HORIZONTAL_RATIO = 1.2;
+    const SWIPE_LOCK_PX = 12;
+
+    const resetGesture = () => {
+      drawerSwipeGestureRef.current = { startX: null, startY: null, tracking: false };
+    };
+
+    const onTouchStart = (event: TouchEvent) => {
+      const touch = event.touches[0];
+      if (!touch) return;
+      drawerSwipeGestureRef.current = {
+        startX: touch.clientX,
+        startY: touch.clientY,
+        tracking: true,
+      };
+    };
+
+    const onTouchMove = (event: TouchEvent) => {
+      const { startX, startY, tracking } = drawerSwipeGestureRef.current;
+      if (!tracking || startX == null || startY == null) return;
+      const touch = event.touches[0];
+      if (!touch) return;
+      const deltaX = touch.clientX - startX;
+      const deltaY = touch.clientY - startY;
+      if (
+        Math.abs(deltaX) > SWIPE_LOCK_PX &&
+        Math.abs(deltaX) > Math.abs(deltaY) * SWIPE_HORIZONTAL_RATIO
+      ) {
+        event.preventDefault();
+      }
+    };
+
+    const onTouchEnd = (event: TouchEvent) => {
+      const { startX, startY, tracking } = drawerSwipeGestureRef.current;
+      resetGesture();
+      if (!tracking || startX == null || startY == null) return;
+      const touch = event.changedTouches[0];
+      if (!touch) return;
+
+      const deltaX = touch.clientX - startX;
+      const deltaY = touch.clientY - startY;
+      const isHorizontalSwipe =
+        Math.abs(deltaX) > SWIPE_COMMIT_PX &&
+        Math.abs(deltaX) > Math.abs(deltaY) * SWIPE_HORIZONTAL_RATIO;
+      if (!isHorizontalSwipe) return;
+
+      if (deltaX > 0) navigateDrawerActivityDateRef.current(-1);
+      else navigateDrawerActivityDateRef.current(1);
+    };
+
+    el.addEventListener('touchstart', onTouchStart, { passive: true });
+    el.addEventListener('touchmove', onTouchMove, { passive: false });
+    el.addEventListener('touchend', onTouchEnd, { passive: true });
+    el.addEventListener('touchcancel', resetGesture, { passive: true });
+
+    return () => {
+      el.removeEventListener('touchstart', onTouchStart);
+      el.removeEventListener('touchmove', onTouchMove);
+      el.removeEventListener('touchend', onTouchEnd);
+      el.removeEventListener('touchcancel', resetGesture);
+      resetGesture();
+    };
+  }, [drawerDateKey]);
 
   return (
     <TooltipProvider>
@@ -1111,7 +1177,7 @@ export const GridView = memo(function GridView({
               calendarDataVersion={calendarDataVersion}
               suppressHoverDuringScrollRef={suppressHoverDuringScrollRef}
               lectureWeekByDate={lectureWeekByDate}
-              isStandalonePwa={isStandalonePwa}
+              useDayActivityDrawer={isMobileViewport}
               onOpenActivityDrawer={handleOpenActivityDrawer}
             />
           ))}
@@ -1123,33 +1189,46 @@ export const GridView = memo(function GridView({
           if (!open) setDrawerDateKey(null);
         }}
       >
-        <DrawerContent
-          className={cn(
-            'flex min-h-[240px] flex-col [&::after]:hidden overflow-x-hidden data-[vaul-drawer-direction=bottom]:max-h-none data-[vaul-drawer-direction=top]:max-h-none',
-            isStandalonePwa && drawerDateKey && 'min-h-[42vh] max-h-[85vh]'
-          )}
-        >
-          <div
-            ref={drawerShellRef}
-            style={
-              isStandalonePwa && drawerDateKey && drawerShellMinHeight > 0
-                ? { minHeight: drawerShellMinHeight }
-                : undefined
-            }
-            className={cn(
-              'flex w-full min-w-0 max-w-full flex-1 min-h-0 flex-col border-0 bg-popover text-left shadow-none outline-none ring-0 ring-offset-0',
-              isStandalonePwa && drawerDateKey && 'min-h-[42vh] max-h-[85vh]'
-            )}
-          >
+        <DrawerContent className={drawerContentClassName}>
+          <div className={cn(drawerBodyClassName, 'min-h-0 flex-1 gap-0 px-0')}>
             {drawerDateKey ? (
-              <div className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto">
+              <div
+                ref={drawerSwipeAreaRef}
+                data-vaul-no-drag=""
+                data-grid-activity-drawer-swipe=""
+                className="w-full min-w-0 overflow-x-hidden"
+              >
                 <ActivityDrawerAnimatedSection
                 animateKey={`${drawerDateKey}-${drawerActivities.length}-${lectureWeekByDate?.get(drawerDateKey) ?? 'none'}`}
                 className="w-full min-w-0 max-w-full px-4 pt-0"
               >
-                <DrawerTitle className="w-full border-0 text-center font-heading font-medium text-foreground shadow-none outline-none ring-0 ring-offset-0 md:text-left">
-                  {formatDateLabel(drawerDateKey)}
-                </DrawerTitle>
+                <div className="flex w-full items-center justify-between gap-2">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    disabled={!canGoPrev}
+                    onClick={() => navigateDrawerActivityDate(-1)}
+                    className="h-8 w-8 shrink-0"
+                    aria-label="Previous activity day"
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </Button>
+                  <DrawerTitle asChild className="min-w-0 flex-1">
+                    <h2>{formatDateLabel(drawerDateKey)}</h2>
+                  </DrawerTitle>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    disabled={!canGoNext}
+                    onClick={() => navigateDrawerActivityDate(1)}
+                    className="h-8 w-8 shrink-0"
+                    aria-label="Next activity day"
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </div>
                 <DrawerDescription className="sr-only border-0 shadow-none">
                   Activities for the selected date
                 </DrawerDescription>
@@ -1166,32 +1245,6 @@ export const GridView = memo(function GridView({
               </ActivityDrawerAnimatedSection>
               </div>
             ) : null}
-            {isStandalonePwa && drawerDateKey ? (
-              <div className="mt-auto grid w-full shrink-0 min-w-0 max-w-full grid-cols-2 gap-2 bg-popover px-4 pb-6 pt-2">
-                <Button
-                  type="button"
-                  size="default"
-                  variant="outline"
-                  disabled={!canGoPrev}
-                  onClick={() => navigateDrawerActivityDate(-1)}
-                  className="h-[38px] min-w-0 w-full justify-center border-border bg-background text-black shadow-xs transition-all hover:bg-muted hover:text-foreground dark:border-input dark:bg-input/30 dark:text-foreground dark:hover:bg-input/50"
-                >
-                  Previous
-                </Button>
-                <Button
-                  type="button"
-                  size="default"
-                  variant="outline"
-                  disabled={!canGoNext}
-                  onClick={() => navigateDrawerActivityDate(1)}
-                  className="h-[38px] min-w-0 w-full justify-center border-border bg-background text-black shadow-xs transition-all hover:bg-muted hover:text-foreground dark:border-input dark:bg-input/30 dark:text-foreground dark:hover:bg-input/50"
-                >
-                  Next
-                </Button>
-              </div>
-            ) : (
-              <div className="pb-6" aria-hidden />
-            )}
           </div>
         </DrawerContent>
       </Drawer>
