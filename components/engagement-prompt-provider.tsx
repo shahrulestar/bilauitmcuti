@@ -1,11 +1,19 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useEffect, useState, type ReactNode } from "react";
 import {
   EngagementPromptProvider,
   useEngagementPrompt,
 } from "@/components/engagement-prompt-context";
-import { EngagementPromptSheet } from "@/components/engagement-prompt-sheet";
+
+const EngagementPromptSheet = dynamic(
+  () =>
+    import("@/components/engagement-prompt-sheet").then(
+      (m) => m.EngagementPromptSheet
+    ),
+  { ssr: false }
+);
 
 function EngagementPromptHost() {
   const { open, setOpen, closeAfterShare, closeAfterFeedback, completeRating } =
@@ -20,6 +28,8 @@ function EngagementPromptHost() {
     media.addEventListener("change", sync);
     return () => media.removeEventListener("change", sync);
   }, []);
+
+  if (!open) return null;
 
   return (
     <EngagementPromptSheet

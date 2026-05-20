@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { ChatCalendarBootstrap } from "@/components/chat-calendar-bootstrap";
+import { EngagementPromptRoot } from "@/components/engagement-prompt-provider";
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://bilauitmcuti.com"),
@@ -41,9 +42,9 @@ export default function ChatLayout({
   children: React.ReactNode;
 }) {
   return (
-    <>
+    <EngagementPromptRoot>
       <ChatCalendarBootstrap />
       {children}
-    </>
+    </EngagementPromptRoot>
   );
 }

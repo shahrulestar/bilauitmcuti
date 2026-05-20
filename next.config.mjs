@@ -4,7 +4,18 @@ import { initOpenNextCloudflareForDev } from '@opennextjs/cloudflare';
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   experimental: {
-    optimizePackageImports: ['lucide-react'],
+    optimizePackageImports: [
+      'lucide-react',
+      'vaul',
+      'sonner',
+      '@radix-ui/react-avatar',
+      '@radix-ui/react-context-menu',
+      '@radix-ui/react-dialog',
+      '@radix-ui/react-dropdown-menu',
+      '@radix-ui/react-popover',
+      '@radix-ui/react-select',
+      '@radix-ui/react-tooltip',
+    ],
   },
   env: {
     NEXT_PUBLIC_BUILD_ID: Date.now().toString(),

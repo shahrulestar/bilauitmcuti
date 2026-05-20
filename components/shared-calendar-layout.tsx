@@ -30,6 +30,7 @@ import type { SessionId } from '@/lib/data';
 import { setFiltersToCookie, type FilterStates } from '@/lib/cookie-utils';
 import type { ViewMode } from '@/app/page';
 import { parseSessionIdsFromHydrateKey } from '@/lib/calendar-initial-server';
+import { EngagementPromptRoot } from '@/components/engagement-prompt-provider';
 
 type ProgramSessionMap = Partial<Record<ProgramValue, SessionId[]>>;
 
@@ -584,6 +585,7 @@ export function SharedCalendarLayout({
   const bgClass = 'bg-background text-foreground';
 
   return (
+    <EngagementPromptRoot>
     <CalendarHydrationProvider hydrationVersion={hydrationVersion}>
     <CalendarDataGate
       selectedSessions={selectedSessions}
@@ -650,5 +652,6 @@ export function SharedCalendarLayout({
     </div>
     </CalendarDataGate>
     </CalendarHydrationProvider>
+    </EngagementPromptRoot>
   );
 }

@@ -4,7 +4,6 @@ import Script from 'next/script'
 import { ThemeProvider } from '@/components/theme-provider'
 import { ThemeShortcut } from '@/components/theme-shortcut'
 import { VersionBanner } from '@/components/version-banner'
-import { EngagementPromptRoot } from '@/components/engagement-prompt-provider'
 import './globals.css'
 import { Geist, Geist_Mono } from "next/font/google"
 import { cn } from "@/lib/utils"
@@ -311,7 +310,7 @@ export default function RootLayout({
           disableTransitionOnChange={false}
         >
           <ThemeShortcut />
-          <EngagementPromptRoot>{children}</EngagementPromptRoot>
+          {children}
         </ThemeProvider>
         <Script
           src={`https://www.googletagmanager.com/gtag/js?id=${GA_MEASUREMENT_ID}`}
