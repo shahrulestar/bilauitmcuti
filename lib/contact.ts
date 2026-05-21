@@ -18,11 +18,3 @@ export const CONTACT_CATEGORY_OPTIONS = [
   "Collabration/Ads",
   "Others",
 ] as const;
-
-export interface ContactPayload {
-  who: string;
-  category: string;
-  message: string;
-  startedAt: number;
-  website?: string;
-}

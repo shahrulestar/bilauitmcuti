@@ -36,11 +36,6 @@ export function getSnapshot(): CalendarSnapshot {
   return snapshot;
 }
 
-/** SSR / hydration: stable empty catalogue until client fetch completes. */
-export function getServerSnapshot(): CalendarSnapshot {
-  return emptySnapshot;
-}
-
 export function setMeta(meta: {
   defaultSession: string;
   sessionOptions: SessionOptionRow[];
@@ -77,23 +72,6 @@ export function resetSessionActivitiesCache(): void {
   emit();
 }
 
-/** Drop cached activities for these ids before refetch (optional). */
-export function clearSessionActivities(sessionIds: string[]): void {
-  if (sessionIds.length === 0) return;
-  const next = { ...snapshot.sessions };
-  for (const id of sessionIds) delete next[id];
-  snapshot = {
-    ...snapshot,
-    version: snapshot.version + 1,
-    sessions: next,
-  };
-  emit();
-}
-
-export function getDefaultSessionFallback(): string {
-  return snapshot.defaultSession || FALLBACK_DEFAULT_SESSION;
-}
-
 /**
  * Replace entire store without notifying subscribers — safe during React render
  * (e.g. useMemo while hydrating from RSC). Call notifyCalendarStoreListeners in useLayoutEffect.
@@ -110,11 +88,5 @@ export function assignCalendarStoreSnapshot(next: CalendarSnapshot): void {
 
 /** Flush after assignCalendarStoreSnapshot once the current commit has finished. */
 export function notifyCalendarStoreListeners(): void {
-  emit();
-}
-
-/** Replace entire store and notify immediately — only use outside React render (async, effects). */
-export function replaceStoreSnapshot(next: CalendarSnapshot): void {
-  assignCalendarStoreSnapshot(next);
   emit();
 }

@@ -15,8 +15,7 @@
     "test:smoke": "echo smoke-placeholder",
     "start": "next start",
     "pages:dev": "wrangler pages dev .vercel/output/static --compatibility-flag=nodejs_compat",
-    "preview": "pnpm run build:pages && pnpm run pages:dev",
-    "calendar:import": "node scripts/txt-to-calendar.mjs"
+    "preview": "pnpm run build:pages && pnpm run pages:dev"
   },
   "pnpm": {
     "onlyBuiltDependencies": [

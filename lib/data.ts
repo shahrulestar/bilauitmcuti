@@ -50,11 +50,6 @@ export function getProgramOptions(): Array<{ label: string; value: string; group
   return getCalendarSnapshot().programOptions;
 }
 
-export function getDefaultSession(): SessionId {
-  const d = getCalendarSnapshot().defaultSession;
-  return d || STATIC_DEFAULT_SESSION_FALLBACK;
-}
-
 function getSessionsData(): Record<string, { activities: Activity[] }> {
   return getCalendarSnapshot().sessions;
 }

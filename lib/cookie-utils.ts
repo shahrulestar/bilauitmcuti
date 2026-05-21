@@ -6,7 +6,7 @@ import {
 import { isProgramValue, type ProgramValue } from './route-utils';
 
 /** Prefer API defaultSession when store is hydrated; else static fallback (SSR-safe). */
-export function getDefaultSessionForCookie(): string {
+function getDefaultSessionForCookie(): string {
   const d = getSnapshot().defaultSession;
   if (d) return d;
   return getDefaultSessionFallback();
@@ -33,7 +33,7 @@ const COOKIE_NAME = 'calendar-filters';
 const COOKIE_MAX_AGE = 365 * 24 * 60 * 60; // 1 year
 
 /** Read raw value of `calendar-filters` from `document.cookie` (client only). */
-export function getCalendarFiltersCookieRaw(): string | null {
+function getCalendarFiltersCookieRaw(): string | null {
   if (typeof document === 'undefined') return null;
   const escaped = COOKIE_NAME.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   const m = document.cookie.match(new RegExp(`(?:^|;\\s*)${escaped}=([^;]*)`));

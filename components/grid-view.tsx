@@ -16,8 +16,10 @@ import {
   DrawerContent,
   DrawerDescription,
   DrawerTitle,
+  activityDrawerContentClassName,
   drawerBodyClassName,
-  drawerContentClassName,
+  drawerBodyFlexClassName,
+  drawerScrollRegionClassName,
 } from '@/components/ui/drawer';
 import { Button } from '@/components/ui/button';
 import { useCalendarHydrationVersion } from '@/components/calendar-hydration-context';
@@ -35,7 +37,7 @@ interface TooltipActivityListProps {
   showCountdown: boolean;
   currentDateStr: string | null;
   showKKT: boolean;
-  /** Tooltip: mobile chevron paging. Drawer (mobile viewport): full list, sheet height follows content (no inner scroll). */
+  /** Tooltip: mobile chevron paging. Drawer (mobile viewport): min 30vh; list scrolls below fixed header. */
   listMode: 'paginated' | 'full';
   surface: 'tooltip' | 'drawer';
   /** Lecture week chip; rendered inside this list (scrolls with activities). */
@@ -1201,61 +1203,74 @@ export const GridView = memo(function GridView({
           if (!open) setDrawerDateKey(null);
         }}
       >
-        <DrawerContent className={drawerContentClassName}>
-          <div className={cn(drawerBodyClassName, 'min-h-0 flex-1 gap-0 px-0 overflow-y-auto overscroll-contain')}>
+        <DrawerContent className={activityDrawerContentClassName}>
+          <div
+            className={cn(
+              drawerBodyClassName,
+              drawerBodyFlexClassName,
+              'min-h-0 gap-0 px-0'
+            )}
+          >
             {drawerDateKey ? (
-              <div
-                ref={setDrawerSwipeAreaRef}
-                data-vaul-no-drag=""
-                data-grid-activity-drawer-swipe=""
-                className="w-full min-w-0 overflow-x-hidden"
-              >
-                <ActivityDrawerAnimatedSection
-                animateKey={`${drawerDateKey}-${drawerActivities.length}-${lectureWeekByDate?.get(drawerDateKey) ?? 'none'}`}
-                className="w-full min-w-0 max-w-full px-4 pt-0"
-              >
-                <div className="flex w-full items-center justify-between gap-2">
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    disabled={!canGoPrev}
-                    onClick={() => navigateDrawerActivityDate(-1)}
-                    className="h-8 w-8 shrink-0"
-                    aria-label="Previous activity day"
-                  >
-                    <ChevronLeft className="h-4 w-4" />
-                  </Button>
-                  <DrawerTitle asChild className="min-w-0 flex-1">
-                    <h2>{formatDateLabel(drawerDateKey)}</h2>
-                  </DrawerTitle>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    disabled={!canGoNext}
-                    onClick={() => navigateDrawerActivityDate(1)}
-                    className="h-8 w-8 shrink-0"
-                    aria-label="Next activity day"
-                  >
-                    <ChevronRight className="h-4 w-4" />
-                  </Button>
+              <>
+                <div
+                  data-vaul-no-drag=""
+                  className="w-full shrink-0 px-4 pt-0"
+                >
+                  <div className="flex w-full items-center justify-between gap-2">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      disabled={!canGoPrev}
+                      onClick={() => navigateDrawerActivityDate(-1)}
+                      className="h-8 w-8 shrink-0"
+                      aria-label="Previous activity day"
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                    </Button>
+                    <DrawerTitle asChild className="min-w-0 flex-1">
+                      <h2>{formatDateLabel(drawerDateKey)}</h2>
+                    </DrawerTitle>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      disabled={!canGoNext}
+                      onClick={() => navigateDrawerActivityDate(1)}
+                      className="h-8 w-8 shrink-0"
+                      aria-label="Next activity day"
+                    >
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  <DrawerDescription className="sr-only border-0 shadow-none">
+                    Activities for the selected date
+                  </DrawerDescription>
                 </div>
-                <DrawerDescription className="sr-only border-0 shadow-none">
-                  Activities for the selected date
-                </DrawerDescription>
-                <GridDayActivitiesPanel
-                  dateStr={drawerDateKey}
-                  activities={drawerActivities}
-                  weekNum={lectureWeekByDate?.get(drawerDateKey) ?? null}
-                  selectedProgram={selectedProgram}
-                  showCountdown={showCountdown}
-                  currentDateStr={drawerCurrentDateStr}
-                  showKKT={showKKT}
-                  surface="drawer"
-                />
-              </ActivityDrawerAnimatedSection>
-              </div>
+                <div
+                  ref={setDrawerSwipeAreaRef}
+                  data-vaul-no-drag=""
+                  data-grid-activity-drawer-swipe=""
+                  className={cn(drawerScrollRegionClassName, 'w-full min-w-0 px-4')}
+                >
+                  <ActivityDrawerAnimatedSection
+                    animateKey={`${drawerDateKey}-${drawerActivities.length}-${lectureWeekByDate?.get(drawerDateKey) ?? 'none'}`}
+                    className="w-full min-w-0 max-w-full"
+                  >
+                    <GridDayActivitiesPanel
+                      dateStr={drawerDateKey}
+                      activities={drawerActivities}
+                      weekNum={lectureWeekByDate?.get(drawerDateKey) ?? null}
+                      selectedProgram={selectedProgram}
+                      showCountdown={showCountdown}
+                      currentDateStr={drawerCurrentDateStr}
+                      showKKT={showKKT}
+                      surface="drawer"
+                    />
+                  </ActivityDrawerAnimatedSection>
+                </div>
+              </>
             ) : null}
           </div>
         </DrawerContent>

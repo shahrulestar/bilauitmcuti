@@ -5,9 +5,22 @@ import { Drawer as DrawerPrimitive } from "vaul"
 
 import { cn } from "@/lib/utils"
 
-/** Shared shell: sheet grows with content; no nested overflow scroll regions. */
+/** Shared shell: min 30vh, max 80vh (bottom); flex children use min-h-0 for inner scroll. */
 export const drawerContentClassName =
-  "flex min-h-0 flex-col [&::after]:hidden overflow-x-hidden"
+  "flex min-h-[30vh] flex-col [&::after]:hidden overflow-x-hidden"
+
+/** Activity day list drawer — tighter cap than default 80vh. */
+export const activityDrawerContentClassName = cn(
+  drawerContentClassName,
+  "data-[vaul-drawer-direction=bottom]:max-h-[50vh]"
+)
+
+/** Drawer body column that fills the shell (use with a scroll region below a fixed header). */
+export const drawerBodyFlexClassName = "flex min-h-0 flex-1 flex-col"
+
+/** Scrollable drawer region (list/content only — keep titles/headers outside). */
+export const drawerScrollRegionClassName =
+  "min-h-0 flex-1 overflow-y-auto overscroll-contain"
 
 /** Bottom inset: safe-area + 28px (1.75rem) for PWA home indicator — use on drawer shell. */
 export const DRAWER_SAFE_BOTTOM_PADDING =

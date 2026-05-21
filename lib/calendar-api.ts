@@ -21,7 +21,7 @@ export interface MetaResponse {
 const DEFAULT_BASE = "https://api.bilauitmcuti.com";
 
 /** Strip trailing slash and accidental `/api` so we always append `/api/v1/...` once. */
-export function normalizeCalendarApiOrigin(raw: string): string {
+function normalizeCalendarApiOrigin(raw: string): string {
   let u = raw.trim().replace(/\/$/, "");
   if (u.endsWith("/api")) u = u.slice(0, -4);
   return u;
@@ -64,7 +64,7 @@ function isActivityType(value: string): value is ActivityType {
 }
 
 /** Normalize API activity row to our Activity shape. */
-export function normalizeApiActivity(raw: Record<string, unknown>): Activity {
+function normalizeApiActivity(raw: Record<string, unknown>): Activity {
   const typeRaw = String(raw.type ?? "other");
   const type: ActivityType = isActivityType(typeRaw) ? typeRaw : "other";
   const group =
@@ -219,36 +219,6 @@ function parseSingleSessionCalendar(data: unknown): Activity[] {
   );
 }
 
-function parseAllSessionsCalendar(
-  data: unknown
-): Record<string, { activities: Activity[] }> {
-  const out: Record<string, { activities: Activity[] }> = {};
-  if (!data || typeof data !== "object") return out;
-  const o = data as Record<string, unknown>;
-  const sessions = o.sessions;
-  if (!Array.isArray(sessions)) return out;
-  for (const entry of sessions) {
-    if (!entry || typeof entry !== "object") continue;
-    const e = entry as Record<string, unknown>;
-    const session = e.session as Record<string, unknown> | undefined;
-    const id = session && typeof session.id === "string" ? session.id : null;
-    if (!id) continue;
-    const activities = e.activities;
-    if (!Array.isArray(activities)) {
-      out[id] = { activities: [] };
-      continue;
-    }
-    out[id] = {
-      activities: activities.map((row) =>
-        normalizeApiActivity(
-          typeof row === "object" && row ? (row as Record<string, unknown>) : {}
-        )
-      ),
-    };
-  }
-  return out;
-}
-
 /** Concurrent callers with the same URL share one in-flight request (e.g. Strict Mode). */
 const calendarSessionInflight = new Map<string, Promise<Activity[]>>();
 
@@ -317,27 +287,6 @@ export async function fetchCalendarSession(
   return promise;
 }
 
-/**
- * All sessions in a group (merge into store).
- * Group A: GET /api/v1/calendar?group=A&allSessions=true
- * Group B: GET /api/v1/calendar?group=B&allSessions=true&program=All (or specific program).
- */
-export async function fetchCalendarAllSessions(params: {
-  group: "A" | "B";
-  program?: string;
-}): Promise<Record<string, { activities: Activity[] }>> {
-  const q = new URLSearchParams();
-  q.set("group", params.group);
-  q.set("allSessions", "true");
-  if (params.group === "B" && params.program !== undefined && params.program !== "") {
-    q.set("program", params.program);
-  }
-  const data = await fetchJsonWithRetry(
-    buildCalendarRequestUrl("v1/calendar", q)
-  );
-  return parseAllSessionsCalendar(data);
-}
-
 /** Map ProgramValue / route program to calendar API `program` query (Group B). */
 export function calendarProgramQueryForRoute(selectedProgram: string): string | undefined {
   if (selectedProgram === "Foundation/Professional") return undefined;
@@ -347,7 +296,7 @@ export function calendarProgramQueryForRoute(selectedProgram: string): string | 
 
 // ── Lecture weeks ─────────────────────────────────────────────────────────────
 
-export interface LectureWeekDay {
+interface LectureWeekDay {
   date: string;
   weekday: string;
   label: string;

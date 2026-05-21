@@ -34,7 +34,9 @@ import {
   DrawerDescription,
   DrawerTitle,
   drawerBodyClassName,
+  drawerBodyFlexClassName,
   drawerContentClassName,
+  drawerScrollRegionClassName,
 } from '@/components/ui/drawer';
 import {
   Collapsible,
@@ -1018,10 +1020,10 @@ export function CalendarControls({
       </div>
       <Drawer open={isProgramDrawerOpen} onOpenChange={handleProgramDrawerOpenChange}>
         <DrawerContent className={drawerContentClassName}>
-          <div className={cn(drawerBodyClassName, 'min-h-0 flex-1 gap-3 overflow-y-auto overscroll-contain')}>
-            <DrawerTitle>Program Selection</DrawerTitle>
+          <div className={cn(drawerBodyClassName, drawerBodyFlexClassName, 'gap-3')}>
+            <DrawerTitle className="shrink-0">Program Selection</DrawerTitle>
             <DrawerDescription className="sr-only">Select group, program, and calendar sessions.</DrawerDescription>
-            <div className="space-y-3">
+            <div className={cn(drawerScrollRegionClassName, 'space-y-3')}>
               <div className="space-y-2">
                 <div className="text-xs font-semibold text-muted-foreground">Group</div>
                 <div className="grid grid-cols-2 gap-2">
@@ -1134,10 +1136,10 @@ export function CalendarControls({
       </Drawer>
       <Drawer open={isSettingsDrawerOpen} onOpenChange={setIsSettingsDrawerOpen}>
         <DrawerContent className={drawerContentClassName}>
-          <div className={cn(drawerBodyClassName, 'min-h-0 flex-1 gap-3 overflow-y-auto overscroll-contain')}>
-            <DrawerTitle>Settings</DrawerTitle>
+          <div className={cn(drawerBodyClassName, drawerBodyFlexClassName, 'gap-3')}>
+            <DrawerTitle className="shrink-0">Settings</DrawerTitle>
             <DrawerDescription className="sr-only">Configure activity filter settings.</DrawerDescription>
-            <div className="space-y-3 transition-none">
+            <div className={cn(drawerScrollRegionClassName, 'space-y-3 transition-none')}>
               <div className="space-y-2 transition-none">
                 <label className="flex items-center justify-between cursor-pointer py-0.5 transition-none">
                   <span className="text-sm font-medium text-foreground">Registration</span>

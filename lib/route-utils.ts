@@ -147,8 +147,3 @@ export function getProgramDisplayName(route: string | null | undefined): string 
   
   return displayNameMap[route] || 'All';
 }
-
-// OG image path for social preview by route (program slug or null for default)
-export function getOgImageForRoute(route: string | null | undefined): string {
-  return 'https://bilauitmcuti.com/all-cover.png';
-}
