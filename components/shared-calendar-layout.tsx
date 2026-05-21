@@ -3,7 +3,7 @@
 import { useState, useEffect, useLayoutEffect, useCallback, useMemo, useSyncExternalStore } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { CalendarHeader } from '@/components/calendar-header';
-import { CalendarControls, PWA_PROGRAM_DRAWER_OPEN_KEY } from '@/components/calendar-controls';
+import { CalendarControls } from '@/components/calendar-controls';
 import { PwaPromptAlert } from '@/components/pwa-prompt-alert';
 import { ListView } from '@/components/list-view';
 import { GridView } from '@/components/grid-view';
@@ -223,14 +223,8 @@ export function SharedCalendarLayout({
   const [selectedProgram, setSelectedProgram] = useState(routeSelectedProgram);
   const programGroup = getGroupFromProgram(selectedProgram);
 
-  // Keep optimistic state aligned with route; skip while PWA program drawer is open (URL may lag).
+  // Keep optimistic state aligned with route
   useEffect(() => {
-    if (
-      typeof window !== 'undefined' &&
-      sessionStorage.getItem(PWA_PROGRAM_DRAWER_OPEN_KEY) === '1'
-    ) {
-      return;
-    }
     setSelectedProgram(routeSelectedProgram);
   }, [routeSelectedProgram]);
 
@@ -485,10 +479,7 @@ export function SharedCalendarLayout({
 
       setSelectedSessions(resolvedSessions);
       const newPath = getRoutePath(program, activeViewMode);
-      const isProgramDrawerOpen =
-        typeof window !== 'undefined' &&
-        sessionStorage.getItem(PWA_PROGRAM_DRAWER_OPEN_KEY) === '1';
-      if (newPath !== pathname && !isProgramDrawerOpen) {
+      if (newPath !== pathname) {
         window.history.replaceState(null, '', newPath);
         window.scrollTo(0, 0);
       }

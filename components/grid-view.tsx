@@ -37,7 +37,7 @@ interface TooltipActivityListProps {
   showCountdown: boolean;
   currentDateStr: string | null;
   showKKT: boolean;
-  /** Tooltip: mobile chevron paging. Drawer (mobile viewport): min 30vh; list scrolls below fixed header. */
+  /** Tooltip: mobile chevron paging. Drawer (mobile viewport): min 30vh, max 60vh; list scrolls below fixed header. */
   listMode: 'paginated' | 'full';
   surface: 'tooltip' | 'drawer';
   /** Lecture week chip; rendered inside this list (scrolls with activities). */

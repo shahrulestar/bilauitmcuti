@@ -16,8 +16,6 @@ import {
   type EngagementActionType,
 } from "@/lib/engagement-prompt";
 
-const PWA_PROGRAM_DRAWER_OPEN_KEY = "pwa-program-drawer-open";
-
 interface EngagementPromptContextValue {
   open: boolean;
   setOpen: (open: boolean) => void;
@@ -37,15 +35,6 @@ function isBlockingOverlayOpen(): boolean {
   return document.querySelectorAll('[data-vaul-drawer][data-state="open"]').length > 0;
 }
 
-function isProgramDrawerOpen(): boolean {
-  if (typeof window === "undefined") return false;
-  try {
-    return sessionStorage.getItem(PWA_PROGRAM_DRAWER_OPEN_KEY) === "1";
-  } catch {
-    return false;
-  }
-}
-
 export function EngagementPromptProvider({ children }: { children: ReactNode }) {
   const [open, setOpen] = useState(false);
   const ratedThisSessionRef = useRef(false);
@@ -60,7 +49,7 @@ export function EngagementPromptProvider({ children }: { children: ReactNode }) 
 
   const tryOpenPrompt = useCallback(() => {
     const attemptOpen = () => {
-      if (isBlockingOverlayOpen() || isProgramDrawerOpen()) {
+      if (isBlockingOverlayOpen()) {
         pendingOpenTimerRef.current = setTimeout(attemptOpen, 500);
         return;
       }

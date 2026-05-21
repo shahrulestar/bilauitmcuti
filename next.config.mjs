@@ -7,7 +7,6 @@ const nextConfig = {
     optimizePackageImports: [
       'lucide-react',
       '@radix-ui/react-avatar',
-      '@radix-ui/react-collapsible',
       '@radix-ui/react-context-menu',
       '@radix-ui/react-dialog',
       '@radix-ui/react-dropdown-menu',

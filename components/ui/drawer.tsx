@@ -9,10 +9,10 @@ import { cn } from "@/lib/utils"
 export const drawerContentClassName =
   "flex min-h-[30vh] flex-col [&::after]:hidden overflow-x-hidden"
 
-/** Activity day list drawer — tighter cap than default 80vh. */
+/** Activity day list drawer — capped at 60vh (bottom). */
 export const activityDrawerContentClassName = cn(
   drawerContentClassName,
-  "data-[vaul-drawer-direction=bottom]:max-h-[50vh]"
+  "data-[vaul-drawer-direction=bottom]:max-h-[60vh]"
 )
 
 /** Drawer body column that fills the shell (use with a scroll region below a fixed header). */
