@@ -31,14 +31,21 @@ function getClientIp(request: NextRequest): string {
   );
 }
 
-function buildTelegramText(rating: number, ip: string, userAgent: string): string {
-  const now = new Date().toISOString();
+function formatTelegramTime(date: Date): string {
+  return date.toLocaleString("en-MY", {
+    timeZone: "Asia/Kuala_Lumpur",
+    dateStyle: "medium",
+    timeStyle: "short",
+  });
+}
+
+function buildTelegramText(rating: number, ip: string): string {
   return [
-    "Engagement Prompt Star Rating",
-    `Time: ${now}`,
-    `Rating: ${rating}/5`,
+    "User Star Rating",
+    "",
+    `Rating: ${rating} out of 5 stars`,
+    `Time: ${formatTelegramTime(new Date())}`,
     `IP: ${ip}`,
-    `User Agent: ${userAgent || "unknown"}`,
   ].join("\n");
 }
 
@@ -86,8 +93,7 @@ export async function POST(request: NextRequest) {
     const parsed = parseRatingRequest(rawBody);
     if (!parsed.success) return jsonError("Invalid rating value.", 400);
 
-    const userAgent = request.headers.get("user-agent") ?? "unknown";
-    const text = buildTelegramText(parsed.data.rating, ip, userAgent);
+    const text = buildTelegramText(parsed.data.rating, ip);
     await sendToTelegram(text);
 
     return NextResponse.json({ message: "Thanks for your rating!" });

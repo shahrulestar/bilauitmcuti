@@ -69,31 +69,35 @@ function getClientIp(request: NextRequest): string {
   );
 }
 
+function formatTelegramTime(date: Date): string {
+  return date.toLocaleString("en-MY", {
+    timeZone: "Asia/Kuala_Lumpur",
+    dateStyle: "medium",
+    timeStyle: "short",
+  });
+}
+
 function buildTelegramText(
   who: string,
   category: string,
   message: string,
   ip: string,
-  userAgent: string,
   rating: number,
   email?: string
 ): string {
-  const now = new Date().toISOString();
   const trimmedEmail = email?.trim() ?? "";
-  const emailLine = trimmedEmail.length > 0 ? `Email: ${trimmedEmail}` : null;
-  return [
-    "New Contact Form Submission",
-    `Time: ${now}`,
+  const lines = [
+    "User Feedback",
+    "",
     `Who: ${who}`,
     `Category: ${category}`,
-    `Rating: ${rating}/5`,
+    `Rating: ${rating} out of 5 stars`,
+    `Time: ${formatTelegramTime(new Date())}`,
     `IP: ${ip}`,
-    `User Agent: ${userAgent || "unknown"}`,
-    ...(emailLine ? [emailLine] : []),
-    "",
-    "Message:",
-    message,
-  ].join("\n");
+  ];
+  if (trimmedEmail.length > 0) lines.push(`Email: ${trimmedEmail}`);
+  lines.push("", "Message:", message);
+  return lines.join("\n");
 }
 
 async function sendToTelegram(text: string) {
@@ -187,8 +191,7 @@ export async function POST(request: NextRequest) {
       shouldSetVerifiedCookie = true;
     }
 
-    const userAgent = request.headers.get("user-agent") ?? "unknown";
-    const text = buildTelegramText(who, category, message.trim(), ip, userAgent, rating, email);
+    const text = buildTelegramText(who, category, message.trim(), ip, rating, email);
     await sendToTelegram(text);
 
     return withVerifiedCookie(NextResponse.json({ message: "Thanks! Your message has been submitted." }));
