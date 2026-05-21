@@ -27,6 +27,7 @@ pnpm install
 | `pnpm typecheck` | Run TypeScript check |
 | `pnpm build` | Next.js production build (`next build`; used by Cloudflare Next.js preset) |
 | `pnpm build:cf` | OpenNext Worker bundle after `pnpm build` (`.open-next/`; runs on `wrangler deploy`) |
+| `pnpm check:worker` | Fail if `.open-next/worker.js` gzip exceeds safe limit (3 MiB Cloudflare cap) |
 | `pnpm dev` | Development server (localhost:3000) |
 | `pnpm preview` | Build + local Cloudflare preview |
 | `pnpm deploy` | Build + deploy to Cloudflare |
@@ -44,6 +45,11 @@ GitHub Actions workflow (`.github/workflows/ci.yml`) runs on push/PR:
 
 - `GET /api/health` — returns `{ status, groq }`. 503 if GROQ is not configured.
 - `GET /api/version` — returns build ID.
+
+## Cloudflare Worker size
+
+- Deployed Worker gzip must stay **under 3 MiB** (Wrangler `gzip:` line). CI runs `pnpm run check:worker` after `build:cf`.
+- Do **not** add `export const runtime = "edge"` — OpenNext Cloudflare uses Node.js (`nodejs_compat`). See `.cursor/rules/cloudflare-worker-size.mdc`.
 
 ## Known Limitations
 

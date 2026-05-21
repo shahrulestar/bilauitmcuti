@@ -3,7 +3,6 @@ import { getTelegramEnv } from "@/lib/env";
 import { logger } from "@/lib/logger";
 import { checkRateLimit } from "@/lib/rate-limit";
 
-export const runtime = "edge";
 
 const MAX_BODY_SIZE_BYTES = 512;
 

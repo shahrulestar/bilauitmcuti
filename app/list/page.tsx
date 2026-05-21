@@ -1,4 +1,3 @@
-export const runtime = 'edge';
 
 import { CalendarWrapper } from '@/components/calendar-wrapper';
 
@@ -7,4 +6,3 @@ import { CalendarWrapper } from '@/components/calendar-wrapper';
 export default function ListPage() {
   return <CalendarWrapper viewMode="list" programFromRoute="All" />;
 }
-

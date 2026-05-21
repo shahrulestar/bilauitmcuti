@@ -128,6 +128,7 @@ pnpm deploy    # build + deploy (requires wrangler login)
 For a **single local command** (build + deploy): `pnpm run deploy`.
 
 **Troubleshooting:**
+- **Worker exceeded 3 MiB:** Cloudflare limits **gzip** upload size. Run `pnpm build && pnpm run build:cf && pnpm run check:worker` on Linux/macOS (or CI). Do not use `export const runtime = "edge"`. See `.cursor/rules/cloudflare-worker-size.mdc`.
 - **Build loops or times out:** Set framework preset to **Next.js** (Workers, not Pages). Build command must be `pnpm run build` (default). Deploy command must be `npx wrangler deploy` or `pnpm run deploy` — not `npx @cloudflare/next-on-pages@1`.
 - If chat fails: ensure `GROQ_API_KEY` is set as a secret in Cloudflare
 - Health check: `GET /api/health` returns readiness (503 if GROQ is missing)

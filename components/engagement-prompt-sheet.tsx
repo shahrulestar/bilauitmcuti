@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -9,6 +10,7 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
+  responsiveDialogContentClassName,
 } from "@/components/ui/dialog";
 import {
   Drawer,
@@ -19,6 +21,7 @@ import {
   drawerContentClassName,
 } from "@/components/ui/drawer";
 import { StarRating } from "@/components/star-rating";
+import { shareOrCopyLink } from "@/lib/web-share";
 import { cn } from "@/lib/utils";
 
 const SHARE_TITLE = "Bila UiTM Cuti";
@@ -38,7 +41,6 @@ function EngagementPromptBody({
   rating,
   hasRated,
   isSubmittingRating,
-  canShare,
   showRateFirstHint,
   onRatingChange,
   onFeedback,
@@ -47,7 +49,6 @@ function EngagementPromptBody({
   rating: number;
   hasRated: boolean;
   isSubmittingRating: boolean;
-  canShare: boolean;
   showRateFirstHint: boolean;
   onRatingChange: (value: number) => void;
   onFeedback: () => void;
@@ -96,10 +97,10 @@ function EngagementPromptBody({
         <Button
           type="button"
           variant="default"
-          aria-disabled={!actionsEnabled || !canShare}
+          aria-disabled={!actionsEnabled}
           className={cn(
             "h-[38px] w-full",
-            (!actionsEnabled || !canShare) && "pointer-events-auto opacity-50"
+            !actionsEnabled && "pointer-events-auto opacity-50"
           )}
           onClick={onShare}
         >
@@ -123,7 +124,6 @@ export function EngagementPromptSheet({
   const [hasRated, setHasRated] = useState(false);
   const [showRateFirstHint, setShowRateFirstHint] = useState(false);
   const [isSubmittingRating, setIsSubmittingRating] = useState(false);
-  const [canShare, setCanShare] = useState(false);
 
   useEffect(() => {
     if (!open) return;
@@ -131,11 +131,6 @@ export function EngagementPromptSheet({
     setHasRated(false);
     setShowRateFirstHint(false);
     setIsSubmittingRating(false);
-    if (typeof navigator === "undefined") {
-      setCanShare(false);
-      return;
-    }
-    setCanShare(typeof navigator.share === "function");
   }, [open]);
 
   const handleRatingChange = useCallback(
@@ -177,21 +172,25 @@ export function EngagementPromptSheet({
 
   const handleShare = useCallback(async () => {
     if (!requireRating()) return;
-    if (typeof navigator === "undefined" || typeof navigator.share !== "function") {
-      return;
-    }
 
     const url =
       typeof window !== "undefined" ? window.location.origin : "https://bilauitmcuti.com";
-    const sharePayload = { title: SHARE_TITLE, text: SHARE_TEXT, url };
+    const result = await shareOrCopyLink({
+      title: SHARE_TITLE,
+      text: SHARE_TEXT,
+      url,
+    });
 
-    try {
-      if (navigator.canShare && !navigator.canShare(sharePayload)) return;
-      await navigator.share(sharePayload);
+    if (result === "shared" || result === "copied") {
+      if (result === "copied") {
+        toast.success("Link copied! Paste it to share with friends.");
+      }
       onShareComplete();
-    } catch (err) {
-      if (err instanceof Error && err.name === "AbortError") return;
+      return;
     }
+    if (result === "aborted") return;
+
+    toast.error("Could not copy the link. Please try again.");
   }, [onShareComplete, requireRating]);
 
   const handleFeedback = useCallback(() => {
@@ -216,7 +215,6 @@ export function EngagementPromptSheet({
               rating={rating}
               hasRated={hasRated}
               isSubmittingRating={isSubmittingRating}
-              canShare={canShare}
               showRateFirstHint={showRateFirstHint}
               onRatingChange={handleRatingChange}
               onFeedback={handleFeedback}
@@ -230,7 +228,12 @@ export function EngagementPromptSheet({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md gap-4 border border-border bg-popover p-4 sm:p-6">
+      <DialogContent
+        className={cn(
+          responsiveDialogContentClassName,
+          "max-w-md gap-4 bg-popover p-4 sm:p-6"
+        )}
+      >
         <DialogHeader className="sr-only">
           <DialogTitle>Share &amp; feedback</DialogTitle>
           <DialogDescription>Share the app or send feedback.</DialogDescription>
@@ -239,7 +242,6 @@ export function EngagementPromptSheet({
           rating={rating}
           hasRated={hasRated}
           isSubmittingRating={isSubmittingRating}
-          canShare={canShare}
           showRateFirstHint={showRateFirstHint}
           onRatingChange={handleRatingChange}
           onFeedback={handleFeedback}

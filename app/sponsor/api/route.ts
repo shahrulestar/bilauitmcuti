@@ -14,7 +14,6 @@ import {
   verifyTurnstileToken,
 } from "@/lib/turnstile";
 
-export const runtime = "edge";
 
 const MIN_SUBMIT_TIME_MS = 3000;
 const SPONSOR_TURNSTILE_COOKIE = "sponsor_turnstile_verified";

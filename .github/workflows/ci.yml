@@ -33,3 +33,6 @@ jobs:
         env:
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY || 'placeholder-groq-key' }}
         run: pnpm build && pnpm run build:cf
+
+      - name: Check Worker bundle size (Cloudflare 3 MiB gzip limit)
+        run: pnpm run check:worker

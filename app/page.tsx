@@ -1,4 +1,3 @@
-export const runtime = 'edge';
 import type { Metadata } from 'next';
 
 // Export types for use in other components
@@ -39,4 +38,3 @@ export default function Page() {
     </>
   );
 }
-

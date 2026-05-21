@@ -47,6 +47,10 @@ function DialogOverlay({
   )
 }
 
+/** Border/ring overrides for desktop dialogs that pair with mobile drawers. */
+export const responsiveDialogContentClassName =
+  "border border-zinc-300 ring-0 dark:border-zinc-700"
+
 function DialogContent({
   className,
   children,

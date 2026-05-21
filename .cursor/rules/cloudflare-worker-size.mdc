@@ -1,0 +1,53 @@
+---
+description: Keep Cloudflare Worker (OpenNext) gzip bundle under the 3 MiB deploy limit
+globs:
+  - "**/*.{ts,tsx,js,mjs}"
+  - "package.json"
+  - "wrangler.jsonc"
+  - "open-next.config.ts"
+  - "next.config.mjs"
+alwaysApply: false
+---
+
+# Cloudflare Worker size (3 MiB gzip)
+
+Deployment uses **OpenNext** → `.open-next/worker.js` → **Wrangler** on Cloudflare Workers/Pages. The **gzip-compressed** Worker upload must stay **under 3 MiB** (free plan). Wrangler prints `Total Upload: … / gzip: …` — only **gzip** counts.
+
+## Before merging or deploying
+
+```bash
+pnpm build && pnpm run build:cf && pnpm run check:worker
+```
+
+CI runs `check:worker` after `build:cf`. Do not skip when changing server routes, middleware, or dependencies.
+
+## Do not add to the Worker bundle
+
+- `export const runtime = "edge"` — **remove**; OpenNext Cloudflare uses Node.js (`nodejs_compat`). Edge routes inflate or duplicate the bundle.
+- Large static JSON in `lib/` imported by API routes or server components (use API fetch / R2 / `public/` instead).
+- Unused npm dependencies (especially UI libs pulled into server code).
+- `@opennextjs/cloudflare` in `dependencies` — keep it in **devDependencies** only.
+
+## Prefer when touching server/API code
+
+- **Node.js runtime** (default); no `runtime = "edge"`.
+- `experimental.optimizePackageImports` for barrel packages (`lucide-react`, `@radix-ui/*`).
+- Dynamic `import()` for heavy, route-only logic.
+- Same-origin calendar API (`/api/v1/*`) — never embed large calendar JSON in server modules.
+
+## If deploy fails with “exceeded the size limit of 3 MiB”
+
+1. Run `pnpm run check:worker` locally (Linux/macOS CI is authoritative; Windows OpenNext build may be flaky).
+2. Remove `runtime = "edge"` from any new files.
+3. Drop unused dependencies; avoid importing client-only UI into `app/**/api/route.ts`.
+4. Split or lazy-load large modules used only by one route.
+5. Do **not** change `wrangler.jsonc` deploy target or Pages vs Workers setup unless the user asks — fix bundle content instead.
+
+## Limits (scripts/check-worker-bundle.mjs)
+
+| Threshold | Value |
+|-----------|-------|
+| Cloudflare hard limit | 3072 KiB gzip |
+| CI / `check:worker` fails at | 2850 KiB gzip (default) |
+
+Override CI threshold: `WORKER_GZIP_FAIL_KIB=2900 pnpm run check:worker`

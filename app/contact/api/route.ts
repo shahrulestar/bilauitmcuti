@@ -9,7 +9,6 @@ import {
   verifyTurnstileToken,
 } from "@/lib/turnstile";
 
-export const runtime = "edge";
 
 const MAX_BODY_SIZE_BYTES = 10 * 1024;
 const MIN_SUBMIT_TIME_MS = 3000;

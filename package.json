@@ -9,6 +9,7 @@
   "scripts": {
     "build": "next build",
     "build:cf": "opennextjs-cloudflare build --skipNextBuild",
+    "check:worker": "node scripts/check-worker-bundle.mjs",
     "dev": "next dev",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
@@ -30,7 +31,6 @@
     ]
   },
   "dependencies": {
-    "@opennextjs/cloudflare": "^1.17.1",
     "@radix-ui/react-avatar": "1.1.2",
     "@radix-ui/react-collapsible": "^1.1.12",
     "@radix-ui/react-context-menu": "2.2.4",
@@ -53,6 +53,7 @@
     "vaul": "^1.1.2"
   },
   "devDependencies": {
+    "@opennextjs/cloudflare": "^1.17.1",
     "@tailwindcss/postcss": "^4.1.9",
     "@types/node": "^22",
     "@types/react": "^19",

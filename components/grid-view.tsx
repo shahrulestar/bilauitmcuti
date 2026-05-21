@@ -1074,7 +1074,10 @@ export const GridView = memo(function GridView({
   };
 
   const navigateDrawerActivityDateRef = useRef(navigateDrawerActivityDate);
-  navigateDrawerActivityDateRef.current = navigateDrawerActivityDate;
+
+  useEffect(() => {
+    navigateDrawerActivityDateRef.current = navigateDrawerActivityDate;
+  });
 
   useEffect(() => {
     if (!drawerDateKey) return;
