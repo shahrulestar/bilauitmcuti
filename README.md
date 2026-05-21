@@ -104,7 +104,8 @@ pnpm typecheck   # TypeScript (tsc --noEmit)
 ### Production Build
 
 ```bash
-pnpm build
+pnpm build              # Next.js only (Cloudflare preset build step)
+pnpm run build:cf       # OpenNext Worker bundle (after build; also via wrangler deploy)
 pnpm start
 ```
 
@@ -117,15 +118,17 @@ pnpm preview   # build + local preview
 pnpm deploy    # build + deploy (requires wrangler login)
 ```
 
-**Cloudflare Workers (Git-connected build):** Use a **two-step** pipeline (do not run only `next build` before `wrangler deploy`):
-- **Build command:** `pnpm run build` (runs `opennextjs-cloudflare build` — produces `.open-next/` for Wrangler)
-- **Deploy command:** `npx wrangler deploy` (or `pnpm exec wrangler deploy`)
+**Cloudflare Workers — Next.js framework preset (recommended):** Use the dashboard defaults; this repo is aligned with them.
+- **Build command:** `pnpm run build` (or `npm run build`) → `next build`
+- **Deploy command:** `npx wrangler deploy` (or `pnpm run deploy`) → runs `build:cf` from `wrangler.jsonc`, then deploys `.open-next/`
+- Do **not** use `npx @cloudflare/next-on-pages` (Pages-only, deprecated). Do **not** set `package.json` `"build"` to `opennextjs-cloudflare build` (infinite loop).
 - **Environment variables / secrets:** `GROQ_API_KEY`, optional Telegram, Turnstile keys (`NEXT_PUBLIC_TURNSTILE_SITE_KEY`, `TURNSTILE_SECRET_KEY`), and `CALENDAR_API_BASE`
 - `CLOUDFLARE_API_TOKEN` is auto-injected when connected via Git
 
 For a **single local command** (build + deploy): `pnpm run deploy`.
 
 **Troubleshooting:**
+- **Build loops or times out:** Set framework preset to **Next.js** (Workers, not Pages). Build command must be `pnpm run build` (default). Deploy command must be `npx wrangler deploy` or `pnpm run deploy` — not `npx @cloudflare/next-on-pages@1`.
 - If chat fails: ensure `GROQ_API_KEY` is set as a secret in Cloudflare
 - Health check: `GET /api/health` returns readiness (503 if GROQ is missing)
 - For distributed rate limiting: run `wrangler kv namespace create RATE_LIMIT_KV`, add the binding to `wrangler.jsonc`
@@ -184,7 +187,7 @@ public/
 
 ## CI
 
-GitHub Actions (`.github/workflows/ci.yml`) on push/PR: `pnpm install --frozen-lockfile` → `pnpm lint` → `pnpm typecheck` → `pnpm build` (needs `GROQ_API_KEY` in CI or a placeholder).
+GitHub Actions (`.github/workflows/ci.yml`) on push/PR: `pnpm install --frozen-lockfile` → `pnpm lint` → `pnpm typecheck` → `pnpm build && pnpm run build:cf` (needs `GROQ_API_KEY` in CI or a placeholder).
 
 ## Rate Limits
 

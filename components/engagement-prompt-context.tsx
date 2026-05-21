@@ -101,7 +101,6 @@ export function EngagementPromptProvider({ children }: { children: ReactNode }) 
     ratedThisSessionRef.current = true;
     markEngagementCompleted();
     clearPendingOpen();
-    setOpen(false);
   }, [clearPendingOpen]);
 
   const dismissPrompt = useCallback(() => {

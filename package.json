@@ -7,16 +7,16 @@
     "node": ">=18"
   },
   "scripts": {
-    "build": "opennextjs-cloudflare build",
-    "build:next": "next build",
+    "build": "next build",
+    "build:cf": "opennextjs-cloudflare build --skipNextBuild",
     "dev": "next dev",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "test:smoke": "echo smoke-placeholder",
     "start": "next start",
-    "preview": "opennextjs-cloudflare build && opennextjs-cloudflare preview",
-    "deploy": "opennextjs-cloudflare build && opennextjs-cloudflare deploy",
-    "upload": "opennextjs-cloudflare build && opennextjs-cloudflare upload",
+    "preview": "pnpm run build && pnpm run build:cf && opennextjs-cloudflare preview",
+    "deploy": "wrangler deploy",
+    "upload": "pnpm run build && pnpm run build:cf && opennextjs-cloudflare upload",
     "cf-typegen": "wrangler types --env-interface CloudflareEnv cloudflare-env.d.ts",
     "calendar:import": "node scripts/txt-to-calendar.mjs"
   },

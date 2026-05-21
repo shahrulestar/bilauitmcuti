@@ -36,19 +36,25 @@ interface EngagementPromptSheetProps {
 
 function EngagementPromptBody({
   rating,
+  hasRated,
   isSubmittingRating,
   canShare,
+  showRateFirstHint,
   onRatingChange,
   onFeedback,
   onShare,
 }: {
   rating: number;
+  hasRated: boolean;
   isSubmittingRating: boolean;
   canShare: boolean;
+  showRateFirstHint: boolean;
   onRatingChange: (value: number) => void;
   onFeedback: () => void;
   onShare: () => void;
 }) {
+  const actionsEnabled = hasRated;
+
   return (
     <div className="flex flex-col gap-5">
       <div className="space-y-2 text-center md:text-left">
@@ -60,18 +66,29 @@ function EngagementPromptBody({
         </p>
       </div>
 
-      <StarRating
-        rating={rating}
-        disabled={isSubmittingRating}
-        onRatingChange={onRatingChange}
-        className="items-center text-center"
-      />
+      <div className="flex flex-col gap-1">
+        <StarRating
+          rating={rating}
+          disabled={isSubmittingRating}
+          onRatingChange={onRatingChange}
+          className="items-center text-center"
+        />
+        {showRateFirstHint && !hasRated ? (
+          <p className="text-center text-xs text-destructive" role="alert">
+            Please rate your experience first.
+          </p>
+        ) : null}
+      </div>
 
       <div className="flex flex-col gap-2">
         <Button
           type="button"
           variant="outline"
-          className="h-[38px] w-full"
+          aria-disabled={!actionsEnabled}
+          className={cn(
+            "h-[38px] w-full",
+            !actionsEnabled && "pointer-events-auto opacity-50"
+          )}
           onClick={onFeedback}
         >
           Send feedback
@@ -79,8 +96,11 @@ function EngagementPromptBody({
         <Button
           type="button"
           variant="default"
-          className="h-[38px] w-full"
-          disabled={!canShare}
+          aria-disabled={!actionsEnabled || !canShare}
+          className={cn(
+            "h-[38px] w-full",
+            (!actionsEnabled || !canShare) && "pointer-events-auto opacity-50"
+          )}
           onClick={onShare}
         >
           Share with friends
@@ -100,12 +120,16 @@ export function EngagementPromptSheet({
 }: EngagementPromptSheetProps) {
   const router = useRouter();
   const [rating, setRating] = useState(0);
+  const [hasRated, setHasRated] = useState(false);
+  const [showRateFirstHint, setShowRateFirstHint] = useState(false);
   const [isSubmittingRating, setIsSubmittingRating] = useState(false);
   const [canShare, setCanShare] = useState(false);
 
   useEffect(() => {
     if (!open) return;
     setRating(0);
+    setHasRated(false);
+    setShowRateFirstHint(false);
     setIsSubmittingRating(false);
     if (typeof navigator === "undefined") {
       setCanShare(false);
@@ -118,6 +142,7 @@ export function EngagementPromptSheet({
     async (value: number) => {
       if (isSubmittingRating) return;
       setRating(value);
+      setShowRateFirstHint(false);
       setIsSubmittingRating(true);
 
       try {
@@ -132,6 +157,8 @@ export function EngagementPromptSheet({
           return;
         }
 
+        setHasRated(true);
+        setShowRateFirstHint(false);
         onRatingComplete();
       } catch {
         setRating(0);
@@ -142,7 +169,14 @@ export function EngagementPromptSheet({
     [isSubmittingRating, onRatingComplete]
   );
 
+  const requireRating = useCallback(() => {
+    if (hasRated) return true;
+    setShowRateFirstHint(true);
+    return false;
+  }, [hasRated]);
+
   const handleShare = useCallback(async () => {
+    if (!requireRating()) return;
     if (typeof navigator === "undefined" || typeof navigator.share !== "function") {
       return;
     }
@@ -158,12 +192,13 @@ export function EngagementPromptSheet({
     } catch (err) {
       if (err instanceof Error && err.name === "AbortError") return;
     }
-  }, [onShareComplete]);
+  }, [onShareComplete, requireRating]);
 
   const handleFeedback = useCallback(() => {
+    if (!requireRating()) return;
     onFeedbackComplete();
     router.push("/feedback");
-  }, [onFeedbackComplete, router]);
+  }, [onFeedbackComplete, requireRating, router]);
 
   if (isMobileSheet) {
     return (
@@ -179,8 +214,10 @@ export function EngagementPromptSheet({
             </DrawerDescription>
             <EngagementPromptBody
               rating={rating}
+              hasRated={hasRated}
               isSubmittingRating={isSubmittingRating}
               canShare={canShare}
+              showRateFirstHint={showRateFirstHint}
               onRatingChange={handleRatingChange}
               onFeedback={handleFeedback}
               onShare={handleShare}
@@ -200,8 +237,10 @@ export function EngagementPromptSheet({
         </DialogHeader>
         <EngagementPromptBody
           rating={rating}
+          hasRated={hasRated}
           isSubmittingRating={isSubmittingRating}
           canShare={canShare}
+          showRateFirstHint={showRateFirstHint}
           onRatingChange={handleRatingChange}
           onFeedback={handleFeedback}
           onShare={handleShare}

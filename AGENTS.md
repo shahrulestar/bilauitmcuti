@@ -25,8 +25,8 @@ pnpm install
 | `pnpm install` | Install dependencies |
 | `pnpm lint` | Run ESLint |
 | `pnpm typecheck` | Run TypeScript check |
-| `pnpm build` | OpenNext + Next production build (`.open-next/` for Workers) |
-| `pnpm build:next` | Next.js build only (no Worker bundle) |
+| `pnpm build` | Next.js production build (`next build`; used by Cloudflare Next.js preset) |
+| `pnpm build:cf` | OpenNext Worker bundle after `pnpm build` (`.open-next/`; runs on `wrangler deploy`) |
 | `pnpm dev` | Development server (localhost:3000) |
 | `pnpm preview` | Build + local Cloudflare preview |
 | `pnpm deploy` | Build + deploy to Cloudflare |
@@ -38,7 +38,7 @@ GitHub Actions workflow (`.github/workflows/ci.yml`) runs on push/PR:
 1. `pnpm install --frozen-lockfile`
 2. `pnpm lint`
 3. `pnpm typecheck`
-4. `pnpm build` (requires `GROQ_API_KEY` secret or placeholder)
+4. `pnpm build && pnpm run build:cf` (requires `GROQ_API_KEY` secret or placeholder)
 
 ## Health & Readiness
 
