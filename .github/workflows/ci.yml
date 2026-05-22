@@ -31,7 +31,6 @@ jobs:
 
       - name: Build for Cloudflare Pages (next-on-pages)
         env:
-          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY || 'placeholder-groq-key' }}
           NEXT_PUBLIC_TURNSTILE_SITE_KEY: ${{ secrets.NEXT_PUBLIC_TURNSTILE_SITE_KEY || 'placeholder-turnstile-site-key' }}
           TURNSTILE_SECRET_KEY: ${{ secrets.TURNSTILE_SECRET_KEY || 'placeholder-turnstile-secret' }}
         run: pnpm run build:pages

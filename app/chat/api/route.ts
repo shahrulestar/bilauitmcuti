@@ -2,14 +2,13 @@ export const runtime = 'edge';
 import { NextRequest, NextResponse } from "next/server";
 
 import {
-  askGroq,
-  isGroqRateLimitError,
-  MAX_TOKENS_LLAMA,
-  MODEL_LLAMA,
-  MODEL_LLAMA_FALLBACK,
-  MODEL_LLAMA_RATE_LIMIT_ESCAPE,
+  askWorkersAi,
+  isAiRateLimitError,
+  MAX_OUTPUT_TOKENS,
   type ChatMessage,
 } from "@/lib/ai";
+import { getLanguageTurnDirective } from "@/lib/chat-language";
+import { normalizeAssistantTables } from "@/lib/format-ai-table";
 
 interface SystemRulesJson {
   schemaVersion: number;
@@ -127,7 +126,7 @@ function parseChatRequest(raw: unknown): { success: true; data: ChatRequest } | 
   return { success: true, data: { message, program, selectedSessions, history, turnstileToken } };
 }
 
-// --- Rate Limiter (KV when on Cloudflare, in-memory fallback) ---
+// --- Rate Limiter (in-memory per isolate) ---
 import { checkRateLimit } from "@/lib/rate-limit";
 import { logger } from "@/lib/logger";
 
@@ -207,126 +206,46 @@ function getModelResponseBudget(
     lower.includes("jelaskan") ||
     lower.includes("full") ||
     lower.includes("complete") ||
-    lower.includes("lengkap");
+    lower.includes("lengkap") ||
+    lower.includes("semua") ||
+    lower.includes("list all") ||
+    lower.includes("senarai");
 
   if (!useCalendarPrompt) {
-    return { maxTokens: MAX_TOKENS_LLAMA, temperature: 0.25 };
+    return { maxTokens: MAX_OUTPUT_TOKENS, temperature: 0.25 };
   }
   if (isCompareRequested) {
-    return { maxTokens: MAX_TOKENS_LLAMA, temperature: 0.15 };
+    return { maxTokens: MAX_OUTPUT_TOKENS, temperature: 0.15 };
   }
   if (asksDetail) {
-    return { maxTokens: MAX_TOKENS_LLAMA, temperature: 0.2 };
+    return { maxTokens: MAX_OUTPUT_TOKENS, temperature: 0.2 };
   }
   if (isSimpleCalendarQuestion(message)) {
-    return { maxTokens: 600, temperature: 0.1 };
+    return { maxTokens: MAX_OUTPUT_TOKENS, temperature: 0.1 };
   }
-  return { maxTokens: 1600, temperature: 0.15 };
+  return { maxTokens: MAX_OUTPUT_TOKENS, temperature: 0.15 };
 }
 
 const RETRY_DELAYS_MS = [350];
 
-function isFallbackWorthyError(error: unknown): boolean {
-  const msg = normalizeErrorMessage(error);
-  if (msg.includes("401") || msg.includes("unauthorized")) return false;
-  if (msg.includes("403") || msg.includes("forbidden")) return false;
-  if (msg.includes("api key") && msg.includes("invalid")) return false;
-  return true;
-}
-
-async function askGroqWithRetry(
+async function askAiWithRetry(
   message: string,
   systemPrompt: string,
   history: ChatMessage[] | undefined,
-  options: { maxTokens: number; temperature: number },
-  model: string
+  options: { maxTokens: number; temperature: number }
 ): Promise<string> {
   let lastError: unknown = null;
   for (let attempt = 0; attempt <= RETRY_DELAYS_MS.length; attempt++) {
     try {
-      return await askGroq(message, systemPrompt, history, model, options);
+      return await askWorkersAi(message, systemPrompt, history, options);
     } catch (err) {
       lastError = err;
       if (!isTransientModelError(err) || attempt >= RETRY_DELAYS_MS.length) throw err;
-      // Same model stays rate-limited; switch model in askGroqWithPrimaryThenFallback instead of retrying here.
-      if (isGroqRateLimitError(err)) throw err;
+      if (isAiRateLimitError(err)) throw err;
       await sleep(RETRY_DELAYS_MS[attempt]);
     }
   }
   throw lastError;
-}
-
-async function askGroqWithPrimaryThenFallback(
-  message: string,
-  systemPrompt: string,
-  history: ChatMessage[] | undefined,
-  options: { maxTokens: number; temperature: number },
-  correlationId: string
-): Promise<string> {
-  try {
-    return await askGroqWithRetry(
-      message,
-      systemPrompt,
-      history,
-      options,
-      MODEL_LLAMA
-    );
-  } catch (primaryErr) {
-    if (!isFallbackWorthyError(primaryErr)) throw primaryErr;
-    const rateLimitedPrimary = isGroqRateLimitError(primaryErr);
-    if (rateLimitedPrimary) {
-      logger.warn("Chat using rate-limit escape model", {
-        correlationId,
-        primaryModel: MODEL_LLAMA,
-        escapeModel: MODEL_LLAMA_RATE_LIMIT_ESCAPE,
-        reason: "primary_rate_limit",
-        err:
-          primaryErr instanceof Error ? primaryErr.message : String(primaryErr),
-      });
-      return await askGroqWithRetry(
-        message,
-        systemPrompt,
-        history,
-        options,
-        MODEL_LLAMA_RATE_LIMIT_ESCAPE
-      );
-    }
-    logger.warn("Chat using fallback model", {
-      correlationId,
-      primaryModel: MODEL_LLAMA,
-      fallbackModel: MODEL_LLAMA_FALLBACK,
-      reason: rateLimitedPrimary ? "rate_limit" : "primary_failed",
-      err:
-        primaryErr instanceof Error ? primaryErr.message : String(primaryErr),
-    });
-    try {
-      return await askGroqWithRetry(
-        message,
-        systemPrompt,
-        history,
-        options,
-        MODEL_LLAMA_FALLBACK
-      );
-    } catch (fallbackErr) {
-      if (!isFallbackWorthyError(fallbackErr)) throw fallbackErr;
-      if (!isGroqRateLimitError(fallbackErr)) throw fallbackErr;
-      logger.warn("Chat using rate-limit escape model", {
-        correlationId,
-        escapeModel: MODEL_LLAMA_RATE_LIMIT_ESCAPE,
-        err:
-          fallbackErr instanceof Error
-            ? fallbackErr.message
-            : String(fallbackErr),
-      });
-      return await askGroqWithRetry(
-        message,
-        systemPrompt,
-        history,
-        options,
-        MODEL_LLAMA_RATE_LIMIT_ESCAPE
-      );
-    }
-  }
 }
 
 // --- Input Validation ---
@@ -342,40 +261,6 @@ function sanitizeMessage(message: string): string {
     .replace(/<\|im_start\|>/gi, "")
     .replace(/<\|im_end\|>/gi, "")
     .trim();
-}
-
-/** Lightweight heuristic so the model reliably mirrors Malay vs English on each turn. */
-function getLanguageTurnDirective(message: string): string {
-  const s = message.trim();
-  if (!s) return "";
-
-  const malayHits =
-    (
-      s.match(
-        /\b(yang|dan|atau|untuk|dengan|tidak|bukan|bila|apa|bagaimana|berapa|bilakah|saja|saya|awak|anda|cuti|semester|kalendar|peperiksaan|kuliah|pendaftaran|pelajar|sesi|minggu|hari|daripada|kepada|ialah|adalah|dapat|boleh|akan|telah|sudah|belum|kerana|juga|serta|nak|lah|kah)\b/gi
-      ) ?? []
-    ).length;
-
-  const englishHits =
-    (
-      s.match(
-        /\b(when|what|where|which|why|who)\b|\bhow\s+(do|does|did|is|are|was|were|can|could|should|will)\b|\b(does|did)\b|\b(is|are|was|were)\s+(the|there|it)\b|\b(the|a|an)\s+(calendar|registration|session|exam|break)\b|\bcalendar\b|\bregistration\b|\bsession\b|\bexam\b|\bbreak\b|\bwhich\b/gi
-      ) ?? []
-    ).length;
-
-  const prefersMalay =
-    malayHits > englishHits || (malayHits >= 2 && englishHits <= 1);
-  const prefersEnglish =
-    englishHits > malayHits || (englishHits >= 2 && malayHits === 0);
-
-  if (prefersMalay && !prefersEnglish) {
-    return "\n\nLANGUAGE DIRECTIVE (this user message): Reply entirely in Bahasa Melayu standard (Malaysia spelling). Keep proper nouns and usual abbreviations as-is (UiTM, GT, RPGT, EET, MDS, SuFO, course codes).";
-  }
-  if (prefersEnglish && !prefersMalay) {
-    return "\n\nLANGUAGE DIRECTIVE (this user message): Reply entirely in English.";
-  }
-
-  return "\n\nLANGUAGE DIRECTIVE (this user message): Mirror the user's Malay/English blend from their latest message; if evenly mixed, prefer Bahasa Melayu for syllabus vocabulary when calendar terms are mostly Malay.";
 }
 
 const CALENDAR_STRONG_KEYWORDS = [
@@ -493,6 +378,31 @@ function isComparisonQuestion(message: string): boolean {
   const lower = message.toLowerCase();
   return COMPARE_KEYWORDS.some((kw) => lower.includes(kw));
 }
+
+const TABLE_FORMAT_KEYWORDS = [
+  "table",
+  "jadual",
+  "in table",
+  "into table",
+  "as table",
+  "tabular",
+  "format table",
+  "write table",
+  "list in table",
+  "show in table",
+  "bentuk jadual",
+  "dalam jadual",
+  "dalam bentuk jadual",
+  "senarai jadual",
+];
+
+function isTableFormatRequested(message: string): boolean {
+  const lower = message.toLowerCase();
+  return TABLE_FORMAT_KEYWORDS.some((kw) => lower.includes(kw));
+}
+
+const TABLE_OUTPUT_RULE =
+  "\n\nTABLE OUTPUT RULE (MANDATORY): The user asked for a table. Put the schedule or comparison inside a [TABLE]...[/TABLE] block only. Format:\n[TABLE]\n| Activity | Date |\n| --- | --- |\n| (event name) | (date or range) |\n[/TABLE]\nRules: First row inside [TABLE] MUST be real column headers (e.g. Activity, Date)—NOT a group title. Put group/program title as ONE plain-text line immediately BEFORE [TABLE]. Use pipe | between columns. Do NOT output raw markdown tables outside [TABLE]. For session comparisons, first column = session id + label.";
 
 function isSimpleCalendarQuestion(message: string): boolean {
   const lower = message.toLowerCase().trim();
@@ -804,7 +714,7 @@ function computeQuickReference(activities: Activity[], todayISO: string): string
   return lines.join("\n");
 }
 
-/** Context char limits to avoid Groq 413 and reduce latency. */
+/** Context char limits to avoid oversized prompts and reduce latency. */
 const MAX_PRIMARY_CONTEXT_CHARS = 4_500;
 const MAX_SECONDARY_CONTEXT_CHARS = 1_800;
 const MAX_COMPARISON_CONTEXT_CHARS = 2_000;
@@ -901,7 +811,7 @@ function buildCalendarSystemPrompt(
   todayFormatted: string,
   quickReference: string,
   comparisonContext?: string,
-  forceComparisonTable?: boolean,
+  forceTableOutput?: boolean,
   multipleSessionsSelected?: boolean,
   uitmSupplement?: string,
   selectedSessionCount?: number
@@ -940,9 +850,8 @@ function buildCalendarSystemPrompt(
     result +=
       "\n\nMULTI-SESSION LABELING (MANDATORY): The user selected more than one session in the dropdown. The primary calendar is split into === SESSION sessionId (label) === sections. For every calendar answer, state which session each date or event belongs to—use both the session id and the human-readable label from the SESSION LIST (same format as the section headers). Do not combine dates from different sessions in one sentence without naming each session. For Malay replies, you may write sesi or penggal with the id/label.";
   }
-  if (forceComparisonTable) {
-    result +=
-      "\n\nCOMPARISON OUTPUT RULE (MANDATORY): The user is comparing sessions or timelines. Present results in a [TABLE]...[/TABLE] block. First column MUST identify the session using session id plus label from the SESSION LIST (e.g. B-20263 with its date range). Other columns: Activity/Event, Date or range, Notes if useful. Include a one-line intro, then the table. Do not use comparison-only bullet lists without a table.";
+  if (forceTableOutput) {
+    result += TABLE_OUTPUT_RULE;
   }
   const uitm =
     uitmSupplement && uitmSupplement.length > 0
@@ -958,7 +867,7 @@ function buildCalendarSystemPrompt(
   return result;
 }
 
-/** Max chars for UiTM info context to avoid Groq 413. */
+/** Max chars for UiTM info context to avoid oversized prompts. */
 const MAX_UITM_INFO_CHARS = 5_000;
 
 function buildResearchSystemPrompt(todayFormatted: string): string {
@@ -1049,7 +958,7 @@ export async function POST(request: NextRequest) {
       "unknown";
 
     correlationId = generateCorrelationId();
-    const rateLimit = await checkRateLimit(ip, request);
+    const rateLimit = checkRateLimit(ip, request);
     if (rateLimit.limited) {
       logger.warn("Rate limited", { correlationId, ip });
       return jsonError(rateLimit.message, 429);
@@ -1183,6 +1092,8 @@ export async function POST(request: NextRequest) {
     const useCalendarPrompt = isCalendarQuestion(sanitizedMessage);
     const isCompareRequested =
       multipleSessionsSelected && isComparisonQuestion(sanitizedMessage);
+    const wantsTableOutput =
+      isCompareRequested || isTableFormatRequested(sanitizedMessage);
     const includeUitmSupplement = !useCalendarPrompt || !isSimpleCalendarQuestion(sanitizedMessage);
     const systemPrompt = useCalendarPrompt
       ? buildCalendarSystemPrompt(
@@ -1197,7 +1108,7 @@ export async function POST(request: NextRequest) {
           todayFormatted,
           quickReference,
           comparisonContext,
-          isCompareRequested,
+          wantsTableOutput,
           multipleSessionsSelected,
           includeUitmSupplement ? UITM_GENERAL_INFO : "",
           effectiveSessions.length
@@ -1209,7 +1120,7 @@ export async function POST(request: NextRequest) {
       selectedProgram,
       effectiveSessions.join(","),
       useCalendarPrompt ? "calendar" : "research",
-      isCompareRequested ? "compare" : "normal",
+      wantsTableOutput ? "table" : "normal",
       sanitizedMessage,
       JSON.stringify(sanitizedHistory),
     ].join("||");
@@ -1220,21 +1131,24 @@ export async function POST(request: NextRequest) {
     const modelBudget = getModelResponseBudget(
       sanitizedMessage,
       useCalendarPrompt,
-      isCompareRequested
+      wantsTableOutput
     );
+    const languageDirective = getLanguageTurnDirective(sanitizedMessage, sanitizedHistory);
     const systemPromptWithCompletion =
       systemPrompt +
       "\n\nIMPORTANT: Finish every sentence and paragraph completely—never stop mid-thought or mid-list. For simple questions stay concise; for detailed or long questions use enough length to answer fully without truncating." +
-      getLanguageTurnDirective(sanitizedMessage);
-    const rawReply = await askGroqWithPrimaryThenFallback(
+      languageDirective +
+      (languageDirective
+        ? "\n- Before sending: verify every sentence matches the LANGUAGE DIRECTIVE above."
+        : "");
+    const rawReply = await askAiWithRetry(
       sanitizedMessage,
       systemPromptWithCompletion,
       sanitizedHistory,
-      modelBudget,
-      correlationId
+      modelBudget
     );
 
-    const reply = cleanAiReply(rawReply);
+    const reply = normalizeAssistantTables(cleanAiReply(rawReply));
 
     setCachedReply(cacheKey, reply);
     return withVerifiedCookie(NextResponse.json({ reply }));
@@ -1248,7 +1162,7 @@ export async function POST(request: NextRequest) {
 
     if (status === 401 || errMsg.includes("401") || errMsg.includes("Unauthorized")) {
       return withVerifiedCookie(jsonError(
-        "AI service authentication failed. Please check API key configuration.",
+        "Workers AI is not configured. Add an AI binding named AI in Cloudflare Pages settings.",
         502
       ));
     }

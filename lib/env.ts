@@ -1,26 +1,18 @@
-export interface Env {
-  GROQ_API_KEY: string;
-  NODE_ENV?: string;
-}
-
 export interface TelegramEnv {
   TELEGRAM_BOT_TOKEN: string;
   TELEGRAM_CHAT_ID: string;
 }
 
-let _env: Env | null = null;
-
-export function getEnv(): Env {
-  if (_env) return _env;
-  const key = process.env.GROQ_API_KEY?.trim();
-  if (!key) throw new Error("Env validation failed: GROQ_API_KEY is required for chat feature");
-  _env = { GROQ_API_KEY: key, NODE_ENV: process.env.NODE_ENV };
-  return _env;
-}
-
-export function checkEnv(): { ok: boolean; groq: "configured" | "missing" } {
-  const hasGroq = !!process.env.GROQ_API_KEY?.trim();
-  return { ok: hasGroq, groq: hasGroq ? "configured" : "missing" };
+export async function checkEnv(): Promise<{ ok: boolean; ai: "configured" | "missing" }> {
+  try {
+    const { getOptionalRequestContext } = await import("@cloudflare/next-on-pages");
+    const ctx = getOptionalRequestContext();
+    const ai = (ctx?.env as CloudflareEnv | undefined)?.AI;
+    if (ai) return { ok: true, ai: "configured" };
+  } catch {
+    // No Cloudflare context (next dev without platform, etc.)
+  }
+  return { ok: false, ai: "missing" };
 }
 
 let _telegramEnv: TelegramEnv | null = null;

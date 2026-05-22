@@ -82,7 +82,7 @@ export async function POST(request: NextRequest) {
     }
 
     const ip = getClientIp(request);
-    const limitResult = await checkRateLimit(ip, request);
+    const limitResult = checkRateLimit(ip, request);
     if (limitResult.limited) return jsonError(limitResult.message, 429);
 
     const rawBody = await request.json();

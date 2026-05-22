@@ -71,6 +71,12 @@ import {
 } from "@/components/turnstile-widget";
 import { useTurnstileSiteKeyFromContext } from "@/components/turnstile-site-key-provider";
 import { useEngagementPrompt } from "@/components/engagement-prompt-provider";
+import {
+  isMarkdownTableSeparator,
+  isPipeTableRow,
+  isTableCaptionRow,
+  parsePipeTableBlock,
+} from "@/lib/format-ai-table";
 
 function getChatErrorMessage(res: Response, fallback: string): string {
   if (res.status === 429) return "Too many requests. Please wait a moment before trying again.";
@@ -89,62 +95,8 @@ async function parseChatResponse(res: Response): Promise<{ error?: string; reply
   }
 }
 
-/**
- * Parse a [TABLE]...[/TABLE] block into headers and rows.
- * Each row is pipe-delimited. The first row is the header.
- * A separator row (e.g. ---|---|---) is skipped if present.
- */
 function parseTable(block: string): { headers: string[]; rows: string[][] } | null {
-  const lines = block
-    .split(/\r?\n/)
-    .map((l) => l.trim())
-    .filter(Boolean);
-  if (lines.length < 2) return null;
-
-  const parseRow = (line: string) =>
-    line.split("|").map((cell) => cell.trim()).filter((c) => c.length > 0);
-
-  const headers = parseRow(lines[0]);
-  if (headers.length === 0) return null;
-
-  const rows: string[][] = [];
-  for (let j = 1; j < lines.length; j++) {
-    // Skip markdown-style separator rows (---|---|---)
-    if (/^[\s|:-]+$/.test(lines[j])) continue;
-    const row = parseRow(lines[j]);
-    if (row.length > 0) rows.push(row);
-  }
-
-  return rows.length > 0 ? { headers, rows } : null;
-}
-
-function isPipeTableRow(line: string): boolean {
-  const t = line.trim();
-  if (!t.includes("|")) return false;
-  const cells = t.split("|").map((c) => c.trim()).filter((c) => c.length > 0);
-  return cells.length >= 2;
-}
-
-/** GFM / markdown table separator row e.g. | --- | --- | or |:---|:---| */
-function isMarkdownTableSeparator(line: string): boolean {
-  const cells = line
-    .trim()
-    .split("|")
-    .map((c) => c.trim())
-    .filter((c) => c.length > 0);
-  return cells.length >= 2 && cells.every((c) => /^:?-{3,}:?$/.test(c));
-}
-
-/** First row of a pipe table: not a separator-only row */
-function isMarkdownTableHeaderRow(line: string): boolean {
-  if (!isPipeTableRow(line)) return false;
-  const cells = line
-    .trim()
-    .split("|")
-    .map((c) => c.trim())
-    .filter((c) => c.length > 0);
-  const allDash = cells.every((c) => /^:?-{3,}:?$/.test(c));
-  return !allDash;
+  return parsePipeTableBlock(block);
 }
 
 /**
@@ -169,16 +121,46 @@ function splitEmbeddedMarkdownTables(part: string): { type: "text" | "table"; bo
     const line2 = rawLines[i + 1]?.replace(/\r$/, "");
     const line3 = rawLines[i + 2]?.replace(/\r$/, "");
 
-    if (
+    const hasSeparatorTable =
       line2 !== undefined &&
       line3 !== undefined &&
-      isMarkdownTableHeaderRow(line) &&
       isMarkdownTableSeparator(line2) &&
       isPipeTableRow(line3) &&
-      !isMarkdownTableSeparator(line3)
-    ) {
+      !isMarkdownTableSeparator(line3);
+
+    if (hasSeparatorTable) {
       flushText();
-      const tableLines: string[] = [line, line2];
+      if (line.trim() && (isTableCaptionRow(line) || !isPipeTableRow(line))) {
+        const caption = line.includes("|")
+          ? line
+              .replace(/^\|+|\|+$/g, "")
+              .split("|")
+              .map((c) => c.trim())
+              .filter(Boolean)[0] ?? line.trim()
+          : line.trim();
+        if (caption) textBuf.push(caption);
+        flushText();
+      } else if (
+        line.trim() &&
+        isPipeTableRow(line) &&
+        !isTableCaptionRow(line) &&
+        !isMarkdownTableSeparator(line)
+      ) {
+        const tableLines: string[] = [line, line2];
+        i += 2;
+        while (i < rawLines.length) {
+          const L = rawLines[i]?.replace(/\r$/, "") ?? "";
+          if (!L.trim()) break;
+          if (isPipeTableRow(L)) {
+            tableLines.push(L);
+            i++;
+          } else break;
+        }
+        segments.push({ type: "table", body: tableLines.join("\n") });
+        continue;
+      }
+
+      const tableLines: string[] = [line2];
       i += 2;
       while (i < rawLines.length) {
         const L = rawLines[i]?.replace(/\r$/, "") ?? "";
@@ -397,70 +379,71 @@ function FormattedMessage({ content }: { content: string }) {
 }
 
 const SUGGESTIONS_GROUP_A = [
-  "What are the registration dates for new vs returning students (Group A)?",
-  "When must I validate or confirm my registered courses (Group A)?",
-  "What is the late add/drop window after the normal period (Group A)?",
-  "When is the last day to pay semester fees (Group A)?",
-  "What dates are Grade Transaction (GT) and GT2 (Group A)?",
-  "When is RPGT and when are RPGT results released (Group A)?",
-  "What are the start and end dates for Lecture Week 1 (Group A)?",
-  "When do Lecture Weeks 2 through 5 run (Group A)?",
-  "How many lecture weeks are in this academic session (Group A)?",
-  "Summarize the lecture-phase timeline for this session (Group A).",
-  "When does mid-semester break fall (Group A)?",
-  "When is the special Aidilfitri recess (Group A)?",
-  "When is revision week scheduled (Group A)?",
-  "When does between-semester break start and end (Group A)?",
-  "When is the mid-semester examination (Group A)?",
-  "When is the final examination period (Group A)?",
-  "From when can I print or download my exam slip (Group A)?",
-  "Give every exam-related deadline I should know (Group A).",
-  "Explain MDS and its dates this session (Group A).",
-  "What is SuFO and what is the submission deadline (Group A)?",
+  "What is the next upcoming break on my Group A calendar?",
+  "Bila cuti pertengahan semester untuk Kumpulan A?",
+  "Show my Group A lecture and break dates in a table",
+  "When do new intake vs returning students register (Group A)?",
+  "Bilakah tarikh sahkan kursus dan tambah/gugur lewat (Kumpulan A)?",
+  "What are GT, GT2, RPGT, and fee payment deadlines (Group A)?",
+  "When does Lecture Week 1 start and when does the last lecture week end (Group A)?",
+  "How many lecture weeks are in this Group A session?",
+  "When is revision week and how many days is it (Group A)?",
+  "When does semester break start and end (Group A)?",
+  "Is there an Aidilfitri or festive recess on the Group A calendar?",
+  "When are mid-semester and final examinations (Group A)?",
+  "From which date can I print my examination slip (Group A)?",
+  "List all exam-related dates for Group A in table format",
+  "Are Kedah, Kelantan, and Terengganu dates different from other states (Group A)?",
+  "When is Minggu Destini Siswa (MDS) for Group A?",
+  "What is SuFO and when is the online submission deadline (Group A)?",
+  "Summarize this Group A semester timeline in a table",
+  "Apakah program yang guna kalendar Kumpulan A?",
+  "What is UiTM Foundation (Asasi) and which campuses offer it?",
 ];
 
 const SUGGESTIONS_GROUP_B = [
-  "When does ePJJ/PLK new-intake registration open (Group B)?",
-  "When can bachelor's students register for courses (Group B)?",
-  "When is Pre-Diploma and Diploma registration (Group B)?",
-  "When should registered courses be validated (Group B)?",
-  "What is the late add/drop period after the normal window (Group B)?",
-  "Summarize fee payment, GT, RPGT, and GT2 dates (Group B).",
-  "What are Lecture Week 1 start and end dates (Group B)?",
-  "When do Lecture Weeks 2 and 3 take place (Group B)?",
-  "When does Short Semester run this cycle (Group B)?",
+  "What is the next important date on my Group B calendar?",
+  "Bila pendaftaran kursus Pra-Diploma, Diploma, dan Ijazah (Kumpulan B)?",
+  "Show Group B registration-to-exam timeline in a table",
+  "When does e-PJJ or PLK new-intake registration open (Group B)?",
+  "When must I validate registered courses (Group B)?",
+  "What is the late add/drop window after normal registration (Group B)?",
+  "Summarize GT, RPGT, GT2, and semester fee dates (Group B)",
+  "When do Lecture Weeks 1–3 run and when does Short Semester start (Group B)?",
   "When are Intersession classes scheduled (Group B)?",
-  "When are mid-semester and festive breaks (Group B)?",
-  "When is revision week for this cohort (Group B)?",
-  "When is semester break (Group B)?",
-  "Are recess dates different for UiTM in Kedah, Kelantan, or Terengganu (Group B)?",
-  "When is EET Speaking held (Group B)?",
-  "When are final written EET or assessments (Group B)?",
-  "From when is the exam slip available to print (Group B)?",
-  "List every exam-related date for Group B.",
-  "Explain MDS timing for Group B.",
-  "What is SuFO and when is it due (Group B)?",
+  "Bila cuti pertengahan semester dan cuti semester (Kumpulan B)?",
+  "When is revision week for this Group B session?",
+  "Are break dates different for Kedah, Kelantan, and Terengganu (Group B)?",
+  "When is EET Speaking and the final EET assessment (Group B)?",
+  "List every examination period and slip date in a table (Group B)",
+  "When is Minggu Destini Siswa (MDS) for Group B?",
+  "What is SuFO and key briefing dates for Group B?",
+  "Compare registration, lectures, and exam phases in a table (Group B)",
+  "Apa itu e-PJJ UiTM dan siapa sesuai menggunakannya?",
+  "What diploma and degree programmes use the Group B calendar?",
+  "How many UiTM faculties are there and what do they cover?",
 ];
 
 /** Neutral UITM info — combined with Group A or Group B pools only (never cross-mixed). */
 const SUGGESTIONS_GENERAL_NEUTRAL = [
-  "List all UiTM campuses",
-  "What courses does UiTM offer?",
-  "How many faculties in UiTM?",
-  "What is MDS programme?",
-  "Tell me about UiTM Shah Alam",
-  "Senarai fakulti UiTM",
-  "When is Hari Raya break?",
-  "Bila pendaftaran kursus dibuka?",
+  "List UiTM campuses across Malaysia",
+  "Senarai kampus UiTM dan lokasi ringkas",
+  "How is Group A calendar different from Group B?",
+  "Apa beza sesi, semester, dan penggal di UiTM?",
+  "What is flexible modular system at UiTM?",
+  "How do I read registration vs lecture vs exam on the calendar?",
+  "Bila cuti umum negeri — adakah ia dalam kalendar UiTM?",
+  "Tell me about UiTM Shah Alam student services",
 ];
 
-const SUGGESTIONS_GENERAL_EXTRA_A = ["Apa itu program Asasi UiTM?", "What programs are in Group A?"];
+const SUGGESTIONS_GENERAL_EXTRA_A = [
+  "Which intake months use Group A (Dec–May cycle)?",
+  "Apa itu Program Asasi UiTM dan tarikh pentingnya?",
+];
 
 const SUGGESTIONS_GENERAL_EXTRA_B = [
-  "Apa syarat masuk Diploma?",
-  "Apa itu e-PJJ UiTM?",
-  "When does Semester 1 start for Group B?",
-  "What programs are in Group B?",
+  "When does the Mar–Aug Group B academic year begin?",
+  "Apa syarat kemasukan Diploma UiTM secara ringkas?",
 ];
 
 const LOADING_PHRASES = [

@@ -10,7 +10,7 @@ pnpm install
 
 ## Required Environment
 
-- `GROQ_API_KEY` — required for chat feature. Add to `.env.local` for local dev; set as secret in Cloudflare for production.
+- **Workers AI binding** — required for chat. In Cloudflare Pages: Settings → Bindings → Add → **Workers AI** → variable name `AI` (production + preview). Local: `pnpm run preview` after `build:pages`. Also declared in [`wrangler.jsonc`](wrangler.jsonc). No API key secret for inference.
 - `NEXT_PUBLIC_TURNSTILE_SITE_KEY` + `TURNSTILE_SECRET_KEY` — required for Turnstile on feedback, sponsor, and chat in production. Set `NEXT_PUBLIC_TURNSTILE_SITE_KEY` in **Pages build environment** (inlined into the client bundle), or `TURNSTILE_SITE_KEY` at runtime (client loads via `GET /api/turnstile/config`).
 
 ## Optional Environment
@@ -39,11 +39,11 @@ GitHub Actions workflow (`.github/workflows/ci.yml`) runs on push/PR:
 1. `pnpm install --frozen-lockfile`
 2. `pnpm lint`
 3. `pnpm typecheck`
-4. `pnpm run build:pages` (requires `GROQ_API_KEY` secret or placeholder)
+4. `pnpm run build:pages`
 
 ## Health & Readiness
 
-- `GET /api/health` — returns `{ status, groq }`. 503 if GROQ is not configured.
+- `GET /api/health` — returns `{ status, ai }`. 503 if Workers AI binding is not available at runtime.
 - `GET /api/version` — returns build ID.
 
 ## Cloudflare Pages deployment
@@ -64,6 +64,6 @@ All dynamic routes must export `export const runtime = 'edge'`. Restore with `no
 
 ## Known Limitations
 
-- Chat rate limiting uses in-memory storage when no Worker KV binding is configured. For distributed limits, add KV in the dashboard and wire `lib/rate-limit.ts`.
+- Chat rate limiting uses in-memory storage per isolate (`lib/rate-limit.ts`).
 - `@cloudflare/next-on-pages` is deprecated in favor of OpenNext; this project intentionally uses next-on-pages for Cloudflare Pages Git deploys.
 - Middleware deprecation warning: Next.js 16 recommends "proxy" over "middleware" — non-blocking.

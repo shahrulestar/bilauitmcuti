@@ -19,7 +19,7 @@ Academic calendar web app for Universiti Teknologi MARA (UiTM) — Malaysia's la
 - Ask about academic dates, breaks, and exams in English or Malay
 - General UiTM info: campuses, faculties, programs, admission
 - Context-aware answers based on selected program
-- Powered by Groq (Llama 3.1 8B)
+- Powered by Cloudflare Workers AI (Llama 3.2 3B Instruct)
 - Rate limited: per IP per day and a global daily cap (see Rate Limits below)
 
 ### Progressive Web App
@@ -36,7 +36,7 @@ Academic calendar web app for Universiti Teknologi MARA (UiTM) — Malaysia's la
 - **Framework:** Next.js 16 (App Router), React 19, TypeScript
 - **Styling:** Tailwind CSS 4, shadcn/ui, Radix UI
 - **Scrolling:** Lenis (smooth wheel / touch sync on calendar routes; chat route uses native scroll)
-- **AI:** Groq SDK (llama-3.1-8b-instant)
+- **AI:** Cloudflare Workers AI (`@cf/meta/llama-3.2-3b-instruct`)
 - **Calendar UI:** react-day-picker, date-fns
 - **Validation:** Zod
 - **Deployment:** Cloudflare Pages (`@cloudflare/next-on-pages`)
@@ -46,7 +46,7 @@ Academic calendar web app for Universiti Teknologi MARA (UiTM) — Malaysia's la
 ### Prerequisites
 
 - Node.js 18+
-- Groq API key ([console.groq.com](https://console.groq.com))
+- Cloudflare account with Workers AI access (for chat in production/preview)
 
 ### Installation
 
@@ -66,7 +66,7 @@ cp .env.example .env.local
 
 | Variable | Required | Purpose |
 |----------|----------|---------|
-| `GROQ_API_KEY` | Yes (for chat) | Groq API access; never expose to the client |
+| Workers AI binding (`AI`) | Yes (for chat) | Pages Functions binding; configure in Cloudflare Dashboard or use `pnpm preview` locally |
 | `TELEGRAM_BOT_TOKEN` | Optional | Contact and sponsor form notifications (same bot) |
 | `TELEGRAM_CHAT_ID` | Optional | Contact and sponsor form notifications (same chat) |
 | `NEXT_PUBLIC_TURNSTILE_SITE_KEY` | Yes (contact, chat, sponsor in production) | Cloudflare Turnstile site key (public) |
@@ -78,7 +78,6 @@ Sponsor uploads: max proof file size **10 MB** (see `SPONSOR_MAX_FILE_BYTES` in 
 Example:
 
 ```env
-GROQ_API_KEY=your_groq_api_key_here
 TELEGRAM_BOT_TOKEN=your_telegram_bot_token_here
 TELEGRAM_CHAT_ID=your_telegram_chat_id_here
 NEXT_PUBLIC_TURNSTILE_SITE_KEY=your_turnstile_site_key_here
@@ -122,14 +121,13 @@ pnpm start         # standard Next.js server (not used in production on CF)
 
 **After first deploy:** Pages **Settings → Functions** → enable **`nodejs_compat`** for production and preview; set compatibility date to at least `2022-11-30`.
 
-**Secrets / env:** `GROQ_API_KEY`, optional Telegram, Turnstile (`NEXT_PUBLIC_TURNSTILE_SITE_KEY`, `TURNSTILE_SECRET_KEY`), optional `CALENDAR_API_BASE`.
+**Bindings / env:** Workers AI binding named `AI`, optional Telegram, Turnstile (`NEXT_PUBLIC_TURNSTILE_SITE_KEY`, `TURNSTILE_SECRET_KEY`), optional `CALENDAR_API_BASE`.
 
 **Troubleshooting:**
 - **“routes were not configured to run with the Edge Runtime”:** Run `node scripts/add-edge-runtime.mjs` or add `export const runtime = 'edge'` to every dynamic route/API.
 - **Build loops:** Do **not** set `package.json` `"build"` to `next-on-pages` — keep `"build": "next build"`; use `build:pages` or `npx @cloudflare/next-on-pages@1` as the Cloudflare **build command** only.
-- If chat fails: ensure `GROQ_API_KEY` is set as a secret in Cloudflare
-- Health check: `GET /api/health` returns readiness (503 if GROQ is missing)
-- For distributed rate limiting: run `wrangler kv namespace create RATE_LIMIT_KV`, add the binding to `wrangler.jsonc`
+- If chat fails: ensure a **Workers AI** binding named `AI` is configured under Pages → Settings → Bindings (production + preview), then redeploy
+- Health check: `GET /api/health` returns readiness (503 if Workers AI binding is missing at runtime)
 
 ## Calendar API (same origin)
 
@@ -167,12 +165,12 @@ components/
   list-view.tsx
   theme-toggle.tsx
 lib/
-  ai.ts                    # Groq AI integration
+  ai.ts                    # Workers AI integration
   data.ts                  # Academic calendar logic (activities, dates)
   calendar-api.ts          # Client fetch helpers (same-origin)
   calendar-store.ts        # Client calendar session store
   env.ts                   # Centralized env validation
-  rate-limit.ts            # Rate limiting (KV or in-memory fallback)
+  rate-limit.ts            # Rate limiting (in-memory per isolate)
   logger.ts
   uitm-info.ts
   cookie-utils.ts          # Filter persistence
@@ -185,7 +183,7 @@ public/
 
 ## CI
 
-GitHub Actions (`.github/workflows/ci.yml`) on push/PR: `pnpm install --frozen-lockfile` → `pnpm lint` → `pnpm typecheck` → `pnpm run build:pages` (needs `GROQ_API_KEY` in CI or a placeholder).
+GitHub Actions (`.github/workflows/ci.yml`) on push/PR: `pnpm install --frozen-lockfile` → `pnpm lint` → `pnpm typecheck` → `pnpm run build:pages`.
 
 ## Rate Limits
 

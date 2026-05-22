@@ -5,8 +5,6 @@ const RATE_LIMIT_MAX_PER_DAY = 120;
 const RATE_LIMIT_MAX_UNKNOWN_PER_DAY = 60;
 /** All users combined, per rolling 24h (abuse / cost ceiling). */
 const RATE_LIMIT_GLOBAL_MAX_PER_DAY = 5000;
-const KV_PREFIX = "rl:";
-const KV_GLOBAL_KEY = "rl:global";
 
 export interface RateLimitResult {
   limited: boolean;
@@ -25,7 +23,6 @@ export function getRateLimitKey(ip: string, request: NextRequest): string {
   }
 }
 
-/** In-memory fallback when KV is unavailable (next dev, etc.) */
 const rateLimitMap = new Map<string, number[]>();
 let globalDailyTimestamps: number[] = [];
 const CLEANUP_THRESHOLD = 500;
@@ -40,7 +37,7 @@ function cleanupStaleEntries(): void {
   globalDailyTimestamps = globalDailyTimestamps.filter((t) => now - t < RATE_LIMIT_DAILY_MS);
 }
 
-export function checkRateLimitMemory(ip: string, request: NextRequest): RateLimitResult {
+export function checkRateLimit(ip: string, request: NextRequest): RateLimitResult {
   const now = Date.now();
   if (rateLimitMap.size > CLEANUP_THRESHOLD) cleanupStaleEntries();
 
@@ -62,65 +59,4 @@ export function checkRateLimitMemory(ip: string, request: NextRequest): RateLimi
   rateLimitMap.set(key, dailyValid);
   globalDailyTimestamps = [...globalValid, now];
   return { limited: false, message: "" };
-}
-
-type KVNamespace = { get: (k: string) => Promise<string | null>; put: (k: string, v: string) => Promise<void> };
-
-export async function checkRateLimitKV(
-  ip: string,
-  request: NextRequest,
-  kv: KVNamespace
-): Promise<RateLimitResult> {
-  const now = Date.now();
-  const key = getRateLimitKey(ip, request);
-  const isUnknown = ip === "unknown";
-
-  const [ipRaw, globalRaw] = await Promise.all([
-    kv.get(`${KV_PREFIX}${key}`),
-    kv.get(KV_GLOBAL_KEY),
-  ]);
-
-  const parse = (s: string | null): number[] => {
-    if (!s) return [];
-    try {
-      const arr = JSON.parse(s) as unknown;
-      return Array.isArray(arr) ? arr.filter((n): n is number => typeof n === "number") : [];
-    } catch {
-      return [];
-    }
-  };
-
-  const globalTimestamps = parse(globalRaw);
-  const globalValid = globalTimestamps.filter((t) => now - t < RATE_LIMIT_DAILY_MS);
-  if (globalValid.length >= RATE_LIMIT_GLOBAL_MAX_PER_DAY) {
-    return { limited: true, message: "Service is at capacity for today. Please try again tomorrow." };
-  }
-
-  const timestamps = parse(ipRaw);
-  const dailyValid = timestamps.filter((t) => now - t < RATE_LIMIT_DAILY_MS);
-  const maxDaily = isUnknown ? RATE_LIMIT_MAX_UNKNOWN_PER_DAY : RATE_LIMIT_MAX_PER_DAY;
-  if (dailyValid.length >= maxDaily) {
-    return { limited: true, message: "Daily limit reached. Please try again tomorrow." };
-  }
-
-  const updated = [...dailyValid, now];
-  const globalUpdated = [...globalValid, now];
-  await Promise.all([
-    kv.put(`${KV_PREFIX}${key}`, JSON.stringify(updated)),
-    kv.put(KV_GLOBAL_KEY, JSON.stringify(globalUpdated)),
-  ]);
-  return { limited: false, message: "" };
-}
-
-/** Uses KV when available (Cloudflare Pages), otherwise in-memory. */
-export async function checkRateLimit(ip: string, request: NextRequest): Promise<RateLimitResult> {
-  try {
-    const { getOptionalRequestContext } = await import("@cloudflare/next-on-pages");
-    const ctx = getOptionalRequestContext();
-    const kv = (ctx?.env as { RATE_LIMIT_KV?: KVNamespace } | undefined)?.RATE_LIMIT_KV;
-    if (kv) return await checkRateLimitKV(ip, request, kv);
-  } catch {
-    // No Cloudflare context (next dev, etc.)
-  }
-  return checkRateLimitMemory(ip, request);
 }

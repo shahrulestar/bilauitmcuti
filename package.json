@@ -14,7 +14,7 @@
     "typecheck": "tsc --noEmit",
     "test:smoke": "echo smoke-placeholder",
     "start": "next start",
-    "pages:dev": "wrangler pages dev .vercel/output/static --compatibility-flag=nodejs_compat",
+    "pages:dev": "wrangler pages dev .vercel/output/static --compatibility-flag=nodejs_compat --ai=AI",
     "preview": "pnpm run build:pages && pnpm run pages:dev"
   },
   "pnpm": {
@@ -49,6 +49,7 @@
   },
   "devDependencies": {
     "@cloudflare/next-on-pages": "^1.13.16",
+    "@cloudflare/workers-types": "^4.20260305.0",
     "@tailwindcss/postcss": "^4.1.9",
     "@types/node": "^22",
     "@types/react": "^19",
