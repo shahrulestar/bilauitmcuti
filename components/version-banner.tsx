@@ -3,6 +3,10 @@
 import { useEffect, useRef, useState } from "react";
 
 const INITIAL_BUILD_ID = process.env.NEXT_PUBLIC_BUILD_ID;
+
+interface VersionResponse {
+  buildId?: string;
+}
 /** Production only; longer interval to cut noise and server load. */
 const POLL_INTERVAL_MS = 60_000;
 
@@ -25,7 +29,7 @@ export function VersionBanner() {
       try {
         const res = await fetch("/api/version", { cache: "no-store" });
         if (!res.ok) return;
-        const { buildId } = await res.json();
+        const { buildId } = (await res.json()) as VersionResponse;
         if (buildId && buildId !== INITIAL_BUILD_ID) {
           setIsVisible(true);
           clearPoll();
