@@ -6,7 +6,6 @@ import {
 } from "@/lib/cookie-utils";
 import {
   applySessionIdsToFilters,
-  buildCleanCalendarUrl,
   hasSessionQueryParams,
   isCalendarPath,
   parseSessionIdsFromSearchParams,
@@ -99,8 +98,7 @@ function handleSessionQueryRedirect(request: NextRequest): NextResponse | null {
   );
   const merged = applySessionIdsToFilters(existing, sessionIds, program);
 
-  const cleanUrl = new URL(buildCleanCalendarUrl(pathname), request.url);
-  const response = NextResponse.redirect(cleanUrl);
+  const response = NextResponse.next();
   response.cookies.set(CALENDAR_FILTERS_COOKIE, JSON.stringify(merged), {
     path: "/",
     maxAge: CALENDAR_FILTERS_MAX_AGE,

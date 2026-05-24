@@ -330,9 +330,9 @@ export function SharedCalendarLayout({
       window.scrollTo(0, 0);
       setActiveViewMode(newMode);
       const newPath = getRoutePath(selectedProgram as ProgramValue, newMode);
-      replaceCalendarHistoryUrl(newPath);
+      replaceCalendarHistoryUrl(newPath, selectedSessions);
     },
-    [selectedProgram]
+    [selectedProgram, selectedSessions]
   );
 
   const persistProgramSessions = useCallback(
@@ -373,7 +373,7 @@ export function SharedCalendarLayout({
       if (options?.navigate !== false) {
         const newPath = getRoutePath(program, activeViewMode);
         if (newPath !== pathname) {
-          replaceCalendarHistoryUrl(newPath);
+          replaceCalendarHistoryUrl(newPath, resolvedSessions);
           window.scrollTo(0, 0);
         }
       }
@@ -498,6 +498,13 @@ export function SharedCalendarLayout({
       setSelectedStates([]);
     }
   }, [showKKT, showRegistration, showLecture, showSemesterPendek, showKuliahIntersesi, showExamination, showOthersExams, showBreak, showCountdown, selectedProgram, selectedSessions, sessionsByProgram, isLoaded]);
+
+  // Sync address bar + og:url when sessions or route change (for share previews).
+  useEffect(() => {
+    if (!isLoaded) return;
+    const path = getRoutePath(selectedProgram as ProgramValue, activeViewMode);
+    replaceCalendarHistoryUrl(path, selectedSessions);
+  }, [isLoaded, selectedProgram, activeViewMode, selectedSessions]);
 
   // Theme-aware classes
   const bgClass = 'bg-background text-foreground';

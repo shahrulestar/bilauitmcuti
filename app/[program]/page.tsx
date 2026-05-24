@@ -4,6 +4,7 @@ import { CalendarWrapper } from '@/components/calendar-wrapper';
 import { notFound } from 'next/navigation';
 import { isValidProgramRoute, getProgramDisplayName } from '@/lib/route-utils';
 import { getProgramCanonicalUrl, getProgramPageTitle, getProgramSeoDescription } from '@/lib/program-seo';
+import { buildCalendarPageMetadata } from '@/lib/calendar-seo-metadata';
 import type { Metadata } from 'next';
 
 
@@ -11,49 +12,24 @@ interface ProgramPageProps {
   params: Promise<{
     program: string;
   }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }
 
 // Generate metadata for program pages
-export async function generateMetadata({ params }: ProgramPageProps): Promise<Metadata> {
+export async function generateMetadata({ params, searchParams }: ProgramPageProps): Promise<Metadata> {
   const { program } = await params;
   
   if (!isValidProgramRoute(program)) {
     return {};
   }
-  
-  const title = getProgramPageTitle(program);
-  const description = getProgramSeoDescription(program);
-  const canonical = getProgramCanonicalUrl(program);
 
-  return {
-    title,
-    description,
-    alternates: {
-      canonical,
-    },
-    openGraph: {
-      siteName: 'Bila UiTM Cuti',
-      title,
-      description,
-      type: 'website',
-      url: canonical,
-      locale: 'ms_MY',
-      images: [
-        {
-          url: 'https://bilauitmcuti.com/all-cover.png',
-          width: 1200,
-          height: 630,
-          alt: title,
-        },
-      ],
-    },
-    twitter: {
-      card: 'summary_large_image',
-      title,
-      description,
-      images: ['https://bilauitmcuti.com/all-cover.png'],
-    },
-  };
+  const sp = await searchParams;
+  return buildCalendarPageMetadata({
+    pathname: `/${program}`,
+    viewMode: 'grid',
+    programSlug: program,
+    searchParams: sp,
+  });
 }
 
 function ProgramJsonLd({ program }: { program: string }) {

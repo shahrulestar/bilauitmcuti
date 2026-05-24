@@ -3,7 +3,8 @@ export const runtime = 'edge';
 import { CalendarWrapper } from '@/components/calendar-wrapper';
 import { notFound } from 'next/navigation';
 import { isValidProgramRoute, getProgramDisplayName } from '@/lib/route-utils';
-import { getProgramListCanonicalUrl, getProgramPageTitle, getProgramSeoDescription } from '@/lib/program-seo';
+import { getProgramPageTitle, getProgramSeoDescription, getProgramListCanonicalUrl } from '@/lib/program-seo';
+import { buildCalendarPageMetadata } from '@/lib/calendar-seo-metadata';
 import type { Metadata } from 'next';
 
 
@@ -11,50 +12,24 @@ interface ProgramListPageProps {
   params: Promise<{
     program: string;
   }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }
 
 // Generate metadata for program list pages
-export async function generateMetadata({ params }: ProgramListPageProps): Promise<Metadata> {
+export async function generateMetadata({ params, searchParams }: ProgramListPageProps): Promise<Metadata> {
   const { program } = await params;
   
   if (!isValidProgramRoute(program)) {
     return {};
   }
-  
-  const title = getProgramPageTitle(program);
-  const description = getProgramSeoDescription(program);
-  const canonical = getProgramListCanonicalUrl(program);
 
-  return {
-    title,
-    description,
-    robots: { index: false, follow: true },
-    alternates: {
-      canonical,
-    },
-    openGraph: {
-      siteName: 'Bila UiTM Cuti',
-      title,
-      description,
-      type: 'website',
-      url: canonical,
-      locale: 'ms_MY',
-      images: [
-        {
-          url: 'https://bilauitmcuti.com/list-cover.png',
-          width: 1200,
-          height: 630,
-          alt: title,
-        },
-      ],
-    },
-    twitter: {
-      card: 'summary_large_image',
-      title,
-      description,
-      images: ['https://bilauitmcuti.com/list-cover.png'],
-    },
-  };
+  const sp = await searchParams;
+  return buildCalendarPageMetadata({
+    pathname: `/${program}/list`,
+    viewMode: 'list',
+    programSlug: program,
+    searchParams: sp,
+  });
 }
 
 function ProgramListJsonLd({ program }: { program: string }) {

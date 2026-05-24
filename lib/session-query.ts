@@ -41,6 +41,28 @@ export function buildCleanCalendarUrl(pathname: string): string {
   return pathname || "/";
 }
 
+const SITE_ORIGIN = "https://bilauitmcuti.com";
+
+/** Bare session keys joined for the query string, e.g. `B-20263&A-20251`. */
+export function buildSessionQueryString(sessionIds: SessionId[]): string {
+  return sessionIds.filter(isSessionIdQueryKey).join("&");
+}
+
+/** Pathname with optional session query, e.g. `/diploma?B-20263`. */
+export function buildCalendarUrlPath(pathname: string, sessionIds: SessionId[]): string {
+  const qs = buildSessionQueryString(sessionIds);
+  const path = pathname || "/";
+  if (!qs) return path;
+  return `${path}?${qs}`;
+}
+
+/** Absolute share/og URL for a calendar route + session query. */
+export function buildCalendarAbsoluteUrl(pathname: string, sessionIds: SessionId[]): string {
+  const pathWithQuery = buildCalendarUrlPath(pathname, sessionIds);
+  if (pathWithQuery === "/") return SITE_ORIGIN;
+  return `${SITE_ORIGIN}${pathWithQuery}`;
+}
+
 export function isCalendarPath(pathname: string): boolean {
   if (pathname === "/" || pathname === "/list") return true;
   const segments = pathname.split("/").filter(Boolean);
