@@ -244,8 +244,12 @@ function extractWorkersAiContent(result: unknown): string {
   if (result && typeof result === "object") {
     const data = result as WorkersAiTextResponse;
     if (typeof data.response === "string" && data.response.trim()) return data.response;
-    const choiceContent = data.choices?.[0]?.message?.content;
-    if (typeof choiceContent === "string" && choiceContent.trim()) return choiceContent;
+    const message = data.choices?.[0]?.message as
+      | { content?: string | null; reasoning?: string | null }
+      | undefined;
+    if (typeof message?.content === "string" && message.content.trim()) {
+      return message.content.trim();
+    }
 
     const geminiCandidates = (result as { candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }> })
       .candidates;
@@ -291,6 +295,10 @@ function getAiErrorStatus(error: unknown): number | undefined {
   return undefined;
 }
 
+function isGemmaThinkingCapableModel(modelId: string): boolean {
+  return modelId.includes("gemma-4") || modelId.includes("gemma-3");
+}
+
 function buildModelRunInput(
   modelId: string,
   messages: { role: "system" | "user" | "assistant"; content: string }[],
@@ -308,12 +316,16 @@ function buildModelRunInput(
       ...(stream ? { stream: true } : {}),
     };
   }
-  return {
+  const input: Record<string, unknown> = {
     messages,
     max_tokens,
     temperature,
-    ...(stream ? { stream: true } : {}),
   };
+  if (isGemmaThinkingCapableModel(modelId)) {
+    input.chat_template_kwargs = { enable_thinking: false, thinking: false };
+  }
+  if (stream) input.stream = true;
+  return input;
 }
 
 /** Whether to attempt the next model in the production chain after a failure. */
@@ -441,21 +453,15 @@ function extractStreamDelta(chunk: unknown): string {
 
   const choice = (chunk as {
     choices?: Array<{
-      delta?: { content?: string; reasoning?: string; reasoning_content?: string };
-      message?: { content?: string; reasoning?: string };
+      delta?: { content?: string };
+      message?: { content?: string };
     }>;
   }).choices?.[0];
-  const delta = choice?.delta;
-  if (typeof delta?.content === "string" && delta.content) return delta.content;
-  if (typeof delta?.reasoning === "string" && delta.reasoning) return delta.reasoning;
-  if (typeof delta?.reasoning_content === "string" && delta.reasoning_content) {
-    return delta.reasoning_content;
-  }
+  const deltaContent = choice?.delta?.content;
+  if (typeof deltaContent === "string" && deltaContent) return deltaContent;
 
   const messageContent = choice?.message?.content;
   if (typeof messageContent === "string" && messageContent) return messageContent;
-  const messageReasoning = choice?.message?.reasoning;
-  if (typeof messageReasoning === "string" && messageReasoning) return messageReasoning;
 
   const geminiParts = (
     chunk as { candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }> }

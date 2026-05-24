@@ -335,12 +335,7 @@ export async function POST(request: NextRequest) {
     );
     const languageDirective = getLanguageTurnDirective(sanitizedMessage, sanitizedHistory);
     const systemPromptWithCompletion =
-      systemPrompt +
-      getCompletionInstruction(isSimple, asksDetail) +
-      languageDirective +
-      (languageDirective
-        ? "\n- Before sending: verify every sentence matches the LANGUAGE DIRECTIVE above."
-        : "");
+      systemPrompt + getCompletionInstruction(isSimple, asksDetail) + languageDirective;
 
     const allowedDates = useCalendarPrompt
       ? collectAllowedDateTokens(primaryActivities)

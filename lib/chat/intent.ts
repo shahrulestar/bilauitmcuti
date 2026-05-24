@@ -223,7 +223,7 @@ export function getCompletionInstruction(
   asksDetail: boolean
 ): string {
   if (isSimple) {
-    return "\n\nIMPORTANT: Keep this answer short (1–3 sentences). State the date clearly. Do not add unrelated calendar items.";
+    return "\n\nKeep the reply to 1–3 sentences with the date. No planning or checklists in the output.";
   }
   if (asksDetail) {
     return "\n\nIMPORTANT: Finish every sentence and paragraph completely—never stop mid-thought or mid-list. Use enough length to answer fully without truncating.";
