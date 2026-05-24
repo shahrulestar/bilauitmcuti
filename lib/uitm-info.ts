@@ -1,7 +1,7 @@
 /**
  * Static knowledge base sourced from https://www.uitm.edu.my/
  * Used as AI context for general UiTM questions that go beyond calendar data.
- * Data stored in uitm-info.json for AI model access and deterministic answers.
+ * Data stored in uitm-info.json for AI model access in research-mode chat.
  * Last updated: February 2026
  */
 

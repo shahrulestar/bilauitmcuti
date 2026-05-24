@@ -95,12 +95,12 @@ export function resolveWorkersAiModelTier(requestHost?: string | null): WorkersA
     return "dev";
   }
 
-  if (process.env.NODE_ENV !== "production") return "dev";
-
   if (requestHost) {
     if (isProductionSiteHost(requestHost)) return "production";
     if (isLocalOrPreviewHost(requestHost)) return "dev";
   }
+
+  if (process.env.NODE_ENV !== "production") return "dev";
 
   if (isCloudflarePagesPreviewDeploy()) return "dev";
 
@@ -561,7 +561,19 @@ export async function streamWorkersAi(
         full += token;
         await options.onToken(token);
       }
-      if (!full.trim()) throw new Error("Empty response from model");
+      if (!full.trim()) {
+        full = await workersAiChatCompletion({
+          modelId,
+          messages,
+          max_tokens,
+          temperature,
+        });
+        if (full.trim()) {
+          await options.onToken(full);
+          return full;
+        }
+        throw new Error("Empty response from model");
+      }
       return full;
     } catch (err) {
       if (isStreamUnsupportedError(err)) {

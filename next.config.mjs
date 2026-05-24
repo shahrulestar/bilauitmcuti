@@ -94,7 +94,9 @@ const nextConfig = {
 }
 
 if (process.env.NODE_ENV === 'development') {
-  await setupDevPlatform();
+  await setupDevPlatform({
+    configPath: path.resolve(process.cwd(), 'wrangler.jsonc'),
+  });
 }
 
 export default nextConfig

@@ -163,7 +163,7 @@ export function isSimpleCalendarQuestion(message: string): boolean {
   return hasSimpleHint && lower.length <= 120;
 }
 
-/** Long user input — allow a larger completion budget; still skips simple fast path via length. */
+/** Long user input — allow a larger completion budget. */
 export function messageIsLong(message: string): boolean {
   return message.trim().length > CHAT_LONG_MESSAGE_THRESHOLD_CHARS;
 }

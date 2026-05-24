@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getMaxOutputTokensForHost, type ChatMessage } from "@/lib/ai";
+import { getAiBinding, getMaxOutputTokensForHost, type ChatMessage } from "@/lib/ai";
 import { getLanguageTurnDirective } from "@/lib/chat-language";
 import { normalizeAssistantTables } from "@/lib/format-ai-table";
 import {
@@ -42,7 +42,6 @@ import {
   resolveEffectiveSessions,
 } from "@/lib/chat/context";
 import { resolveCalendarContextIntent, isNarrowCalendarIntent } from "@/lib/chat/calendar-intent";
-import { tryBuildDeterministicReply } from "@/lib/chat/deterministic-reply";
 import {
   getCompletionInstruction,
   isCalendarQuestion,
@@ -68,45 +67,14 @@ import { cleanAiReply, sanitizeMessage } from "@/lib/chat/sanitize";
 import { getSystemRules } from "@/lib/chat/system-rules";
 import { getTodayISO, toReadableDate } from "@/lib/chat/dates";
 import { encodeSseEvent, SSE_HEADERS } from "@/lib/chat/sse";
+import { mapChatError } from "@/lib/chat/map-error";
 
 function jsonChatReply(
   reply: string,
   correlationId: string,
-  path: "cache" | "fast" | "llm"
+  path: "cache" | "llm"
 ): NextResponse {
   return NextResponse.json({ reply, correlationId, path });
-}
-
-function mapChatError(error: unknown): { message: string; status: number } {
-  const errMsg = error instanceof Error ? error.message : String(error);
-  const status = (error as { status?: number })?.status;
-
-  if (status === 401 || errMsg.includes("401") || errMsg.includes("Unauthorized")) {
-    return {
-      message:
-        "Workers AI is not configured. Add an AI binding named AI in Cloudflare Pages settings.",
-      status: 502,
-    };
-  }
-  if (status === 403 || errMsg.includes("403") || errMsg.includes("Forbidden")) {
-    return {
-      message: "AI model access denied. Please try again later or contact support.",
-      status: 502,
-    };
-  }
-  if (status === 413 || errMsg.includes("413")) {
-    return { message: "Request too large. Try a shorter message or clear chat history.", status: 413 };
-  }
-  if (errMsg.includes("429") || errMsg.includes("rate")) {
-    return { message: "AI service is busy. Please try again in a moment.", status: 429 };
-  }
-  if (errMsg.includes("503") || errMsg.includes("loading") || errMsg.includes("unavailable")) {
-    return { message: "AI model is loading. Please try again in a few seconds.", status: 503 };
-  }
-  if (errMsg.includes("timeout") || errMsg.includes("timed out")) {
-    return { message: "Request took too long. Please try again.", status: 504 };
-  }
-  return { message: "Failed to get response from AI. Please try again.", status: 500 };
 }
 
 export async function POST(request: NextRequest) {
@@ -341,25 +309,12 @@ export async function POST(request: NextRequest) {
       return withVerifiedCookie(jsonChatReply(cachedReply, correlationId, "cache"));
     }
 
-    const canUseDeterministicFastPath =
-      useCalendarPrompt &&
-      !wantsTableOutput &&
-      !isCompareRequested &&
-      !asksDetail;
-
-    if (canUseDeterministicFastPath) {
-      const fastReply = tryBuildDeterministicReply({
-        message: sanitizedMessage,
-        quickReference,
-        programLabel,
-        primaryGroup,
-        activities: primaryActivities,
-        todayISO,
-      });
-      if (fastReply) {
-        setCachedReply(cacheKey, fastReply);
-        return withVerifiedCookie(jsonChatReply(fastReply, correlationId, "fast"));
-      }
+    const aiBinding = await getAiBinding();
+    if (!aiBinding) {
+      const noAi = mapChatError(
+        Object.assign(new Error("Workers AI binding not available"), { status: 503 })
+      );
+      return withVerifiedCookie(jsonError(noAi.message, noAi.status));
     }
 
     const requestHost = request.headers.get("host");
@@ -447,6 +402,7 @@ export async function POST(request: NextRequest) {
               correlationId,
               errMsg: mapped.message,
               status: mapped.status,
+              cause: error instanceof Error ? error.message : String(error),
             });
             enqueue(encodeSseEvent("error", { error: mapped.message, status: mapped.status }));
             controller.close();
@@ -466,7 +422,12 @@ export async function POST(request: NextRequest) {
       return withVerifiedCookie(jsonError("Invalid JSON in request body", 400));
     }
     const mapped = mapChatError(error);
-    logger.error("Chat API error", { correlationId, errMsg: mapped.message, status: mapped.status });
+    logger.error("Chat API error", {
+      correlationId,
+      errMsg: mapped.message,
+      status: mapped.status,
+      cause: error instanceof Error ? error.message : String(error),
+    });
     return withVerifiedCookie(jsonError(mapped.message, mapped.status));
   }
 }

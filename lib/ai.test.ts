@@ -30,4 +30,12 @@ describe("resolveProductionChatModelChain", () => {
     vi.stubEnv("NODE_ENV", "production");
     expect(resolveWorkersAiModelTier("bilauitmcuti.com")).toBe("production");
   });
+
+  it("uses dev tier on localhost even when NODE_ENV is production", () => {
+    vi.stubEnv("NODE_ENV", "production");
+    expect(resolveWorkersAiModelTier("localhost:3000")).toBe("dev");
+    expect(resolveProductionChatModelChain("localhost:3000")).toEqual([
+      MODEL_WORKERS_AI_DEV,
+    ]);
+  });
 });

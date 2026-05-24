@@ -20,7 +20,7 @@ export interface ChatRequest {
   selectedSessions?: string[];
   history?: { role: "user" | "assistant"; content: string }[];
   turnstileToken?: string;
-  /** When true (default), LLM replies use SSE; cache/fast path always JSON. */
+  /** When true (default), LLM replies use SSE; cache hits always JSON. */
   stream?: boolean;
 }
 
