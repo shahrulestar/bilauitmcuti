@@ -80,6 +80,8 @@ import {
   getActiveMentionMatch,
   getChatErrorMessage,
   getRandomLoadingPhrase,
+  consumeChatStream,
+  MAX_CHAT_MESSAGE_LENGTH,
   parseChatResponse,
   prepareHistory,
   type ChatMessageItem,
@@ -131,6 +133,8 @@ export default function ChatPage() {
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [headerVisible, setHeaderVisible] = useState(true);
   const [reactions, setReactions] = useState<Record<string, "up" | "down" | null>>({});
+  const [feedbackSent, setFeedbackSent] = useState<Record<string, boolean>>({});
+  const [feedbackError, setFeedbackError] = useState<string | null>(null);
   const currentGroup = getGroupFromProgram(selectedProgram);
   const suggestionGroup = useMemo((): "A" | "B" => {
     const opt = getProgramOptions().find((p) => p.value === selectedProgram);
@@ -455,7 +459,9 @@ export default function ChatPage() {
   }, [dropdownOpen]);
 
   const sendMessage = useCallback(async (text: string) => {
-    if (!text.trim() || isLoading || waitForTurnstileConfig) return;
+    const trimmed = text.trim();
+    if (!trimmed || isLoading || waitForTurnstileConfig) return;
+    if (trimmed.length > MAX_CHAT_MESSAGE_LENGTH) return;
     if (requiresTurnstile && !turnstileToken.trim()) {
       turnstileRef.current?.execute();
       return;
@@ -465,7 +471,7 @@ export default function ChatPage() {
     const userMessage: Message = {
       id: now.toString(),
       role: "user",
-      content: text.trim(),
+      content: trimmed,
       timestamp: now,
     };
 
@@ -497,15 +503,19 @@ export default function ChatPage() {
 
       const trimmedToken = turnstileToken.trim();
       const body = JSON.stringify({
-        message: text.trim(),
+        message: trimmed,
         program: selectedProgram,
         selectedSessions,
         history,
+        stream: true,
         turnstileToken: trimmedToken ? trimmedToken : undefined,
       });
       let content: string | null = null;
+      let correlationId: string | undefined;
       let maxAttempts = 3;
       let chatRequestSucceeded = false;
+      let usedStreamPlaceholder = false;
+      const assistantId = (now + 1).toString();
       const isRetryableStatus = (s: number) =>
         s === 429 || s === 500 || s === 502 || s === 503 || s === 504;
 
@@ -521,6 +531,64 @@ export default function ChatPage() {
             credentials: "include",
           });
           clearTimeout(timeoutId);
+
+          const responseType = res.headers.get("content-type") ?? "";
+
+          if (responseType.includes("text/event-stream")) {
+            if (!res.ok) {
+              content = getChatErrorMessage(res, "Something went wrong. Please try again.");
+              break;
+            }
+
+            setIsLoading(false);
+            usedStreamPlaceholder = true;
+            setMessages((prev) => [
+              ...prev,
+              {
+                id: assistantId,
+                role: "assistant",
+                content: "",
+                timestamp: Date.now(),
+                userPrompt: trimmed,
+              },
+            ]);
+
+            await consumeChatStream(res, {
+              onToken: (token) => {
+                setMessages((prev) =>
+                  prev.map((m) =>
+                    m.id === assistantId ? { ...m, content: m.content + token } : m
+                  )
+                );
+              },
+              onDone: (payload) => {
+                content = payload.reply;
+                chatRequestSucceeded = true;
+                setMessages((prev) =>
+                  prev.map((m) =>
+                    m.id === assistantId
+                      ? {
+                          ...m,
+                          content: payload.reply,
+                          correlationId: payload.correlationId,
+                          userPrompt: trimmed,
+                        }
+                      : m
+                  )
+                );
+                setIsTurnstileSessionVerified(true);
+                setTurnstileToken("");
+                turnstileRef.current?.reset();
+              },
+              onError: (payload) => {
+                content = payload.error;
+                if (payload.status === 503 && maxAttempts === 3) {
+                  maxAttempts = 4;
+                }
+              },
+            });
+            break;
+          }
 
           const data = await parseChatResponse(res);
 
@@ -540,6 +608,7 @@ export default function ChatPage() {
             }
           } else {
             content = data.reply || "Sorry, I could not get a response.";
+            correlationId = data.correlationId;
             chatRequestSucceeded = true;
             setIsTurnstileSessionVerified(true);
             setTurnstileToken("");
@@ -565,15 +634,41 @@ export default function ChatPage() {
         setTurnstileNonce((n) => n + 1);
       }
 
-      const assistantNow = Date.now();
-      const assistantMessage: Message = {
-        id: (assistantNow + 1).toString(),
-        role: "assistant",
-        content: content || "Something went wrong. Please try again.",
-        timestamp: assistantNow,
-      };
-
-      setMessages((prev) => [...prev, assistantMessage]);
+      if (!chatRequestSucceeded) {
+        const assistantNow = Date.now();
+        const errorContent = content || "Something went wrong. Please try again.";
+        setMessages((prev) => {
+          const hasPlaceholder = prev.some((m) => m.id === assistantId);
+          if (hasPlaceholder) {
+            return prev.map((m) =>
+              m.id === assistantId ? { ...m, content: errorContent, timestamp: assistantNow } : m
+            );
+          }
+          return [
+            ...prev,
+            {
+              id: assistantId,
+              role: "assistant",
+              content: errorContent,
+              timestamp: assistantNow,
+            },
+          ];
+        });
+      } else if (!usedStreamPlaceholder) {
+        const assistantNow = Date.now();
+        const assistantMessage: Message = {
+          id: assistantId,
+          role: "assistant",
+          content: content || "Sorry, I could not get a response.",
+          timestamp: assistantNow,
+          userPrompt: trimmed,
+          correlationId,
+        };
+        setMessages((prev) => {
+          if (prev.some((m) => m.id === assistantId)) return prev;
+          return [...prev, assistantMessage];
+        });
+      }
     } catch {
       const errorNow = Date.now();
       const errorMessage: Message = {
@@ -699,11 +794,53 @@ export default function ChatPage() {
     }
   };
 
-  const handleReaction = (msgId: string, type: "up" | "down") => {
+  const handleReaction = async (msgId: string, type: "up" | "down") => {
+    const nextReaction = reactions[msgId] === type ? null : type;
     setReactions((prev) => ({
       ...prev,
-      [msgId]: prev[msgId] === type ? null : type,
+      [msgId]: nextReaction,
     }));
+
+    if (!nextReaction || feedbackSent[msgId]) return;
+
+    const assistantMsg = messages.find((m) => m.id === msgId);
+    if (!assistantMsg || assistantMsg.role !== "assistant" || !assistantMsg.content.trim()) {
+      setFeedbackError("Feedback is not available for this message yet.");
+      return;
+    }
+
+    const msgIndex = messages.findIndex((m) => m.id === msgId);
+    const userMsg =
+      msgIndex > 0 && messages[msgIndex - 1]?.role === "user"
+        ? messages[msgIndex - 1]
+        : null;
+    const userMessage =
+      assistantMsg.userPrompt ?? userMsg?.content ?? "";
+
+    try {
+      const res = await fetch("/chat/feedback/api", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          rating: nextReaction,
+          correlationId: assistantMsg.correlationId ?? undefined,
+          userMessage,
+          assistantMessage: assistantMsg.content,
+          program: selectedProgram,
+          selectedSessions,
+        }),
+      });
+      if (!res.ok) {
+        const data = (await res.json().catch(() => ({}))) as { error?: string };
+        setFeedbackError(data.error ?? "Could not send feedback. Please try again.");
+        return;
+      }
+      setFeedbackSent((prev) => ({ ...prev, [msgId]: true }));
+      setFeedbackError(null);
+    } catch {
+      setFeedbackError("Could not send feedback. Please try again.");
+    }
   };
 
   const handleDelete = useCallback((msgId: string) => {
@@ -849,14 +986,16 @@ export default function ChatPage() {
                     </button>
                     <button
                       onClick={() => handleReaction(msg.id, "up")}
-                      className={`flex items-center justify-center w-7 h-7 rounded-md hover:bg-secondary dark:hover:bg-[#2A2A2A] transition-colors active:scale-90 transition-transform duration-150 ${reactions[msg.id] === "up" ? "text-foreground" : "text-muted-foreground hover:text-foreground"}`}
+                      disabled={isLoading || !msg.content.trim()}
+                      className={`flex items-center justify-center w-7 h-7 rounded-md hover:bg-secondary dark:hover:bg-[#2A2A2A] transition-colors active:scale-90 transition-transform duration-150 disabled:opacity-40 disabled:pointer-events-none ${reactions[msg.id] === "up" ? "text-foreground" : "text-muted-foreground hover:text-foreground"}`}
                       aria-label="Thumbs up"
                     >
                       <ThumbsUp className={`w-3.5 h-3.5 ${reactions[msg.id] === "up" ? "fill-current" : ""}`} />
                     </button>
                     <button
                       onClick={() => handleReaction(msg.id, "down")}
-                      className={`flex items-center justify-center w-7 h-7 rounded-md hover:bg-secondary dark:hover:bg-[#2A2A2A] transition-colors active:scale-90 transition-transform duration-150 ${reactions[msg.id] === "down" ? "text-foreground" : "text-muted-foreground hover:text-foreground"}`}
+                      disabled={isLoading || !msg.content.trim()}
+                      className={`flex items-center justify-center w-7 h-7 rounded-md hover:bg-secondary dark:hover:bg-[#2A2A2A] transition-colors active:scale-90 transition-transform duration-150 disabled:opacity-40 disabled:pointer-events-none ${reactions[msg.id] === "down" ? "text-foreground" : "text-muted-foreground hover:text-foreground"}`}
                       aria-label="Thumbs down"
                     >
                       <ThumbsDown className={`w-3.5 h-3.5 ${reactions[msg.id] === "down" ? "fill-current" : ""}`} />
@@ -892,6 +1031,11 @@ export default function ChatPage() {
       <div className="chat-input-area relative px-4 md:px-0 pt-1 lg:pt-0.5 pb-6">
         <div className="mx-auto max-w-[600px]">
           {/* Suggestion chips - swipeable carousel with edge fades */}
+          {feedbackError && (
+            <p className="text-xs text-destructive mb-2 px-1" role="status">
+              {feedbackError}
+            </p>
+          )}
           {messages.length === 0 && (
             <SuggestionCarousel
               suggestions={suggestions}
@@ -928,10 +1072,11 @@ export default function ChatPage() {
               ref={textareaRef}
               value={input}
               onChange={(e) => {
-                const nextValue = e.target.value;
+                const nextValue = e.target.value.slice(0, MAX_CHAT_MESSAGE_LENGTH);
                 setInput(nextValue);
                 updateMentionState(nextValue, e.target.selectionStart);
               }}
+              maxLength={MAX_CHAT_MESSAGE_LENGTH}
               onClick={(e) => updateMentionState(e.currentTarget.value, e.currentTarget.selectionStart)}
               onKeyUp={(e) => updateMentionState(e.currentTarget.value, e.currentTarget.selectionStart)}
               onKeyDown={handleKeyDown}

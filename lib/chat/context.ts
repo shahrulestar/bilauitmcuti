@@ -1,3 +1,4 @@
+import type { CalendarContextIntent } from "@/lib/chat/calendar-intent";
 import {
   getActivitiesForSession,
   getDefaultSessionForGroup,
@@ -142,16 +143,22 @@ export function getFilteredActivitiesForSession(
 export function formatPrimaryCalendarContext(
   sessionIds: SessionId[],
   program: string,
-  group: "A" | "B"
+  group: "A" | "B",
+  contextIntent?: CalendarContextIntent
 ): string {
   if (sessionIds.length === 0) return "";
+  const applyIntent = (acts: Activity[]) =>
+    contextIntent && contextIntent !== "all"
+      ? filterActivitiesByContextIntent(acts, contextIntent)
+      : acts;
+
   if (sessionIds.length === 1) {
-    const acts = getFilteredActivitiesForSession(sessionIds[0]!, program, group);
+    const acts = applyIntent(getFilteredActivitiesForSession(sessionIds[0]!, program, group));
     return formatActivitiesAsContext(acts);
   }
   const parts: string[] = [];
   for (const sid of sessionIds) {
-    const acts = getFilteredActivitiesForSession(sid, program, group);
+    const acts = applyIntent(getFilteredActivitiesForSession(sid, program, group));
     parts.push(`=== SESSION ${sessionLabelForContext(sid)} ===`, formatActivitiesAsContext(acts));
   }
   return parts.join("\n\n");
@@ -161,16 +168,22 @@ export function computeQuickReferenceForSessions(
   sessionIds: SessionId[],
   program: string,
   group: "A" | "B",
-  todayISO: string
+  todayISO: string,
+  contextIntent?: CalendarContextIntent
 ): string {
   if (sessionIds.length === 0) return "";
+  const applyIntent = (acts: Activity[]) =>
+    contextIntent && contextIntent !== "all"
+      ? filterActivitiesByContextIntent(acts, contextIntent)
+      : acts;
+
   if (sessionIds.length === 1) {
-    const acts = getFilteredActivitiesForSession(sessionIds[0]!, program, group);
+    const acts = applyIntent(getFilteredActivitiesForSession(sessionIds[0]!, program, group));
     return computeQuickReference(acts, todayISO);
   }
   return sessionIds
     .map((sid) => {
-      const acts = getFilteredActivitiesForSession(sid, program, group);
+      const acts = applyIntent(getFilteredActivitiesForSession(sid, program, group));
       return `[${sessionLabelForContext(sid)}]\n${computeQuickReference(acts, todayISO)}`;
     })
     .join("\n\n");
@@ -253,6 +266,8 @@ export function computeQuickReference(activities: Activity[], todayISO: string):
 
 /** Context char limits to avoid oversized prompts and reduce latency. */
 export const MAX_PRIMARY_CONTEXT_CHARS = 4_500;
+export const MAX_PRIMARY_CONTEXT_CHARS_COMPACT = 2_000;
+export const MAX_PRIMARY_CONTEXT_CHARS_NARROW = 1_500;
 export const MAX_SECONDARY_CONTEXT_CHARS = 1_800;
 export const MAX_COMPARISON_CONTEXT_CHARS = 2_000;
 /** Calendar prompt: uitm-info.json supplement (system-rules DATA PRIORITY). */
@@ -280,6 +295,65 @@ export function narrowActivitiesForSecondaryReference(activities: Activity[]): A
   const key = sorted.filter((a) => isKeyScheduleActivityForReference(a));
   const narrowed = key.length > 0 ? key : sorted.slice(0, 60);
   return narrowed.length > 100 ? narrowed.slice(0, 100) : narrowed;
+}
+
+/** Filter calendar rows sent to the LLM by detected question intent. */
+export function filterActivitiesByContextIntent(
+  activities: Activity[],
+  intent: CalendarContextIntent
+): Activity[] {
+  if (intent === "all" || intent === "days_until" || intent === "lecture_count") {
+    return activities;
+  }
+
+  const filtered = activities.filter((a) => {
+    const name = a.name.toLowerCase();
+    switch (intent) {
+      case "break":
+        return a.type === "break" || name.includes("cuti");
+      case "exam":
+        return (
+          a.type === "examination" ||
+          name.includes("peperiksaan") ||
+          name.includes("ujian") ||
+          name.includes("eet") ||
+          name.includes("slip")
+        );
+      case "lecture":
+        return a.type === "lecture" || name.includes("kuliah") || name.includes("lecture");
+      case "registration":
+        return (
+          a.type === "registration" ||
+          name.includes("pendaftaran") ||
+          name.includes("registration") ||
+          name.includes("validation") ||
+          name.includes("sahkan")
+        );
+      case "fee":
+        return (
+          a.type === "registration" ||
+          name.includes("gt") ||
+          name.includes("rpgt") ||
+          name.includes("yuran") ||
+          name.includes("fee")
+        );
+      case "revision":
+        return name.includes("ulangkaji") || name.includes("revision");
+      case "gugur":
+        return name.includes("gugur");
+      case "festive":
+        return (
+          a.type === "break" &&
+          (name.includes("raya") || name.includes("aidil") || name.includes("festive"))
+        );
+      default:
+        return true;
+    }
+  });
+
+  if (filtered.length > 0) return dedupeActivities(filtered);
+  const keyRows = activities.filter((a) => isKeyScheduleActivityForReference(a));
+  return keyRows.length > 0 ? dedupeActivities(keyRows) : activities;
 }
 
 export function buildComparisonContext(
@@ -336,6 +410,12 @@ export function buildSessionListContext(
     .join("\n");
 }
 
+export interface CalendarPromptBuildOptions {
+  /** Omit secondary group calendar block to shrink prompt (simple questions). */
+  includeSecondaryContext?: boolean;
+  maxPrimaryChars?: number;
+}
+
 export function buildCalendarSystemPrompt(
   programLabel: string,
   primaryGroup: string,
@@ -351,16 +431,20 @@ export function buildCalendarSystemPrompt(
   forceTableOutput?: boolean,
   multipleSessionsSelected?: boolean,
   uitmSupplement?: string,
-  selectedSessionCount?: number
+  selectedSessionCount?: number,
+  buildOptions?: CalendarPromptBuildOptions
 ): string {
+  const primaryCap = buildOptions?.maxPrimaryChars ?? MAX_PRIMARY_CONTEXT_CHARS;
+  const includeSecondary = buildOptions?.includeSecondaryContext !== false;
   const truncatedPrimary =
-    primaryContext.length > MAX_PRIMARY_CONTEXT_CHARS
-      ? primaryContext.slice(0, MAX_PRIMARY_CONTEXT_CHARS) + "\n...[truncated]"
+    primaryContext.length > primaryCap
+      ? primaryContext.slice(0, primaryCap) + "\n...[truncated]"
       : primaryContext;
+  const secondaryForPrompt = includeSecondary ? secondaryContext : "";
   const truncatedSecondary =
-    secondaryContext.length > MAX_SECONDARY_CONTEXT_CHARS
-      ? secondaryContext.slice(0, MAX_SECONDARY_CONTEXT_CHARS) + "\n...[truncated]"
-      : secondaryContext;
+    secondaryForPrompt.length > MAX_SECONDARY_CONTEXT_CHARS
+      ? secondaryForPrompt.slice(0, MAX_SECONDARY_CONTEXT_CHARS) + "\n...[truncated]"
+      : secondaryForPrompt;
 
   const rules = getCachedSystemRules() ?? { schemaVersion: 1, calendarPromptCompact: "", calendarPromptTemplate: "", researchPrompt: "" };
   const template = compilePrompt(rules.calendarPromptCompact);

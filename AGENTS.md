@@ -10,15 +10,17 @@ pnpm install
 
 ## Required Environment
 
-- **Workers AI binding** — required for chat. In Cloudflare Pages: Settings → Bindings → Add → **Workers AI** → variable name `AI` (production + preview). Local: `pnpm run preview` after `build:pages`. Also declared in [`wrangler.jsonc`](wrangler.jsonc). No API key secret for inference. Chat model: **Gemma 4** (`@cf/google/gemma-4-26b-a4b-it`) on production host `bilauitmcuti.com`; **Llama 3.2 3B** for `pnpm dev`, `pnpm preview`, and Pages preview (`*.pages.dev`). See `lib/ai.ts` (`resolveWorkersAiModelId`).
+- **Workers AI binding** — required for chat. In Cloudflare Pages: Settings → Bindings → Add → **Workers AI** → variable name `AI` (production + preview). Local: `pnpm run preview` after `build:pages`. Also declared in [`wrangler.jsonc`](wrangler.jsonc). No API key secret for inference. **Production only** (`bilauitmcuti.com`): primary **Gemma 4** (`@cf/google/gemma-4-26b-a4b-it`), backup **Gemini 3.1 Flash Lite** (`google/gemini-3.1-flash-lite` on fallback). **Dev / preview**: **Llama 3.2 3B**. Overrides: `WORKERS_AI_MODEL`, `WORKERS_AI_BACKUP_MODEL`, `WORKERS_AI_USE_DEV_MODEL=1`. See `lib/ai.ts` (`resolveProductionChatModelChain`).
 - `NEXT_PUBLIC_TURNSTILE_SITE_KEY` + `TURNSTILE_SECRET_KEY` — required for Turnstile on feedback, sponsor, and chat in production. Set `NEXT_PUBLIC_TURNSTILE_SITE_KEY` in **Pages build environment** (inlined into the client bundle), or `TURNSTILE_SITE_KEY` at runtime (client loads via `GET /api/turnstile/config`).
 
 ## Optional Environment
 
-- `DISCORD_WEBHOOK_URL` — optional server-only webhook for contact, engagement rating, and sponsor form notifications. Do not use `NEXT_PUBLIC_*` or commit the URL.
+- `DISCORD_WEBHOOK_URL` — optional server-only webhook for contact, engagement rating, sponsor form, and **chat AI thumbs up/down** (`POST /chat/feedback/api`). Do not use `NEXT_PUBLIC_*` or commit the URL.
 - `CALENDAR_API_BASE` — optional server-only override for the calendar API origin (default `https://api.bilauitmcuti.com`). Do not use `NEXT_PUBLIC_*` for this: the upstream URL must not be embedded in client bundles.
 
 **Browser vs server:** The calendar UI calls **`/api/v1/meta`** and **`/api/v1/calendar`** (same origin); legacy **`/api/calendar-proxy/v1/...`** still works. CSP `connect-src` allows `'self'` only for calendar traffic (not the upstream host). The proxy allowlists those paths and forwards to `CALENDAR_API_BASE`. Chat and other server code call the upstream URL directly.
+
+**Chat API (`POST /chat/api`):** Hybrid responses — cache hits and deterministic fast-path answers return JSON `{ reply, correlationId, path }`; LLM calls with `stream: true` (default) return **SSE** (`text/event-stream`) with `token` and `done` events. Thumbs feedback posts to **`POST /chat/feedback/api`** with the assistant `correlationId`.
 
 ## Commands
 

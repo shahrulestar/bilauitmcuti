@@ -1,3 +1,5 @@
+import { CHAT_LONG_MESSAGE_THRESHOLD_CHARS } from "@/lib/chat/limits";
+
 const CALENDAR_STRONG_KEYWORDS = [
   "cuti",
   "semester",
@@ -159,4 +161,72 @@ export function isSimpleCalendarQuestion(message: string): boolean {
   ];
   const hasSimpleHint = simpleHints.some((kw) => lower.includes(kw));
   return hasSimpleHint && lower.length <= 120;
+}
+
+/** Long user input — allow a larger completion budget; still skips simple fast path via length. */
+export function messageIsLong(message: string): boolean {
+  return message.trim().length > CHAT_LONG_MESSAGE_THRESHOLD_CHARS;
+}
+
+export function messageAsksDetail(message: string): boolean {
+  const lower = message.toLowerCase();
+  return (
+    lower.includes("explain") ||
+    lower.includes("why") ||
+    lower.includes("how") ||
+    lower.includes("detail") ||
+    lower.includes("huraikan") ||
+    lower.includes("jelaskan") ||
+    lower.includes("full") ||
+    lower.includes("complete") ||
+    lower.includes("lengkap") ||
+    lower.includes("semua") ||
+    lower.includes("list all") ||
+    lower.includes("senarai")
+  );
+}
+
+/** User explicitly asks about the other academic group (A vs B). */
+export function needsSecondaryGroupContext(
+  message: string,
+  primaryGroup: "A" | "B"
+): boolean {
+  const lower = message.toLowerCase();
+  if (lower.includes("group a") || lower.includes("kumpulan a")) return true;
+  if (lower.includes("group b") || lower.includes("kumpulan b")) return true;
+  const other = primaryGroup === "A" ? "b" : "a";
+  if (lower.includes(`group ${other}`) || lower.includes(`kumpulan ${other}`)) return true;
+  if (
+    primaryGroup === "A" &&
+    (lower.includes("march") ||
+      lower.includes("ogos") ||
+      lower.includes("august") ||
+      lower.includes("pre-diploma") ||
+      lower.includes("diploma"))
+  ) {
+    return true;
+  }
+  if (
+    primaryGroup === "B" &&
+    (lower.includes("december") ||
+      lower.includes("disember") ||
+      lower.includes("foundation") ||
+      lower.includes("professional"))
+  ) {
+    return true;
+  }
+  return isComparisonQuestion(message);
+}
+
+export function getCompletionInstruction(
+  isSimple: boolean,
+  asksDetail: boolean
+): string {
+  if (isSimple) {
+    return "\n\nIMPORTANT: Keep this answer short (1–3 sentences). State the date clearly. Do not add unrelated calendar items.";
+  }
+  if (asksDetail) {
+    return "\n\nIMPORTANT: Finish every sentence and paragraph completely—never stop mid-thought or mid-list. Use enough length to answer fully without truncating.";
+  }
+  return "\n\nIMPORTANT: Be concise but complete. Finish every sentence; avoid filler and unrelated calendar items.";
 }

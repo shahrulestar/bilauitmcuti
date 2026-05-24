@@ -1,7 +1,15 @@
-export const MAX_BODY_SIZE_BYTES = 50 * 1024; // 50KB
-export const MAX_MESSAGE_LENGTH = 2000;
+import {
+  CHAT_MAX_BODY_BYTES,
+  CHAT_MAX_HISTORY_CONTENT_LENGTH,
+  CHAT_MAX_MESSAGE_LENGTH,
+} from "@/lib/chat/limits";
+
+export const MAX_BODY_SIZE_BYTES = CHAT_MAX_BODY_BYTES;
+/** @deprecated Use CHAT_MAX_MESSAGE_LENGTH from @/lib/chat/limits */
+export const MAX_MESSAGE_LENGTH = CHAT_MAX_MESSAGE_LENGTH;
 export const MAX_HISTORY_ARRAY_LENGTH = 20;
-export const MAX_HISTORY_CONTENT_LENGTH = 8000;
+/** @deprecated Use CHAT_MAX_HISTORY_CONTENT_LENGTH from @/lib/chat/limits */
+export const MAX_HISTORY_CONTENT_LENGTH = CHAT_MAX_HISTORY_CONTENT_LENGTH;
 export const MAX_SELECTED_SESSIONS = 6;
 export const CHAT_TURNSTILE_COOKIE = "chat_turnstile_verified";
 export const CHAT_TURNSTILE_COOKIE_MAX_AGE_SECONDS = 60 * 60 * 12;
@@ -12,6 +20,8 @@ export interface ChatRequest {
   selectedSessions?: string[];
   history?: { role: "user" | "assistant"; content: string }[];
   turnstileToken?: string;
+  /** When true (default), LLM replies use SSE; cache/fast path always JSON. */
+  stream?: boolean;
 }
 
 export function parseChatRequest(raw: unknown): { success: true; data: ChatRequest } | { success: false; error: string } {
@@ -21,7 +31,7 @@ export function parseChatRequest(raw: unknown): { success: true; data: ChatReque
   const message = o.message;
   if (typeof message !== "string" || message.length === 0)
     return { success: false, error: "Message is required" };
-  if (message.length > MAX_MESSAGE_LENGTH)
+  if (message.length > CHAT_MAX_MESSAGE_LENGTH)
     return { success: false, error: "Message is too long. Please shorten your message." };
 
   const program = o.program != null ? String(o.program) : undefined;
@@ -48,7 +58,7 @@ export function parseChatRequest(raw: unknown): { success: true; data: ChatReque
       if (item.role !== "user" && item.role !== "assistant")
         return { success: false, error: "Invalid request. Please try again." };
       const content = String(item.content ?? "");
-      if (content.length > MAX_HISTORY_CONTENT_LENGTH)
+      if (content.length > CHAT_MAX_HISTORY_CONTENT_LENGTH)
         return { success: false, error: "Chat history too long. Please start a new conversation." };
       parsed.push({ role: item.role, content });
     }
@@ -59,5 +69,7 @@ export function parseChatRequest(raw: unknown): { success: true; data: ChatReque
     ? String(o.turnstileToken)
     : undefined;
 
-  return { success: true, data: { message, program, selectedSessions, history, turnstileToken } };
+  const stream = o.stream === false ? false : true;
+
+  return { success: true, data: { message, program, selectedSessions, history, turnstileToken, stream } };
 }

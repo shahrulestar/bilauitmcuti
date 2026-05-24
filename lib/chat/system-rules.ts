@@ -1,3 +1,5 @@
+import systemRulesBundled from "@/public/system-rules.json";
+
 export interface SystemRulesJson {
   schemaVersion: number;
   calendarPromptCompact: string | string[];
@@ -5,10 +7,12 @@ export interface SystemRulesJson {
   researchPrompt: string | string[];
 }
 
-let _systemRules: SystemRulesJson | null = null;
+const bundledRules = systemRulesBundled as SystemRulesJson;
+
+let _systemRules: SystemRulesJson | null = bundledRules;
 
 export async function getSystemRules(origin: string): Promise<SystemRulesJson> {
-  if (_systemRules) return _systemRules;
+  if (_systemRules?.calendarPromptCompact) return _systemRules;
   try {
     const res = await fetch(`${origin}/system-rules.json`);
     if (res.ok) {
@@ -18,12 +22,12 @@ export async function getSystemRules(origin: string): Promise<SystemRulesJson> {
   } catch {
     // fall through to embedded fallback
   }
-  _systemRules = { schemaVersion: 1, calendarPromptCompact: "", calendarPromptTemplate: "", researchPrompt: "" };
+  _systemRules = bundledRules;
   return _systemRules;
 }
 
 export function getCachedSystemRules(): SystemRulesJson {
-  return _systemRules ?? { schemaVersion: 1, calendarPromptCompact: "", calendarPromptTemplate: "", researchPrompt: "" };
+  return _systemRules ?? bundledRules;
 }
 
 export function compilePrompt(sections: string | readonly string[]): string {

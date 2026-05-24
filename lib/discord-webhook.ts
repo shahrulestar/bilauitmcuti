@@ -154,6 +154,42 @@ export function buildEngagementNotificationEmbed(params: {
   };
 }
 
+const CHAT_FEEDBACK_EXCERPT_CHARS = 800;
+
+function excerptForDiscord(text: string, max = CHAT_FEEDBACK_EXCERPT_CHARS): string {
+  const t = text.trim();
+  if (!t) return "(empty)";
+  if (t.length <= max) return t;
+  return t.slice(0, max - 3) + "...";
+}
+
+/** Simple embed for chat thumbs — same webhook as contact/engagement (no ISO timestamp field). */
+export function buildChatFeedbackEmbed(params: {
+  rating: "up" | "down";
+  userMessage: string;
+  assistantMessage: string;
+  time: string;
+  program?: string;
+  correlationId?: string;
+}): DiscordEmbed {
+  const isUp = params.rating === "up";
+  const program = params.program?.trim() || "—";
+  const ref = params.correlationId?.trim() || "—";
+
+  return {
+    title: isUp ? "Chat AI — helpful" : "Chat AI — not helpful",
+    color: isUp ? 0x57f287 : 0xed4245,
+    fields: [
+      { name: "Rating", value: isUp ? "Thumbs up" : "Thumbs down", inline: true },
+      { name: "Time", value: params.time, inline: true },
+      { name: "Program", value: program, inline: true },
+      { name: "Ref", value: ref, inline: true },
+      { name: "Question", value: excerptForDiscord(params.userMessage), inline: false },
+      { name: "Answer", value: excerptForDiscord(params.assistantMessage), inline: false },
+    ],
+  };
+}
+
 export function buildSponsorNotificationEmbed(params: {
   anonymous: boolean;
   nickname: string;

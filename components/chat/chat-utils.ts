@@ -1,3 +1,7 @@
+import { CHAT_MAX_HISTORY_CONTENT_LENGTH, CHAT_MAX_MESSAGE_LENGTH } from "@/lib/chat/limits";
+export { consumeChatStream } from "@/lib/chat/sse";
+export type { ChatStreamDonePayload } from "@/lib/chat/sse";
+
 export function getChatErrorMessage(res: Response, fallback: string): string {
   if (res.status === 429) return "Too many requests. Please wait a moment before trying again.";
   if (res.status === 403) return "Access was blocked. Please refresh and try again.";
@@ -6,10 +10,20 @@ export function getChatErrorMessage(res: Response, fallback: string): string {
   return fallback;
 }
 
-export async function parseChatResponse(res: Response): Promise<{ error?: string; reply?: string }> {
+export async function parseChatResponse(res: Response): Promise<{
+  error?: string;
+  reply?: string;
+  correlationId?: string;
+  path?: string;
+}> {
   const text = await res.text();
   try {
-    return JSON.parse(text) as { error?: string; reply?: string };
+    return JSON.parse(text) as {
+      error?: string;
+      reply?: string;
+      correlationId?: string;
+      path?: string;
+    };
   } catch {
     return { error: getChatErrorMessage(res, "Something went wrong. Please try again.") };
   }
@@ -31,7 +45,8 @@ export const LOADING_PHRASES = [
 export const FETCH_TIMEOUT_MS = 60_000;
 export const RETRY_DELAYS_MS = [400, 800, 1600];
 export const CHAT_TURNSTILE_COOKIE = "chat_turnstile_verified";
-export const MAX_HISTORY_CONTENT_LENGTH = 2000;
+export const MAX_CHAT_MESSAGE_LENGTH = CHAT_MAX_MESSAGE_LENGTH;
+export const MAX_HISTORY_CONTENT_LENGTH = CHAT_MAX_HISTORY_CONTENT_LENGTH;
 export const MAX_HISTORY_ITEMS = 4;
 
 export interface ChatMessageItem {
@@ -39,6 +54,8 @@ export interface ChatMessageItem {
   role: "user" | "assistant";
   content: string;
   timestamp?: number;
+  correlationId?: string;
+  userPrompt?: string;
 }
 
 export interface MentionMatch {
