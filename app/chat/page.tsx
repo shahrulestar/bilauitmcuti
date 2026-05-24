@@ -81,6 +81,7 @@ import {
   getChatErrorMessage,
   getRandomLoadingPhrase,
   consumeChatStream,
+  LOADING_INDICATOR_DELAY_MS,
   MAX_CHAT_MESSAGE_LENGTH,
   parseChatResponse,
   prepareHistory,
@@ -268,6 +269,23 @@ export default function ChatPage() {
     setSuggestions(getRandomSuggestions(suggestionGroup, []));
   }, [suggestionGroup]);
   const [loadingPhrase, setLoadingPhrase] = useState("");
+  const [showThinkingIndicator, setShowThinkingIndicator] = useState(false);
+  const thinkingDelayRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const clearThinkingDelay = useCallback(() => {
+    if (thinkingDelayRef.current) {
+      clearTimeout(thinkingDelayRef.current);
+      thinkingDelayRef.current = null;
+    }
+  }, []);
+
+  const startThinkingDelay = useCallback(() => {
+    clearThinkingDelay();
+    setShowThinkingIndicator(false);
+    thinkingDelayRef.current = setTimeout(() => {
+      setShowThinkingIndicator(true);
+    }, LOADING_INDICATOR_DELAY_MS);
+  }, [clearThinkingDelay]);
 
   const handleSessionToggle = useCallback(
     (programValue: ProgramValue, sessionId: SessionId, group: "A" | "B") => {
@@ -399,6 +417,14 @@ export default function ChatPage() {
     return null;
   }, [messages]);
 
+  const showThinkingUi = useMemo(
+    () =>
+      isLoading &&
+      showThinkingIndicator &&
+      !messages.some((m) => m.role === "assistant" && m.isComplete === false),
+    [isLoading, showThinkingIndicator, messages]
+  );
+
   const disclaimerTexts = useMemo(() => [
     "AI can make mistakes. Check important info.",
     "Free-tier AI model with daily rate limits.",
@@ -416,9 +442,9 @@ export default function ChatPage() {
     return () => clearInterval(interval);
   }, [disclaimerTexts.length]);
 
-  // Rotate loading phrases while waiting for AI response
+  // Rotate loading phrases while the delayed thinking indicator is visible
   useEffect(() => {
-    if (!isLoading) {
+    if (!showThinkingIndicator) {
       setLoadingPhrase("");
       return;
     }
@@ -427,7 +453,9 @@ export default function ChatPage() {
       setLoadingPhrase((prev) => getRandomLoadingPhrase(prev));
     }, 3000);
     return () => clearInterval(interval);
-  }, [isLoading]);
+  }, [showThinkingIndicator]);
+
+  useEffect(() => () => clearThinkingDelay(), [clearThinkingDelay]);
 
   const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -479,6 +507,7 @@ export default function ChatPage() {
     setMessages(updatedMessages);
     setInput("");
     setIsLoading(true);
+    startThinkingDelay();
     recordEngagementAction("chat_send");
     let didAttemptFetch = false;
 
@@ -540,42 +569,66 @@ export default function ChatPage() {
               break;
             }
 
-            setIsLoading(false);
             usedStreamPlaceholder = true;
-            setMessages((prev) => [
-              ...prev,
-              {
-                id: assistantId,
-                role: "assistant",
-                content: "",
-                timestamp: Date.now(),
-                userPrompt: trimmed,
-              },
-            ]);
 
             await consumeChatStream(res, {
               onToken: (token) => {
-                setMessages((prev) =>
-                  prev.map((m) =>
+                clearThinkingDelay();
+                setShowThinkingIndicator(false);
+                setMessages((prev) => {
+                  const existing = prev.find((m) => m.id === assistantId);
+                  if (!existing) {
+                    return [
+                      ...prev,
+                      {
+                        id: assistantId,
+                        role: "assistant",
+                        content: token,
+                        isComplete: false,
+                        userPrompt: trimmed,
+                      },
+                    ];
+                  }
+                  return prev.map((m) =>
                     m.id === assistantId ? { ...m, content: m.content + token } : m
-                  )
-                );
+                  );
+                });
               },
               onDone: (payload) => {
                 content = payload.reply;
                 chatRequestSucceeded = true;
-                setMessages((prev) =>
-                  prev.map((m) =>
+                clearThinkingDelay();
+                setShowThinkingIndicator(false);
+                const doneAt = Date.now();
+                setMessages((prev) => {
+                  const hasMsg = prev.some((m) => m.id === assistantId);
+                  if (!hasMsg) {
+                    return [
+                      ...prev,
+                      {
+                        id: assistantId,
+                        role: "assistant",
+                        content: payload.reply,
+                        correlationId: payload.correlationId,
+                        userPrompt: trimmed,
+                        isComplete: true,
+                        timestamp: doneAt,
+                      },
+                    ];
+                  }
+                  return prev.map((m) =>
                     m.id === assistantId
                       ? {
                           ...m,
                           content: payload.reply,
                           correlationId: payload.correlationId,
                           userPrompt: trimmed,
+                          isComplete: true,
+                          timestamp: doneAt,
                         }
                       : m
-                  )
-                );
+                  );
+                });
                 setIsTurnstileSessionVerified(true);
                 setTurnstileToken("");
                 turnstileRef.current?.reset();
@@ -607,6 +660,8 @@ export default function ChatPage() {
               continue;
             }
           } else {
+            clearThinkingDelay();
+            setShowThinkingIndicator(false);
             content = data.reply || "Sorry, I could not get a response.";
             correlationId = data.correlationId;
             chatRequestSucceeded = true;
@@ -641,7 +696,14 @@ export default function ChatPage() {
           const hasPlaceholder = prev.some((m) => m.id === assistantId);
           if (hasPlaceholder) {
             return prev.map((m) =>
-              m.id === assistantId ? { ...m, content: errorContent, timestamp: assistantNow } : m
+              m.id === assistantId
+                ? {
+                    ...m,
+                    content: errorContent,
+                    timestamp: assistantNow,
+                    isComplete: true,
+                  }
+                : m
             );
           }
           return [
@@ -651,6 +713,7 @@ export default function ChatPage() {
               role: "assistant",
               content: errorContent,
               timestamp: assistantNow,
+              isComplete: true,
             },
           ];
         });
@@ -663,6 +726,7 @@ export default function ChatPage() {
           timestamp: assistantNow,
           userPrompt: trimmed,
           correlationId,
+          isComplete: true,
         };
         setMessages((prev) => {
           if (prev.some((m) => m.id === assistantId)) return prev;
@@ -679,9 +743,12 @@ export default function ChatPage() {
       };
       setMessages((prev) => [...prev, errorMessage]);
     } finally {
+      clearThinkingDelay();
+      setShowThinkingIndicator(false);
       setIsLoading(false);
     }
   }, [
+    clearThinkingDelay,
     isLoading,
     isTurnstileSessionVerified,
     messages,
@@ -689,6 +756,7 @@ export default function ChatPage() {
     requiresTurnstile,
     selectedProgram,
     selectedSessions,
+    startThinkingDelay,
     turnstileToken,
     waitForTurnstileConfig,
   ]);
@@ -924,7 +992,20 @@ export default function ChatPage() {
                 />
               </div>
             ) : null}
-            {messages.map((msg) => (
+            {messages.map((msg) => {
+              if (
+                msg.role === "assistant" &&
+                msg.isComplete === false &&
+                !msg.content.trim()
+              ) {
+                return null;
+              }
+              const assistantFinished =
+                msg.role === "assistant" &&
+                msg.isComplete !== false &&
+                msg.content.trim().length > 0;
+
+              return (
               <div key={msg.id} className="space-y-1">
                 <div
                   className={`flex ${
@@ -965,13 +1046,15 @@ export default function ChatPage() {
                       className="max-w-[80%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed bg-secondary dark:bg-[#2A2A2A] text-foreground rounded-bl-md"
                     >
                       <FormattedMessage content={msg.content} />
-                      <div className="text-right text-xs text-muted-foreground mt-1">
-                        {formatTime24((msg.timestamp ?? parseInt(msg.id, 10)) || Date.now())}
-                      </div>
+                      {assistantFinished && (
+                        <div className="text-right text-xs text-muted-foreground mt-1">
+                          {formatTime24(msg.timestamp ?? Date.now())}
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
-                {msg.role === "assistant" && (
+                {assistantFinished && (
                   <div className="flex gap-1">
                     <button
                       onClick={() => handleCopy(msg.id, msg.content)}
@@ -986,16 +1069,14 @@ export default function ChatPage() {
                     </button>
                     <button
                       onClick={() => handleReaction(msg.id, "up")}
-                      disabled={isLoading || !msg.content.trim()}
-                      className={`flex items-center justify-center w-7 h-7 rounded-md hover:bg-secondary dark:hover:bg-[#2A2A2A] transition-colors active:scale-90 transition-transform duration-150 disabled:opacity-40 disabled:pointer-events-none ${reactions[msg.id] === "up" ? "text-foreground" : "text-muted-foreground hover:text-foreground"}`}
+                      className={`flex items-center justify-center w-7 h-7 rounded-md hover:bg-secondary dark:hover:bg-[#2A2A2A] transition-colors active:scale-90 transition-transform duration-150 ${reactions[msg.id] === "up" ? "text-foreground" : "text-muted-foreground hover:text-foreground"}`}
                       aria-label="Thumbs up"
                     >
                       <ThumbsUp className={`w-3.5 h-3.5 ${reactions[msg.id] === "up" ? "fill-current" : ""}`} />
                     </button>
                     <button
                       onClick={() => handleReaction(msg.id, "down")}
-                      disabled={isLoading || !msg.content.trim()}
-                      className={`flex items-center justify-center w-7 h-7 rounded-md hover:bg-secondary dark:hover:bg-[#2A2A2A] transition-colors active:scale-90 transition-transform duration-150 disabled:opacity-40 disabled:pointer-events-none ${reactions[msg.id] === "down" ? "text-foreground" : "text-muted-foreground hover:text-foreground"}`}
+                      className={`flex items-center justify-center w-7 h-7 rounded-md hover:bg-secondary dark:hover:bg-[#2A2A2A] transition-colors active:scale-90 transition-transform duration-150 ${reactions[msg.id] === "down" ? "text-foreground" : "text-muted-foreground hover:text-foreground"}`}
                       aria-label="Thumbs down"
                     >
                       <ThumbsDown className={`w-3.5 h-3.5 ${reactions[msg.id] === "down" ? "fill-current" : ""}`} />
@@ -1003,9 +1084,10 @@ export default function ChatPage() {
                   </div>
                 )}
               </div>
-            ))}
+            );
+            })}
 
-            {isLoading && (
+            {showThinkingUi && (
               <div className="flex flex-col items-start gap-1">
                 <div className="bg-secondary dark:bg-[#2A2A2A] rounded-2xl rounded-bl-md px-4 py-3">
                   <div className="flex gap-1.5">

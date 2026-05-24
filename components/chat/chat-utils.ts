@@ -44,6 +44,8 @@ export const LOADING_PHRASES = [
 
 export const FETCH_TIMEOUT_MS = 60_000;
 export const RETRY_DELAYS_MS = [400, 800, 1600];
+/** Show three-dot thinking UI only if the response takes longer than this (ms). */
+export const LOADING_INDICATOR_DELAY_MS = 450;
 export const CHAT_TURNSTILE_COOKIE = "chat_turnstile_verified";
 export const MAX_CHAT_MESSAGE_LENGTH = CHAT_MAX_MESSAGE_LENGTH;
 export const MAX_HISTORY_CONTENT_LENGTH = CHAT_MAX_HISTORY_CONTENT_LENGTH;
@@ -56,6 +58,8 @@ export interface ChatMessageItem {
   timestamp?: number;
   correlationId?: string;
   userPrompt?: string;
+  /** False while streaming; omit or true when the answer is finished. */
+  isComplete?: boolean;
 }
 
 export interface MentionMatch {
@@ -71,6 +75,7 @@ export function getRandomLoadingPhrase(exclude?: string): string {
 
 export function prepareHistory(messages: ChatMessageItem[]): { role: "user" | "assistant"; content: string }[] {
   return messages
+    .filter((msg) => msg.isComplete !== false)
     .slice(-MAX_HISTORY_ITEMS)
     .map((msg) => ({
       role: msg.role,
