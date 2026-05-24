@@ -7,6 +7,7 @@ import {
 } from "@/lib/session-memory";
 import {
   getProgramFromRoute,
+  getRoutePath,
   isProgramValue,
   isValidProgramRoute,
   type ProgramValue,
@@ -63,8 +64,12 @@ export function buildCalendarAbsoluteUrl(pathname: string, sessionIds: SessionId
   return `${SITE_ORIGIN}${pathWithQuery}`;
 }
 
+export function isHomepageCalendarPath(pathname: string): boolean {
+  return pathname === "/" || pathname === "/list";
+}
+
 export function isCalendarPath(pathname: string): boolean {
-  if (pathname === "/" || pathname === "/list") return true;
+  if (isHomepageCalendarPath(pathname)) return true;
   const segments = pathname.split("/").filter(Boolean);
   if (segments.length === 1) return isValidProgramRoute(segments[0]);
   if (segments.length === 2 && segments[1] === "list") {
@@ -84,19 +89,41 @@ export function resolveProgramFromCalendarPath(pathname: string): ProgramValue {
   return "All";
 }
 
-/** Resolve program for session query: path wins; homepage falls back to cookie or All. */
+/**
+ * Resolve program for session query: path wins; homepage is always Group B (`All`)
+ * unless the query contains Group A session ids only (then Foundation/Professional).
+ */
 export function resolveProgramForSessionQuery(
   pathname: string,
-  _sessionIds: SessionId[],
+  sessionIds: SessionId[],
   existingSelectedProgram?: ProgramValue
 ): ProgramValue {
   const fromPath = resolveProgramFromCalendarPath(pathname);
   if (fromPath !== "All") return fromPath;
 
+  if (isHomepageCalendarPath(pathname)) {
+    const hasA = sessionIds.some((id) => id.startsWith("A-"));
+    const hasB = sessionIds.some((id) => id.startsWith("B-"));
+    if (hasA && !hasB) return "Foundation/Professional";
+    return "All";
+  }
+
   if (existingSelectedProgram && isProgramValue(existingSelectedProgram)) {
     return existingSelectedProgram;
   }
   return "All";
+}
+
+/** Clean calendar path after consuming session query; homepage + Group A → program route. */
+export function resolveCleanCalendarPath(
+  pathname: string,
+  program: ProgramValue,
+  viewMode: "grid" | "list" = pathname === "/list" ? "list" : "grid"
+): string {
+  if (isHomepageCalendarPath(pathname) && program !== "All") {
+    return getRoutePath(program, viewMode);
+  }
+  return buildCleanCalendarUrl(pathname);
 }
 
 export function normalizeSessionIdsForProgram(

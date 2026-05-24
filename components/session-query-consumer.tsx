@@ -12,11 +12,13 @@ import type { SessionId } from "@/lib/data";
 import {
   applySessionIdsToFilters,
   hasSessionQueryParams,
+  isHomepageCalendarPath,
   normalizeSessionIdsForProgram,
   parseSessionIdsFromSearchParams,
   resolveProgramForSessionQuery,
 } from "@/lib/session-query";
 import type { ProgramValue } from "@/lib/route-utils";
+import { getRoutePath } from "@/lib/route-utils";
 
 interface SessionQueryConsumerProps {
   onSessionQueryConsumed: (program: ProgramValue, sessionIds: SessionId[]) => void;
@@ -83,6 +85,12 @@ export function SessionQueryConsumer({
     }
 
     onSessionQueryConsumed(program, sessionsToApply);
+    if (isHomepageCalendarPath(pathname) && program !== "All") {
+      router.replace(getRoutePath(program, pathname === "/list" ? "list" : "grid"), {
+        scroll: false,
+      });
+      return;
+    }
     router.replace(pathname, { scroll: false });
   }, [searchParams, pathname, router, onSessionQueryConsumed]);
 

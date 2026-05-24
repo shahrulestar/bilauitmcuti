@@ -6,10 +6,10 @@ import {
 } from "@/lib/cookie-utils";
 import {
   applySessionIdsToFilters,
-  buildCleanCalendarUrl,
   hasSessionQueryParams,
   isCalendarPath,
   parseSessionIdsFromSearchParams,
+  resolveCleanCalendarPath,
   resolveProgramForSessionQuery,
 } from "@/lib/session-query";
 import { isSocialPreviewCrawler } from "@/lib/social-preview-crawler";
@@ -105,7 +105,9 @@ function handleSessionQueryRedirect(request: NextRequest): NextResponse | null {
 
   const response = preserveQueryForPreview
     ? NextResponse.next()
-    : NextResponse.redirect(new URL(buildCleanCalendarUrl(pathname), request.url));
+    : NextResponse.redirect(
+        new URL(resolveCleanCalendarPath(pathname, program), request.url)
+      );
 
   response.cookies.set(CALENDAR_FILTERS_COOKIE, JSON.stringify(merged), {
     path: "/",

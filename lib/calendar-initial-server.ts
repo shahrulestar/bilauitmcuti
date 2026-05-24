@@ -13,20 +13,18 @@ import {
 } from "@/lib/session-memory";
 import {
   getProgramFromRoute,
-  isProgramValue,
   type ProgramValue,
 } from "@/lib/route-utils";
 
 function resolveProgramForServer(
   programFromRoute: string,
-  filters: ReturnType<typeof parseFiltersFromCookie>
+  _filters: ReturnType<typeof parseFiltersFromCookie>
 ): ProgramValue {
   if (programFromRoute && programFromRoute !== "All") {
     const fromRoute = getProgramFromRoute(programFromRoute);
     if (fromRoute !== "All") return fromRoute;
   }
-  const sp = filters.selectedProgram;
-  if (sp && isProgramValue(sp)) return sp;
+  // `/` and `/list` are always Group B (All); do not restore Foundation/Professional from cookie.
   return "All";
 }
 

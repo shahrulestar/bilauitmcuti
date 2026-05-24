@@ -4,6 +4,8 @@ import {
   buildCalendarUrlPath,
   buildSessionQueryString,
   parseSessionIdsFromSearchParams,
+  resolveCleanCalendarPath,
+  resolveProgramForSessionQuery,
 } from "./session-query";
 
 describe("session query URL helpers", () => {
@@ -35,5 +37,36 @@ describe("session query URL helpers", () => {
   it("round-trips session ids from search params", () => {
     const params = new URLSearchParams("B-20263&A-20251");
     expect(parseSessionIdsFromSearchParams(params)).toEqual(["B-20263", "A-20251"]);
+  });
+
+  it("homepage session query ignores cookie Foundation and uses All for Group B", () => {
+    expect(
+      resolveProgramForSessionQuery("/", ["B-20263"], "Foundation/Professional")
+    ).toBe("All");
+    expect(resolveProgramForSessionQuery("/list", ["B-20263"], "Foundation/Professional")).toBe(
+      "All"
+    );
+  });
+
+  it("homepage session query uses Foundation for Group A only sessions", () => {
+    expect(resolveProgramForSessionQuery("/", ["A-20251"], "All")).toBe(
+      "Foundation/Professional"
+    );
+  });
+
+  it("program route wins over cookie for session query", () => {
+    expect(
+      resolveProgramForSessionQuery("/diploma", ["B-20263"], "Foundation/Professional")
+    ).toBe("Diploma");
+  });
+
+  it("redirects homepage to program route when Group A sessions consumed", () => {
+    expect(
+      resolveCleanCalendarPath("/", "Foundation/Professional", "grid")
+    ).toBe("/foundation-professional");
+    expect(resolveCleanCalendarPath("/list", "Foundation/Professional", "list")).toBe(
+      "/foundation-professional/list"
+    );
+    expect(resolveCleanCalendarPath("/", "All", "grid")).toBe("/");
   });
 });

@@ -91,23 +91,12 @@ export function SharedCalendarLayout({
     return resolveProgramFromPathAndProps(pathname, programFromRoute);
   }, [pathname, programFromRoute]);
 
-  /** On `/` and `/list`, prefer cookie/SSR program when path does not encode one. */
+  /** On `/` and `/list`, always Group B (`All`); path does not encode a program. */
   const initialSelectedProgram = useMemo((): ProgramValue => {
     if (routeSelectedProgram !== 'All') return routeSelectedProgram;
-    if (pathname !== '/' && pathname !== '/list') return routeSelectedProgram;
-    if (initialCalendarHydration?.programUsed) {
-      return initialCalendarHydration.programUsed;
-    }
-    if (initialFiltersFromProps?.selectedProgram) {
-      return initialFiltersFromProps.selectedProgram;
-    }
-    return 'All';
-  }, [
-    routeSelectedProgram,
-    pathname,
-    initialCalendarHydration,
-    initialFiltersFromProps?.selectedProgram,
-  ]);
+    if (isHomepage) return 'All';
+    return routeSelectedProgram;
+  }, [routeSelectedProgram, isHomepage]);
 
   const [selectedProgram, setSelectedProgram] = useState(initialSelectedProgram);
   const programGroup = getGroupFromProgram(selectedProgram);
