@@ -1,12 +1,13 @@
 'use client';
 
-import { useState, useEffect, useLayoutEffect, useCallback, useMemo, useSyncExternalStore } from 'react';
+import { Suspense, useState, useEffect, useLayoutEffect, useCallback, useMemo, useSyncExternalStore } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { CalendarHeader } from '@/components/calendar-header';
 import { CalendarControls } from '@/components/calendar-controls';
 import { PwaPromptAlert } from '@/components/pwa-prompt-alert';
-import { ListView } from '@/components/list-view';
-import { GridView } from '@/components/grid-view';
+import { SessionQueryConsumer } from '@/components/session-query-consumer';
+import { ShareUrlSync } from '@/components/share-url-sync';
+import { CalendarGridListMount } from '@/components/calendar/grid-list-mount';
 import {
   getRoutePath,
   resolveProgramFromPathAndProps,
@@ -14,8 +15,6 @@ import {
 import type { ProgramValue } from '@/lib/route-utils';
 import {
   CalendarDataGate,
-  useCalendarCommittedProgram,
-  useCalendarCommittedSessions,
 } from '@/components/calendar-data-gate';
 import { CalendarHydrationProvider } from '@/components/calendar-hydration-context';
 import {
@@ -30,143 +29,15 @@ import type { SessionId } from '@/lib/data';
 import { setFiltersToCookie, type FilterStates } from '@/lib/cookie-utils';
 import type { ViewMode } from '@/app/page';
 import { parseSessionIdsFromHydrateKey } from '@/lib/calendar-initial-server';
+import { replaceCalendarHistoryUrl } from '@/lib/share-url';
+import {
+  areSessionListsEqual,
+  getGroupFromProgram,
+  getSessionMemoryKey,
+  normalizeSessionsForGroup,
+} from '@/lib/session-memory';
 
 type ProgramSessionMap = Partial<Record<ProgramValue, SessionId[]>>;
-
-interface CalendarGridListMountProps {
-  bothViewsMounted: boolean;
-  activeViewMode: ViewMode;
-  showKKT: boolean;
-  showRegistration: boolean;
-  showLecture: boolean;
-  showSemesterPendek: boolean;
-  showKuliahIntersesi: boolean;
-  showExamination: boolean;
-  showOthersExams: boolean;
-  showBreak: boolean;
-  showCountdown: boolean;
-  onMonthChange: (month: string) => void;
-  selectedStates: string[];
-  initialCurrentDate?: string;
-}
-
-/** Grid/list use committed program + sessions so they stay in sync with the store (see CalendarDataGate). */
-function CalendarGridListMount({
-  bothViewsMounted,
-  activeViewMode,
-  showKKT,
-  showRegistration,
-  showLecture,
-  showSemesterPendek,
-  showKuliahIntersesi,
-  showExamination,
-  showOthersExams,
-  showBreak,
-  showCountdown,
-  onMonthChange,
-  selectedStates,
-  initialCurrentDate,
-}: CalendarGridListMountProps) {
-  const calendarDataProgram = useCalendarCommittedProgram();
-  const calendarDataSessions = useCalendarCommittedSessions();
-
-  return (
-    <>
-      {bothViewsMounted ? (
-        <>
-          <div style={{ display: activeViewMode === 'list' ? 'block' : 'none' }}>
-            <ListView
-              selectedProgram={calendarDataProgram}
-              selectedSessions={calendarDataSessions}
-              showKKT={showKKT}
-              showRegistration={showRegistration}
-              showLecture={showLecture}
-              showSemesterPendek={showSemesterPendek}
-              showKuliahIntersesi={showKuliahIntersesi}
-              showExamination={showExamination}
-              showOthersExams={showOthersExams}
-              showBreak={showBreak}
-              showCountdown={showCountdown}
-              onMonthChange={onMonthChange}
-              selectedStates={selectedStates}
-              initialCurrentDate={initialCurrentDate}
-            />
-          </div>
-          <div style={{ display: activeViewMode === 'grid' ? 'block' : 'none' }}>
-            <GridView
-              selectedProgram={calendarDataProgram}
-              selectedSessions={calendarDataSessions}
-              showKKT={showKKT}
-              showRegistration={showRegistration}
-              showLecture={showLecture}
-              showSemesterPendek={showSemesterPendek}
-              showKuliahIntersesi={showKuliahIntersesi}
-              showExamination={showExamination}
-              showOthersExams={showOthersExams}
-              showBreak={showBreak}
-              showCountdown={showCountdown}
-              onMonthChange={onMonthChange}
-              selectedStates={selectedStates}
-              initialCurrentDate={initialCurrentDate}
-            />
-          </div>
-        </>
-      ) : activeViewMode === 'list' ? (
-        <ListView
-          selectedProgram={calendarDataProgram}
-          selectedSessions={calendarDataSessions}
-          showKKT={showKKT}
-          showRegistration={showRegistration}
-          showLecture={showLecture}
-          showSemesterPendek={showSemesterPendek}
-          showKuliahIntersesi={showKuliahIntersesi}
-          showExamination={showExamination}
-          showOthersExams={showOthersExams}
-          showBreak={showBreak}
-          showCountdown={showCountdown}
-          onMonthChange={onMonthChange}
-          selectedStates={selectedStates}
-          initialCurrentDate={initialCurrentDate}
-        />
-      ) : (
-        <GridView
-          selectedProgram={calendarDataProgram}
-          selectedSessions={calendarDataSessions}
-          showKKT={showKKT}
-          showRegistration={showRegistration}
-          showLecture={showLecture}
-          showSemesterPendek={showSemesterPendek}
-          showKuliahIntersesi={showKuliahIntersesi}
-          showExamination={showExamination}
-          showOthersExams={showOthersExams}
-          showBreak={showBreak}
-          showCountdown={showCountdown}
-          onMonthChange={onMonthChange}
-          selectedStates={selectedStates}
-          initialCurrentDate={initialCurrentDate}
-        />
-      )}
-    </>
-  );
-}
-
-function getGroupFromProgram(program: ProgramValue): 'A' | 'B' {
-  return program === 'Foundation/Professional' ? 'A' : 'B';
-}
-
-function getSessionMemoryKey(program: ProgramValue): ProgramValue {
-  return getGroupFromProgram(program) === 'B' ? 'All' : program;
-}
-
-function normalizeSessionsForGroup(sessionIds: SessionId[], group: 'A' | 'B'): SessionId[] {
-  const unique = Array.from(new Set(sessionIds));
-  return unique.filter((id) => getGroupFromSession(id) === group);
-}
-
-function areSessionListsEqual(left: SessionId[], right: SessionId[]): boolean {
-  if (left.length !== right.length) return false;
-  return left.every((id, index) => right[index] === id);
-}
 
 interface SharedCalendarLayoutProps {
   viewMode: ViewMode;
@@ -220,12 +91,32 @@ export function SharedCalendarLayout({
     return resolveProgramFromPathAndProps(pathname, programFromRoute);
   }, [pathname, programFromRoute]);
 
-  const [selectedProgram, setSelectedProgram] = useState(routeSelectedProgram);
+  /** On `/` and `/list`, prefer cookie/SSR program when path does not encode one. */
+  const initialSelectedProgram = useMemo((): ProgramValue => {
+    if (routeSelectedProgram !== 'All') return routeSelectedProgram;
+    if (pathname !== '/' && pathname !== '/list') return routeSelectedProgram;
+    if (initialCalendarHydration?.programUsed) {
+      return initialCalendarHydration.programUsed;
+    }
+    if (initialFiltersFromProps?.selectedProgram) {
+      return initialFiltersFromProps.selectedProgram;
+    }
+    return 'All';
+  }, [
+    routeSelectedProgram,
+    pathname,
+    initialCalendarHydration,
+    initialFiltersFromProps?.selectedProgram,
+  ]);
+
+  const [selectedProgram, setSelectedProgram] = useState(initialSelectedProgram);
   const programGroup = getGroupFromProgram(selectedProgram);
 
-  // Keep optimistic state aligned with route
+  // Sync program from route only when the path encodes a program (not `/` or `/list`).
   useEffect(() => {
-    setSelectedProgram(routeSelectedProgram);
+    if (routeSelectedProgram !== 'All') {
+      setSelectedProgram(routeSelectedProgram);
+    }
   }, [routeSelectedProgram]);
 
   // Disable browser's automatic scroll restoration so back-navigation
@@ -338,24 +229,26 @@ export function SharedCalendarLayout({
       : fromSingle
         ? [fromSingle]
         : [];
-    const fallbackForRoute = normalizeSessionsForGroup(candidates as SessionId[], programGroup);
-    const routeSessionKey = getSessionMemoryKey(routeSelectedProgram);
-    if (fallbackForRoute.length > 0 && !nextMap[routeSessionKey]) {
-      nextMap[routeSessionKey] = fallbackForRoute;
+    const initGroup = getGroupFromProgram(initialSelectedProgram);
+    const fallbackForRoute = normalizeSessionsForGroup(candidates as SessionId[], initGroup);
+    const initSessionKey = getSessionMemoryKey(initialSelectedProgram);
+    if (fallbackForRoute.length > 0 && !nextMap[initSessionKey]) {
+      nextMap[initSessionKey] = fallbackForRoute;
     }
 
-    if (
-      initialCalendarHydration &&
-      initialCalendarSnapshot &&
-      routeSelectedProgram === initialCalendarHydration.programUsed
-    ) {
-      const fromServer = parseSessionIdsFromHydrateKey(
-        initialCalendarHydration.hydrateKey
-      );
-      if (fromServer.length > 0) {
-        const g = getGroupFromProgram(routeSelectedProgram);
-        nextMap[getSessionMemoryKey(routeSelectedProgram)] =
-          normalizeSessionsForGroup(fromServer, g);
+    if (initialCalendarHydration && initialCalendarSnapshot) {
+      const hydProgram = initialCalendarHydration.programUsed;
+      const routeMatchesHydration =
+        routeSelectedProgram === hydProgram || routeSelectedProgram === 'All';
+      if (routeMatchesHydration) {
+        const fromServer = parseSessionIdsFromHydrateKey(
+          initialCalendarHydration.hydrateKey
+        );
+        if (fromServer.length > 0) {
+          const g = getGroupFromProgram(hydProgram);
+          nextMap[getSessionMemoryKey(hydProgram)] =
+            normalizeSessionsForGroup(fromServer, g);
+        }
       }
     }
 
@@ -364,17 +257,18 @@ export function SharedCalendarLayout({
 
   const getInitialSessions = (): SessionId[] => {
     const hyd = initialCalendarHydration;
-    if (
-      hyd &&
-      initialCalendarSnapshot &&
-      routeSelectedProgram === hyd.programUsed
-    ) {
-      const fromServer = parseSessionIdsFromHydrateKey(hyd.hydrateKey);
-      if (fromServer.length > 0) return fromServer;
+    if (hyd && initialCalendarSnapshot) {
+      const routeMatchesHydration =
+        routeSelectedProgram === hyd.programUsed || routeSelectedProgram === 'All';
+      if (routeMatchesHydration) {
+        const fromServer = parseSessionIdsFromHydrateKey(hyd.hydrateKey);
+        if (fromServer.length > 0) return fromServer;
+      }
     }
 
     const initialMap = getInitialProgramSessions();
-    const fromProgram = initialMap[getSessionMemoryKey(routeSelectedProgram)];
+    const initGroup = getGroupFromProgram(initialSelectedProgram);
+    const fromProgram = initialMap[getSessionMemoryKey(initialSelectedProgram)];
     if (fromProgram && fromProgram.length > 0) return fromProgram;
 
     const fromIds = initialFiltersFromProps?.sessionIds;
@@ -384,10 +278,10 @@ export function SharedCalendarLayout({
       : fromSingle
         ? [fromSingle]
         : null;
-    const inGroup = candidates?.filter((id) => getGroupFromSession(id) === programGroup) ?? [];
+    const inGroup = candidates?.filter((id) => getGroupFromSession(id) === initGroup) ?? [];
     if (inGroup.length > 0) return inGroup;
     const dateStr = initialCurrentDate ?? (typeof window !== 'undefined' ? new Date().toISOString().slice(0, 10) : '2026-03-15');
-    return [getSessionForCurrentDate(programGroup, dateStr)];
+    return [getSessionForCurrentDate(initGroup, dateStr)];
   };
 
   // State management for settings
@@ -436,30 +330,30 @@ export function SharedCalendarLayout({
       window.scrollTo(0, 0);
       setActiveViewMode(newMode);
       const newPath = getRoutePath(selectedProgram as ProgramValue, newMode);
-      window.history.replaceState(null, '', newPath);
+      replaceCalendarHistoryUrl(newPath);
     },
     [selectedProgram]
   );
 
-  const handleProgramSessionChange = useCallback(
-    (program: ProgramValue, sessionIds: SessionId[]) => {
-      setSelectedProgram(program);
+  const persistProgramSessions = useCallback(
+    (
+      program: ProgramValue,
+      sessionIds: SessionId[],
+      options?: { navigate?: boolean }
+    ) => {
       const targetGroup = getGroupFromProgram(program);
       const sessionMemoryKey = getSessionMemoryKey(program);
-      const inGroup = normalizeSessionsForGroup(sessionIds, targetGroup);
-      const fromProgram = normalizeSessionsForGroup(sessionsByProgram[sessionMemoryKey] ?? [], targetGroup);
-      const resolvedSessions =
-        inGroup.length > 0
-          ? inGroup
-          : fromProgram.length > 0
-            ? fromProgram
-            : [getSessionForCurrentDate(targetGroup, initialCurrentDate ?? new Date().toISOString().slice(0, 10))];
+      const resolvedSessions = normalizeSessionsForGroup(sessionIds, targetGroup);
+      if (resolvedSessions.length === 0) return;
+
       const nextSessionsByProgram: ProgramSessionMap = {
         ...sessionsByProgram,
         [sessionMemoryKey]: resolvedSessions,
       };
 
-      // Persist selected session(s) before route navigation to avoid remount fallback to default session.
+      setSelectedProgram(program);
+      setSessionsByProgram(nextSessionsByProgram);
+      setSelectedSessions(resolvedSessions);
       setFiltersToCookie({
         showKKT,
         showRegistration,
@@ -475,20 +369,18 @@ export function SharedCalendarLayout({
         sessionIdsByProgram: nextSessionsByProgram,
         selectedProgram: program,
       });
-      setSessionsByProgram(nextSessionsByProgram);
 
-      setSelectedSessions(resolvedSessions);
-      const newPath = getRoutePath(program, activeViewMode);
-      if (newPath !== pathname) {
-        window.history.replaceState(null, '', newPath);
-        window.scrollTo(0, 0);
+      if (options?.navigate !== false) {
+        const newPath = getRoutePath(program, activeViewMode);
+        if (newPath !== pathname) {
+          replaceCalendarHistoryUrl(newPath);
+          window.scrollTo(0, 0);
+        }
       }
     },
     [
       activeViewMode,
       pathname,
-      router,
-      initialCurrentDate,
       showKKT,
       showRegistration,
       showLecture,
@@ -500,6 +392,42 @@ export function SharedCalendarLayout({
       showCountdown,
       sessionsByProgram,
     ]
+  );
+
+  const handleProgramSessionChange = useCallback(
+    (program: ProgramValue, sessionIds: SessionId[]) => {
+      const targetGroup = getGroupFromProgram(program);
+      const sessionMemoryKey = getSessionMemoryKey(program);
+      const inGroup = normalizeSessionsForGroup(sessionIds, targetGroup);
+      const fromProgram = normalizeSessionsForGroup(sessionsByProgram[sessionMemoryKey] ?? [], targetGroup);
+      const resolvedSessions =
+        inGroup.length > 0
+          ? inGroup
+          : fromProgram.length > 0
+            ? fromProgram
+            : [getSessionForCurrentDate(targetGroup, initialCurrentDate ?? new Date().toISOString().slice(0, 10))];
+
+      persistProgramSessions(program, resolvedSessions, { navigate: true });
+    },
+    [
+      initialCurrentDate,
+      sessionsByProgram,
+      persistProgramSessions,
+    ]
+  );
+
+  const handleSessionQueryConsumed = useCallback(
+    (program: ProgramValue, sessionIds: SessionId[]) => {
+      persistProgramSessions(program, sessionIds, { navigate: false });
+    },
+    [persistProgramSessions]
+  );
+
+  const handleSessionsCorrected = useCallback(
+    (program: ProgramValue, sessionIds: SessionId[]) => {
+      persistProgramSessions(program, sessionIds, { navigate: false });
+    },
+    [persistProgramSessions]
   );
 
   // Mark as loaded after initial render
@@ -576,9 +504,20 @@ export function SharedCalendarLayout({
 
   return (
     <CalendarHydrationProvider hydrationVersion={hydrationVersion}>
+    <Suspense fallback={null}>
+      <SessionQueryConsumer onSessionQueryConsumed={handleSessionQueryConsumed} />
+      <ShareUrlSync />
+    </Suspense>
     <CalendarDataGate
       selectedSessions={selectedSessions}
       selectedProgram={selectedProgram}
+      currentDateStr={
+        initialCurrentDate ??
+        (typeof window !== "undefined"
+          ? new Date().toISOString().slice(0, 10)
+          : "2026-03-15")
+      }
+      onSessionsCorrected={handleSessionsCorrected}
       hydratedLoadKey={initialCalendarHydration?.hydrateKey ?? null}
       hydratedSnapshotProgram={initialCalendarHydration?.programUsed ?? null}
       serverHydrateKey={initialCalendarHydration?.hydrateKey ?? null}

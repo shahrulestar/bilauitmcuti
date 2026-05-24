@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { sendDiscordWebhook } from "@/lib/discord-webhook";
 import { logger } from "@/lib/logger";
 import { checkRateLimit } from "@/lib/rate-limit";
+import { jsonError, getClientIp, formatNotificationTime } from "@/lib/api-response";
 
 
 const MAX_BODY_SIZE_BYTES = 512;
@@ -16,27 +17,6 @@ function parseRatingRequest(raw: unknown): { success: true; data: RatingRequest 
   const rating = Number((raw as Record<string, unknown>).rating);
   if (!Number.isInteger(rating) || rating < 1 || rating > 5) return { success: false };
   return { success: true, data: { rating } };
-}
-
-function jsonError(message: string, status: number) {
-  return NextResponse.json({ error: message }, { status });
-}
-
-function getClientIp(request: NextRequest): string {
-  return (
-    request.headers.get("cf-connecting-ip") ||
-    request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
-    request.headers.get("x-real-ip") ||
-    "unknown"
-  );
-}
-
-function formatNotificationTime(date: Date): string {
-  return date.toLocaleString("en-MY", {
-    timeZone: "Asia/Kuala_Lumpur",
-    dateStyle: "medium",
-    timeStyle: "short",
-  });
 }
 
 function buildEngagementNotificationText(rating: number): string {

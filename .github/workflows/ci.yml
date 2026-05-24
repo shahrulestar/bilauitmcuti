@@ -29,6 +29,9 @@ jobs:
       - name: Run typecheck
         run: pnpm typecheck
 
+      - name: Run unit tests
+        run: pnpm test
+
       - name: Build for Cloudflare Pages (next-on-pages)
         env:
           NEXT_PUBLIC_TURNSTILE_SITE_KEY: ${{ secrets.NEXT_PUBLIC_TURNSTILE_SITE_KEY || 'placeholder-turnstile-site-key' }}

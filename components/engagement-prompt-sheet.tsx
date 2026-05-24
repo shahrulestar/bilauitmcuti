@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/drawer";
 import { StarRating } from "@/components/star-rating";
 import { shareOrCopyLink } from "@/lib/web-share";
+import { getPageShareUrl } from "@/lib/share-url";
 import { cn } from "@/lib/utils";
 
 const SHARE_TITLE = "Bila UiTM Cuti";
@@ -138,8 +139,7 @@ export function EngagementPromptSheet({
   );
 
   const handleShare = useCallback(async () => {
-    const url =
-      typeof window !== "undefined" ? window.location.origin : "https://bilauitmcuti.com";
+    const url = getPageShareUrl();
     const result = await shareOrCopyLink({
       title: SHARE_TITLE,
       text: SHARE_TEXT,

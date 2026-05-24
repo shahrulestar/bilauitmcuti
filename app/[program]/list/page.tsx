@@ -3,7 +3,7 @@ export const runtime = 'edge';
 import { CalendarWrapper } from '@/components/calendar-wrapper';
 import { notFound } from 'next/navigation';
 import { isValidProgramRoute, getProgramDisplayName } from '@/lib/route-utils';
-import { getProgramCanonicalUrl, getProgramPageTitle, getProgramSeoDescription } from '@/lib/program-seo';
+import { getProgramListCanonicalUrl, getProgramPageTitle, getProgramSeoDescription } from '@/lib/program-seo';
 import type { Metadata } from 'next';
 
 
@@ -23,7 +23,7 @@ export async function generateMetadata({ params }: ProgramListPageProps): Promis
   
   const title = getProgramPageTitle(program);
   const description = getProgramSeoDescription(program);
-  const canonical = getProgramCanonicalUrl(program);
+  const canonical = getProgramListCanonicalUrl(program);
 
   return {
     title,
@@ -61,7 +61,7 @@ function ProgramListJsonLd({ program }: { program: string }) {
   const programName = getProgramDisplayName(program);
   const title = getProgramPageTitle(program);
   const description = getProgramSeoDescription(program);
-  const canonical = getProgramCanonicalUrl(program);
+  const canonical = getProgramListCanonicalUrl(program);
   return (
     <script
       type="application/ld+json"

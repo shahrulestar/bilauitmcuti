@@ -36,7 +36,7 @@ function normalizeBooleanQuery(raw: string): string | null {
   return null;
 }
 
-function buildForwardedSearch(
+export function buildForwardedSearch(
   apiSuffix: CalendarProxyApiSuffix,
   request: NextRequest
 ): string {

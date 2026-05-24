@@ -1,4 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
+import {
+  CALENDAR_FILTERS_COOKIE,
+  CALENDAR_FILTERS_MAX_AGE,
+  parseFiltersFromCookie,
+} from "@/lib/cookie-utils";
+import {
+  applySessionIdsToFilters,
+  buildCleanCalendarUrl,
+  hasSessionQueryParams,
+  isCalendarPath,
+  parseSessionIdsFromSearchParams,
+  resolveProgramForSessionQuery,
+} from "@/lib/session-query";
 
 /**
  * Bot patterns to block from accessing chat routes.
@@ -69,8 +82,40 @@ function isLikelyRealBrowser(request: NextRequest, pathname: string): boolean {
   return request.method === "POST" && hasPageOrigin(request);
 }
 
+function handleSessionQueryRedirect(request: NextRequest): NextResponse | null {
+  const pathname = request.nextUrl.pathname;
+  if (!isCalendarPath(pathname)) return null;
+
+  const searchParams = request.nextUrl.searchParams;
+  if (!hasSessionQueryParams(searchParams)) return null;
+
+  const sessionIds = parseSessionIdsFromSearchParams(searchParams);
+  const existingCookie = request.cookies.get(CALENDAR_FILTERS_COOKIE)?.value;
+  const existing = parseFiltersFromCookie(existingCookie);
+  const program = resolveProgramForSessionQuery(
+    pathname,
+    sessionIds,
+    existing.selectedProgram
+  );
+  const merged = applySessionIdsToFilters(existing, sessionIds, program);
+
+  const cleanUrl = new URL(buildCleanCalendarUrl(pathname), request.url);
+  const response = NextResponse.redirect(cleanUrl);
+  response.cookies.set(CALENDAR_FILTERS_COOKIE, JSON.stringify(merged), {
+    path: "/",
+    maxAge: CALENDAR_FILTERS_MAX_AGE,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+  });
+  return response;
+}
+
 export function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
+
+  const sessionRedirect = handleSessionQueryRedirect(request);
+  if (sessionRedirect) return sessionRedirect;
+
   // Allow /chat/api POST from our page (Referer/Origin) to reduce mobile false-positives
   if (isLikelyRealBrowser(request, pathname)) return NextResponse.next();
   if (isBot(request)) {
@@ -84,5 +129,12 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/chat", "/chat/:path*"],
+  matcher: [
+    "/",
+    "/list",
+    "/:program",
+    "/:program/list",
+    "/chat",
+    "/chat/:path*",
+  ],
 };

@@ -16,6 +16,12 @@ import {
 import type { SessionId } from "@/lib/data";
 import { getFiltersFromCookie, type FilterStates } from "@/lib/cookie-utils";
 import { getRoutePath, isProgramValue, type ProgramValue } from "@/lib/route-utils";
+import {
+  areSessionListsEqual,
+  getGroupFromProgram,
+  getSessionMemoryKey,
+  normalizeSessionsForGroup,
+} from "@/lib/session-memory";
 import { cn } from "@/lib/utils";
 import { sessionSubmenuItemClass } from "@/lib/session-submenu-item-class";
 import { SessionSubmenuItemLabel } from "@/components/session-submenu-item-label";
@@ -51,589 +57,47 @@ import {
 } from "@/components/ui/drawer";
 import { Button } from "@/components/ui/button";
 import {
-  Table,
-  TableHeader,
-  TableBody,
-  TableHead,
-  TableRow,
-  TableCell,
-} from "@/components/ui/table";
-import {
   ContextMenu,
   ContextMenuContent,
   ContextMenuItem,
   ContextMenuTrigger,
 } from "@/components/ui/context-menu";
-import useEmblaCarousel from "embla-carousel-react";
 import {
   TurnstileWidget,
   type TurnstileWidgetHandle,
 } from "@/components/turnstile-widget";
 import { useTurnstileSiteKeyFromContext } from "@/components/turnstile-site-key-provider";
 import { useEngagementPrompt } from "@/components/engagement-prompt-provider";
+import { FormattedMessage } from "@/components/chat/formatted-message";
+import { SuggestionCarousel } from "@/components/chat/suggestion-carousel";
+import { getRandomSuggestions } from "@/components/chat/suggestion-data";
 import {
-  isMarkdownTableSeparator,
-  isPipeTableRow,
-  isTableCaptionRow,
-  parsePipeTableBlock,
-} from "@/lib/format-ai-table";
+  CHAT_TURNSTILE_COOKIE,
+  FETCH_TIMEOUT_MS,
+  RETRY_DELAYS_MS,
+  escapeRegExp,
+  formatTime24,
+  getActiveMentionMatch,
+  getChatErrorMessage,
+  getRandomLoadingPhrase,
+  parseChatResponse,
+  prepareHistory,
+  type ChatMessageItem,
+  type MentionMatch,
+} from "@/components/chat/chat-utils";
+import {
+  getInitialChatSessions,
+  mergeSessionMapsFromHomepage,
+  resolveSessionsForProgram,
+  type ProgramSessionMap,
+} from "@/lib/chat/session-state";
 
-function getChatErrorMessage(res: Response, fallback: string): string {
-  if (res.status === 429) return "Too many requests. Please wait a moment before trying again.";
-  if (res.status === 403) return "Access was blocked. Please refresh and try again.";
-  if (res.status === 504) return "Request timed out. Please try again.";
-  if (res.status >= 500) return "Server is temporarily unavailable. Please try again in a moment.";
-  return fallback;
-}
-
-async function parseChatResponse(res: Response): Promise<{ error?: string; reply?: string }> {
-  const text = await res.text();
-  try {
-    return JSON.parse(text) as { error?: string; reply?: string };
-  } catch {
-    return { error: getChatErrorMessage(res, "Something went wrong. Please try again.") };
-  }
-}
-
-function parseTable(block: string): { headers: string[]; rows: string[][] } | null {
-  return parsePipeTableBlock(block);
-}
-
-/**
- * Finds GitHub-style markdown tables embedded in plain text (models often emit these
- * instead of [TABLE]...[/TABLE]). Returns ordered text + table segments.
- */
-function splitEmbeddedMarkdownTables(part: string): { type: "text" | "table"; body: string }[] {
-  const rawLines = part.split(/\r?\n/);
-  const segments: { type: "text" | "table"; body: string }[] = [];
-  const textBuf: string[] = [];
-  let i = 0;
-
-  function flushText() {
-    if (textBuf.length === 0) return;
-    const body = textBuf.join("\n");
-    textBuf.length = 0;
-    if (body.trim()) segments.push({ type: "text", body });
-  }
-
-  while (i < rawLines.length) {
-    const line = rawLines[i]?.replace(/\r$/, "") ?? "";
-    const line2 = rawLines[i + 1]?.replace(/\r$/, "");
-    const line3 = rawLines[i + 2]?.replace(/\r$/, "");
-
-    const hasSeparatorTable =
-      line2 !== undefined &&
-      line3 !== undefined &&
-      isMarkdownTableSeparator(line2) &&
-      isPipeTableRow(line3) &&
-      !isMarkdownTableSeparator(line3);
-
-    if (hasSeparatorTable) {
-      flushText();
-      if (line.trim() && (isTableCaptionRow(line) || !isPipeTableRow(line))) {
-        const caption = line.includes("|")
-          ? line
-              .replace(/^\|+|\|+$/g, "")
-              .split("|")
-              .map((c) => c.trim())
-              .filter(Boolean)[0] ?? line.trim()
-          : line.trim();
-        if (caption) textBuf.push(caption);
-        flushText();
-      } else if (
-        line.trim() &&
-        isPipeTableRow(line) &&
-        !isTableCaptionRow(line) &&
-        !isMarkdownTableSeparator(line)
-      ) {
-        const tableLines: string[] = [line, line2];
-        i += 2;
-        while (i < rawLines.length) {
-          const L = rawLines[i]?.replace(/\r$/, "") ?? "";
-          if (!L.trim()) break;
-          if (isPipeTableRow(L)) {
-            tableLines.push(L);
-            i++;
-          } else break;
-        }
-        segments.push({ type: "table", body: tableLines.join("\n") });
-        continue;
-      }
-
-      const tableLines: string[] = [line2];
-      i += 2;
-      while (i < rawLines.length) {
-        const L = rawLines[i]?.replace(/\r$/, "") ?? "";
-        if (!L.trim()) break;
-        if (isPipeTableRow(L)) {
-          tableLines.push(L);
-          i++;
-        } else break;
-      }
-      segments.push({ type: "table", body: tableLines.join("\n") });
-      continue;
-    }
-
-    textBuf.push(line);
-    i++;
-  }
-  flushText();
-  return segments;
-}
-
-function renderSegmentsWithMarkdownTables(
-  part: string,
-  keyPrefix: string
-): React.ReactNode[] {
-  const elements: React.ReactNode[] = [];
-  const segments = splitEmbeddedMarkdownTables(part);
-  segments.forEach((seg, segIdx) => {
-    if (seg.type === "table") {
-      const tableData = parseTable(seg.body);
-      if (tableData) {
-        elements.push(
-          <DataTable key={`${keyPrefix}-md-${segIdx}`} headers={tableData.headers} rows={tableData.rows} />
-        );
-      } else {
-        elements.push(
-          ...renderTextSection(seg.body.split(/\r?\n/), `${keyPrefix}-md-fail-${segIdx}`)
-        );
-      }
-    } else {
-      elements.push(...renderTextSection(seg.body.split(/\r?\n/), `${keyPrefix}-tx-${segIdx}`));
-    }
-  });
-  return elements;
-}
-
-/**
- * Renders a data table using shadcn Table components.
- */
-function DataTable({ headers, rows }: { headers: string[]; rows: string[][] }) {
-  return (
-    <div className="mt-2 rounded-lg border border-border overflow-hidden">
-      <Table>
-        <TableHeader>
-          <TableRow className="bg-muted/50">
-            {headers.map((h, idx) => (
-              <TableHead key={idx} className="text-xs font-semibold">
-                {h}
-              </TableHead>
-            ))}
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {rows.map((row, rIdx) => (
-            <TableRow key={rIdx}>
-              {headers.map((_, cIdx) => (
-                <TableCell key={cIdx} className="text-xs">
-                  {row[cIdx] ?? ""}
-                </TableCell>
-              ))}
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
-    </div>
-  );
-}
-
-/**
- * Renders a single section of text (no [TABLE] blocks) into formatted elements.
- * Handles bullet lists, numbered lists with nested sub-details, and plain text paragraphs.
- */
-function renderTextSection(lines: string[], keyPrefix: string): React.ReactNode[] {
-  const elements: React.ReactNode[] = [];
-  let i = 0;
-
-  while (i < lines.length) {
-    const trimmed = lines[i].trim();
-
-    // Skip empty lines
-    if (!trimmed) {
-      i++;
-      continue;
-    }
-
-    // Collect consecutive bullet lines (- item)
-    if (/^-\s/.test(trimmed)) {
-      const bullets: string[] = [];
-      while (i < lines.length && /^-\s/.test(lines[i].trim())) {
-        bullets.push(lines[i].trim().replace(/^-\s+/, ""));
-        i++;
-      }
-      elements.push(
-        <ul key={`${keyPrefix}-ul-${i}`} className="mt-1 space-y-0.5">
-          {bullets.map((b, idx) => (
-            <li key={idx} className="flex gap-2">
-              <span className="text-muted-foreground shrink-0">-</span>
-              <span>{b}</span>
-            </li>
-          ))}
-        </ul>
-      );
-      continue;
-    }
-
-    // Collect numbered list with optional sub-details
-    if (/^\d+[.)]\s/.test(trimmed)) {
-      const items: { num: string; text: string; details: { text: string; isDash: boolean }[] }[] = [];
-      while (i < lines.length) {
-        const cur = lines[i].trim();
-        if (!cur) { i++; continue; }
-        const match = cur.match(/^(\d+)[.)]\s+(.*)/);
-        if (match) {
-          items.push({ num: match[1], text: match[2], details: [] });
-          i++;
-          while (i < lines.length) {
-            const sub = lines[i].trim();
-            if (!sub) { i++; continue; }
-            if (/^\d+[.)]\s/.test(sub)) break;
-            if (/^-\s/.test(sub)) {
-              items[items.length - 1].details.push({ text: sub.replace(/^-\s+/, ""), isDash: true });
-            } else {
-              items[items.length - 1].details.push({ text: sub, isDash: false });
-            }
-            i++;
-          }
-        } else {
-          break;
-        }
-      }
-      elements.push(
-        <ol key={`${keyPrefix}-ol-${i}`} className="mt-1 space-y-1">
-          {items.map((item, idx) => (
-            <li key={idx}>
-              <div className="flex gap-2">
-                <span className="text-muted-foreground shrink-0 tabular-nums min-w-[1.2em] text-right">{item.num}.</span>
-                <span>{item.text}</span>
-              </div>
-              {item.details.length > 0 && (
-                <div className="ml-[calc(1.2em+0.5rem)] mt-0.5 space-y-0.5">
-                  {item.details.map((d, dIdx) => (
-                    <div key={dIdx} className={d.isDash ? "flex gap-2 text-muted-foreground" : ""}>
-                      {d.isDash && <span className="text-muted-foreground shrink-0">-</span>}
-                      <span>{d.text}</span>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </li>
-          ))}
-        </ol>
-      );
-      continue;
-    }
-
-    // Regular text line
-    elements.push(
-      <p key={`${keyPrefix}-p-${i}`} className={elements.length > 0 ? "mt-1" : ""}>
-        {trimmed}
-      </p>
-    );
-    i++;
-  }
-
-  return elements;
-}
-
-/**
- * Renders assistant message content with formatted bullet points, numbered lists, and data tables.
- * Splits plain text into visual blocks: headings, bullets, numbered items, tables, and paragraphs.
- *
- * Tables are denoted by [TABLE]...[/TABLE] blocks with pipe-delimited rows.
- */
-function FormattedMessage({ content }: { content: string }) {
-  // Split content by [TABLE]...[/TABLE] blocks
-  const parts = content.split(/\[TABLE\]|\[\/TABLE\]/i);
-  const elements: React.ReactNode[] = [];
-
-  // Determine which parts are table blocks vs text.
-  // After splitting by [TABLE] and [/TABLE], the pattern is:
-  // text, tableContent, text, tableContent, ...
-  // The first part is always text, then alternates.
-  let isTable = false;
-  for (let pIdx = 0; pIdx < parts.length; pIdx++) {
-    const part = parts[pIdx];
-
-    if (isTable) {
-      // Try to parse as a table
-      const tableData = parseTable(part);
-      if (tableData) {
-        elements.push(<DataTable key={`table-${pIdx}`} headers={tableData.headers} rows={tableData.rows} />);
-      } else {
-        // Fallback: may still be a markdown pipe table, or plain text
-        elements.push(...renderSegmentsWithMarkdownTables(part, `tf-${pIdx}`));
-      }
-    } else {
-      const trimmedPart = part.trim();
-      if (trimmedPart) {
-        elements.push(...renderSegmentsWithMarkdownTables(part, `s-${pIdx}`));
-      }
-    }
-
-    isTable = !isTable;
-  }
-
-  return <>{elements}</>;
-}
-
-/** Group A (Foundation/Professional) — calendar academic prompts only. */
-const SUGGESTIONS_GROUP_A = [
-  "What is the next break or holiday on my Group A calendar?",
-  "What is the next registration, lecture, or exam date (Group A)?",
-  "When does course registration open for new intake students (Group A)?",
-  "When does course registration open for returning students (Group A)?",
-  "When is course validation and the late add/drop period (Group A)?",
-  "What are the GT, GT2, RPGT, and semester fee payment dates (Group A)?",
-  "When does Lecture Week 1 start and when does the last lecture week end (Group A)?",
-  "How many lecture weeks are in this Group A session?",
-  "Show all lecture week dates for Group A in a table",
-  "When is revision week (Minggu Ulangkaji) and how many days is it (Group A)?",
-  "When do mid-semester break and semester break start and end (Group A)?",
-  "How many days until semester break starts (Group A)?",
-  "Is there a festive recess or Hari Raya break on the Group A calendar?",
-  "When are mid-semester and final examinations (Group A)?",
-  "From which date can I print my examination slip (Group A)?",
-  "List all examination periods and slip dates for Group A in a table",
-  "When is gugur taraf (deregistration) on the Group A calendar?",
-  "Do Kedah, Kelantan, and Terengganu have different lecture or break dates (Group A)?",
-  "Compare default vs Kedah, Kelantan, and Terengganu exam dates in a table (Group A)",
-  "When is Minggu Destini Siswa (MDS) on the Group A calendar?",
-  "When are SuFO briefing or submission dates on the Group A calendar?",
-  "Summarize registration, lectures, exams, and breaks for Group A in a table",
-  "Bila cuti pertengahan semester dan cuti semester (Kumpulan A)?",
-  "Bilakah tarikh pendaftaran kursus pelajar baharu dan pelajar sedia ada (Kumpulan A)?",
-  "Bilakah tarikh sahkan kursus dan tambah/gugur lewat (Kumpulan A)?",
-  "Bilakah tarikh GT, GT2, RPGT, dan bayaran yuran semester (Kumpulan A)?",
-  "Bilakah Minggu Kuliah 1 mula dan minggu kuliah terakhir tamat (Kumpulan A)?",
-  "Bilakah minggu ulangkaji dan peperiksaan pertengahan serta akhir (Kumpulan A)?",
-  "Paparkan jadual kuliah dan cuti Kumpulan A dalam jadual",
-  "Apakah tarikh akademik penting seterusnya pada kalendar Kumpulan A?",
-];
-
-/** Group B (Pre-Diploma onwards) — calendar academic prompts only. */
-const SUGGESTIONS_GROUP_B = [
-  "What is the next break or important academic date on my Group B calendar?",
-  "When does course registration open for Pre-Diploma, Diploma, and Bachelor (Group B)?",
-  "When does e-PJJ or PLK new-intake registration open (Group B)?",
-  "When is course validation and the late add/drop period (Group B)?",
-  "What are the GT, GT2, RPGT, and semester fee payment dates (Group B)?",
-  "When do Lecture Weeks 1–3 run (Group B)?",
-  "When does Short Semester (Semester Pendek) start and end (Group B)?",
-  "When are Intersession Classes scheduled (Group B)?",
-  "How many lecture weeks are in this Group B session?",
-  "Show lecture weeks, Short Semester, and Intersession dates in a table (Group B)",
-  "When do mid-semester break and semester break start and end (Group B)?",
-  "When is revision week (Minggu Ulangkaji) for this Group B session?",
-  "When are mid-semester and final examinations (Group B)?",
-  "When is EET Speaking and the final English Exit Test assessment (Group B)?",
-  "From which date can I print my examination slip (Group B)?",
-  "List all examination periods and slip dates for Group B in a table",
-  "When is gugur taraf (deregistration) on the Group B calendar?",
-  "Do Kedah, Kelantan, and Terengganu have different break or exam dates (Group B)?",
-  "Compare default vs Kedah, Kelantan, and Terengganu dates in a table (Group B)",
-  "When is Minggu Destini Siswa (MDS) on the Group B calendar?",
-  "When are SuFO briefing or submission dates on the Group B calendar?",
-  "Compare registration, lectures, exams, and breaks in a table (Group B)",
-  "Do part-time Diploma or Bachelor programmes have different dates (Group B)?",
-  "Bila pendaftaran kursus Pra-Diploma, Diploma, dan Ijazah (Kumpulan B)?",
-  "Bilakah pendaftaran e-PJJ atau PLK untuk pelajar baharu (Kumpulan B)?",
-  "Bilakah Minggu Kuliah 1–3, Semester Pendek, dan Kuliah Intersesi (Kumpulan B)?",
-  "Bilakah minggu ulangkaji dan peperiksaan pertengahan serta akhir (Kumpulan B)?",
-  "Bila Peperiksaan English Exit Test (EET) Lisan dan penilaian akhir (Kumpulan B)?",
-  "Paparkan garis masa pendaftaran hingga peperiksaan Kumpulan B dalam jadual",
-  "Apakah tarikh akademik penting seterusnya pada kalendar Kumpulan B?",
-];
-
-/** Few general UiTM prompts — combined with Group A or B only (never cross-mixed). */
-const SUGGESTIONS_GENERAL_NEUTRAL = [
-  "How is the Group A calendar different from the Group B calendar?",
-  "Apa beza sesi, semester, dan penggal di UiTM?",
-  "How do I read registration, lecture, exam, and break on this calendar?",
-  "Are Malaysia public holidays shown in the UiTM academic calendar?",
-  "How many UiTM campuses are there and where is the main campus?",
-];
-
-const SUGGESTIONS_GENERAL_EXTRA_A = [
-  "Which programmes and intake cycle use Group A (Foundation/Professional)?",
-  "What is UiTM Foundation (Asasi) in brief?",
-];
-
-const SUGGESTIONS_GENERAL_EXTRA_B = [
-  "Which programmes use the Group B calendar (Mar–Aug cycle)?",
-  "What is UiTM e-PJJ in brief?",
-];
-
-const LOADING_PHRASES = [
-  "Searching calendar data...",
-  "Checking your schedule...",
-  "Looking up dates...",
-  "Analyzing academic calendar...",
-  "Finding the answer...",
-  "Menyemak jadual akademik...",
-  "Mencari maklumat...",
-  "Menyusun jawapan...",
-  "Reviewing semester info...",
-  "Scanning timetable...",
-];
-
-const FETCH_TIMEOUT_MS = 60_000;
-const RETRY_DELAYS_MS = [400, 800, 1600];
-const CHAT_TURNSTILE_COOKIE = "chat_turnstile_verified";
-
-function getRandomLoadingPhrase(exclude?: string): string {
-  const available = LOADING_PHRASES.filter((p) => p !== exclude);
-  return available[Math.floor(Math.random() * available.length)];
-}
-
-function getProgramGroup(program: string): "A" | "B" {
-  if (program === "Foundation/Professional") return "A";
-  return "B";
-}
-
-function getSessionMemoryKey(program: ProgramValue): ProgramValue {
-  return getProgramGroup(program) === "B" ? ("All" as ProgramValue) : program;
-}
-
-type ProgramSessionMap = Partial<Record<ProgramValue, SessionId[]>>;
-
-function normalizeSessionsForGroup(sessionIds: SessionId[], group: "A" | "B"): SessionId[] {
-  const unique = Array.from(new Set(sessionIds));
-  return unique.filter((id) => getGroupFromSession(id) === group);
-}
-
-function areSessionListsEqual(left: SessionId[], right: SessionId[]): boolean {
-  if (left.length !== right.length) return false;
-  return left.every((id, index) => right[index] === id);
-}
-
-function resolveSessionsForProgram(
-  program: ProgramValue,
-  sessionCandidates: SessionId[],
-  sessionsByProgram: ProgramSessionMap,
-  dateStr: string
-): SessionId[] {
-  const group = getProgramGroup(program);
-  const sessionMemoryKey = getSessionMemoryKey(program);
-  const fromCandidates = normalizeSessionsForGroup(sessionCandidates, group);
-  if (fromCandidates.length > 0) return fromCandidates;
-
-  const fromProgramMemory = normalizeSessionsForGroup(sessionsByProgram[sessionMemoryKey] ?? [], group);
-  if (fromProgramMemory.length > 0) return fromProgramMemory;
-
-  return [getSessionForCurrentDate(group, dateStr)];
-}
-
-function normalizeEntriesFromSessionMap(
-  raw: Partial<Record<ProgramValue, SessionId[]>> | null | undefined
-): ProgramSessionMap {
-  const normalized: ProgramSessionMap = {};
-  if (!raw || typeof raw !== "object") return normalized;
-  for (const [programKey, sessionIds] of Object.entries(raw)) {
-    if (!Array.isArray(sessionIds) || sessionIds.length === 0) continue;
-    const program = programKey as ProgramValue;
-    const group = getProgramGroup(program);
-    const inGroup = normalizeSessionsForGroup(sessionIds, group);
-    if (inGroup.length > 0) normalized[getSessionMemoryKey(program)] = inGroup;
-  }
-  return normalized;
-}
-
-/** Prefer `calendar-filters` cookie (homepage / SSR), then localStorage. */
-function mergeSessionMapsFromHomepage(
-  fromLocal: Partial<Record<ProgramValue, SessionId[]>> | null,
-  filters: FilterStates
-): ProgramSessionMap {
-  const localNorm = normalizeEntriesFromSessionMap(fromLocal);
-  const cookieNorm = normalizeEntriesFromSessionMap(filters.sessionIdsByProgram ?? null);
-  const merged: ProgramSessionMap = { ...localNorm, ...cookieNorm };
-
-  if (filters.sessionIds && filters.sessionIds.length > 0) {
-    const prog =
-      filters.selectedProgram && isProgramValue(filters.selectedProgram)
-        ? filters.selectedProgram
-        : "All";
-    const memKey = getSessionMemoryKey(prog);
-    const group = getProgramGroup(prog);
-    const ids = normalizeSessionsForGroup(filters.sessionIds as SessionId[], group);
-    if (ids.length > 0 && (!merged[memKey] || merged[memKey]!.length === 0)) {
-      merged[memKey] = ids;
-    }
-  }
-
-  return merged;
-}
-
-function getRandomSuggestions(group: "A" | "B", exclude: string[]): string[] {
-  const groupPool =
-    group === "A"
-      ? [...SUGGESTIONS_GROUP_A, ...SUGGESTIONS_GENERAL_NEUTRAL, ...SUGGESTIONS_GENERAL_EXTRA_A]
-      : [...SUGGESTIONS_GROUP_B, ...SUGGESTIONS_GENERAL_NEUTRAL, ...SUGGESTIONS_GENERAL_EXTRA_B];
-  const available = groupPool.filter((s) => !exclude.includes(s));
-  const pool = available.length >= 5 ? available : groupPool;
-  const shuffled = [...pool].sort(() => Math.random() - 0.5);
-  return shuffled.slice(0, 5);
-}
-
-const MAX_HISTORY_CONTENT_LENGTH = 2000;
-const MAX_HISTORY_ITEMS = 4;
-
-function prepareHistory(messages: Message[]): { role: "user" | "assistant"; content: string }[] {
-  return messages
-    .slice(-MAX_HISTORY_ITEMS)
-    .map((msg) => ({
-      role: msg.role,
-      content: msg.content.slice(0, MAX_HISTORY_CONTENT_LENGTH),
-    }));
-}
-
-interface Message {
-  id: string;
-  role: "user" | "assistant";
-  content: string;
-  timestamp?: number;
-}
-
-interface MentionMatch {
-  start: number;
-  end: number;
-  query: string;
-}
+type Message = ChatMessageItem;
 
 interface MentionItem {
   id: SessionId;
   label: string;
   text: string;
-}
-
-function formatTime24(timestamp: number): string {
-  const d = new Date(timestamp);
-  return d.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", hour12: false });
-}
-
-function getInitialChatSessions(program: string): SessionId[] {
-  const group: "A" | "B" = program === "Foundation/Professional" ? "A" : "B";
-  const dateStr =
-    typeof window !== "undefined" ? new Date().toISOString().slice(0, 10) : "2026-03-15";
-  return [getSessionForCurrentDate(group, dateStr)];
-}
-
-function getActiveMentionMatch(value: string, caretIndex: number): MentionMatch | null {
-  if (caretIndex < 0) return null;
-  const prefix = value.slice(0, caretIndex);
-  const atIndex = prefix.lastIndexOf("@");
-  if (atIndex < 0) return null;
-  const charBefore = atIndex > 0 ? prefix[atIndex - 1] : "";
-  const isBoundary = atIndex === 0 || /\s/.test(charBefore);
-  if (!isBoundary) return null;
-  const query = prefix.slice(atIndex + 1);
-  if (/\s/.test(query)) return null;
-  return { start: atIndex, end: caretIndex, query };
-}
-
-function escapeRegExp(value: string): string {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
 export default function ChatPage() {
@@ -667,10 +131,10 @@ export default function ChatPage() {
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [headerVisible, setHeaderVisible] = useState(true);
   const [reactions, setReactions] = useState<Record<string, "up" | "down" | null>>({});
-  const currentGroup = getProgramGroup(selectedProgram);
+  const currentGroup = getGroupFromProgram(selectedProgram);
   const suggestionGroup = useMemo((): "A" | "B" => {
     const opt = getProgramOptions().find((p) => p.value === selectedProgram);
-    return opt?.group ?? getProgramGroup(selectedProgram);
+    return opt?.group ?? getGroupFromProgram(selectedProgram);
   }, [selectedProgram, calendarDataVersion]);
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [isMentionOpen, setIsMentionOpen] = useState(false);
@@ -874,7 +338,6 @@ export default function ChatPage() {
     if (labels.length === 1) return labels[0];
     return `${labels.length} Selected`;
   }, [currentGroup, selectedSessions, calendarDataVersion]);
-  const [emblaRef] = useEmblaCarousel({ dragFree: true, containScroll: "trimSnaps", align: "center" });
   const allMentionTexts = useMemo(() => {
     const groupA = getSessionOptionsForGroup("A").map((session) => formatSessionLabelWithId(session));
     const groupB = getSessionOptionsForGroup("B").map((session) => formatSessionLabelWithId(session));
@@ -1430,32 +893,15 @@ export default function ChatPage() {
         <div className="mx-auto max-w-[600px]">
           {/* Suggestion chips - swipeable carousel with edge fades */}
           {messages.length === 0 && (
-            <div className="suggestions-carousel relative -mx-4 md:mx-0 mb-2">
-              <div className="suggestions-fade-left" />
-              <div className="suggestions-fade-right" />
-              <div
-                className="suggestions-swipe overflow-hidden"
-                ref={emblaRef}
-              >
-                <div className="embla__container flex gap-2 px-6">
-                  {suggestions.map((suggestion) => (
-                    <button
-                      key={suggestion}
-                      type="button"
-                      disabled={
-                        waitForTurnstileConfig ||
-                        (requiresTurnstile && !turnstileToken.trim()) ||
-                        isLoading
-                      }
-                      onClick={() => sendMessage(suggestion)}
-                      className="embla__slide flex-none text-xs px-3 py-1.5 rounded-full border border-border bg-secondary/50 hover:bg-secondary dark:bg-[#2A2A2A] dark:hover:bg-[#333] text-foreground transition-colors whitespace-nowrap disabled:opacity-40 disabled:pointer-events-none disabled:cursor-not-allowed"
-                    >
-                      {suggestion}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
+            <SuggestionCarousel
+              suggestions={suggestions}
+              disabled={
+                waitForTurnstileConfig ||
+                (requiresTurnstile && !turnstileToken.trim()) ||
+                isLoading
+              }
+              onSelect={(suggestion) => sendMessage(suggestion)}
+            />
           )}
           <form
             onSubmit={handleSubmit}

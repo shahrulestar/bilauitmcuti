@@ -29,8 +29,15 @@ export interface FilterStates {
   selectedProgram?: ProgramValue;
 }
 
-const COOKIE_NAME = 'calendar-filters';
-const COOKIE_MAX_AGE = 365 * 24 * 60 * 60; // 1 year
+export const CALENDAR_FILTERS_COOKIE = 'calendar-filters';
+export const CALENDAR_FILTERS_MAX_AGE = 365 * 24 * 60 * 60; // 1 year
+
+const COOKIE_NAME = CALENDAR_FILTERS_COOKIE;
+const COOKIE_MAX_AGE = CALENDAR_FILTERS_MAX_AGE;
+
+export function serializeFiltersCookieValue(filters: FilterStates): string {
+  return encodeURIComponent(JSON.stringify(filters));
+}
 
 /** Read raw value of `calendar-filters` from `document.cookie` (client only). */
 function getCalendarFiltersCookieRaw(): string | null {
@@ -106,7 +113,7 @@ export function setFiltersToCookie(filters: FilterStates): void {
   if (typeof window === 'undefined') return;
 
   try {
-    const cookieValue = encodeURIComponent(JSON.stringify(filters));
+    const cookieValue = serializeFiltersCookieValue(filters);
     const expires = new Date();
     expires.setTime(expires.getTime() + COOKIE_MAX_AGE * 1000);
     const securePart =

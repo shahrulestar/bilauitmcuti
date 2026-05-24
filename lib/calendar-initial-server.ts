@@ -3,23 +3,19 @@ import {
   calendarProgramQueryForRoute,
   fetchCalendarSession,
 } from "@/lib/calendar-api";
+import { resolveSessionsForProgram } from "@/lib/calendar-session-resolve";
 import { fetchMetaCachedEntireForRsc } from "@/lib/calendar-server-meta";
 import type { CalendarSnapshot } from "@/lib/calendar-store";
 import type { Activity, SessionId } from "@/lib/data";
-import { pickSessionIdForDateFromApiOptions } from "@/lib/data";
+import {
+  getGroupFromProgram,
+  getSessionMemoryKey,
+} from "@/lib/session-memory";
 import {
   getProgramFromRoute,
   isProgramValue,
   type ProgramValue,
 } from "@/lib/route-utils";
-
-function getGroupFromProgram(program: ProgramValue): "A" | "B" {
-  return program === "Foundation/Professional" ? "A" : "B";
-}
-
-function getSessionMemoryKey(program: ProgramValue): ProgramValue {
-  return getGroupFromProgram(program) === "B" ? "All" : program;
-}
 
 function resolveProgramForServer(
   programFromRoute: string,
@@ -59,27 +55,25 @@ function resolveInitialSessionIds(
   }
 
   const fromProgram = nextMap[sessionMemoryKey];
-  if (fromProgram && fromProgram.length > 0) return fromProgram;
-
-  const candidates =
-    filters.sessionIds && filters.sessionIds.length > 0
-      ? filters.sessionIds
-      : filters.sessionId
-        ? [filters.sessionId]
-        : [];
-  const inGroup = candidates.filter((id) => id.startsWith(`${programGroup}-`));
-  if (inGroup.length > 0) return inGroup;
-
-  if (meta.sessionOptions.length === 0) {
-    return [programGroup === "A" ? "A-20251" : "B-20263"];
+  let candidates: SessionId[];
+  if (fromProgram && fromProgram.length > 0) {
+    candidates = fromProgram;
+  } else {
+    const rawCandidates =
+      filters.sessionIds && filters.sessionIds.length > 0
+        ? filters.sessionIds
+        : filters.sessionId
+          ? [filters.sessionId]
+          : [];
+    candidates = rawCandidates.filter((id) => id.startsWith(`${programGroup}-`));
   }
-  return [
-    pickSessionIdForDateFromApiOptions(
-      programGroup,
-      currentDateStr,
-      meta.sessionOptions
-    ),
-  ];
+
+  return resolveSessionsForProgram({
+    meta,
+    program,
+    candidates,
+    dateStr: currentDateStr,
+  }).sessions;
 }
 
 const CALENDAR_HYDRATE_VERSION = 1;

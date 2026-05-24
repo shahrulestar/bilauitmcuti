@@ -1,7 +1,7 @@
 import { memo, useMemo, useCallback, useSyncExternalStore } from 'react';
 import { useCalendarHydrationVersion } from '@/components/calendar-hydration-context';
 import { getSnapshot, subscribe } from '@/lib/calendar-store';
-import { getActivitiesForMonthMultiSessions, getMonthsForSessions, formatDateRange, getDaysUntilStart, formatCountdown, getProgramBadgeConfig, getProgramBadgesConfig, type ProgramGroup, type SessionId } from '@/lib/data';
+import { getActivitiesForMonthMultiSessions, getMonthsForSessions, formatDateRange, getDaysUntilStart, formatCountdown, getProgramBadgeConfig, getProgramBadgesConfig, type Activity, type ProgramGroup, type SessionId } from '@/lib/data';
 
 interface ListViewProps {
   selectedProgram: string;
@@ -78,7 +78,7 @@ export const ListView = memo(function ListView({
     return 'B';
   };
 
-  const shouldShowActivity = useCallback((type: string, activity?: any): boolean => {
+  const shouldShowActivity = useCallback((type: string, activity?: Activity): boolean => {
     if (type === 'registration' && !showRegistration) return false;
     if (type === 'lecture' && !showLecture) return false;
     if (type === 'examination' && !showExamination) return false;
@@ -231,7 +231,7 @@ export const ListView = memo(function ListView({
     [uniqueActivities]
   );
 
-  const getActivityColor = (activity: any) => {
+  const getActivityColor = (activity: Activity) => {
     if (activity.type === 'registration') return 'bg-[#d1d5db]';
     if (activity.type === 'lecture') return 'bg-[#8b5cf6]';
     if (activity.type === 'examination') return 'bg-[#dc2626]';

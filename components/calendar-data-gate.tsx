@@ -9,16 +9,42 @@ import {
   useState,
 } from "react";
 import {
+  CalendarApiError,
   calendarProgramQueryForRoute,
   fetchCalendarSession,
   fetchMetaCached,
+  type MetaResponse,
 } from "@/lib/calendar-api";
+import { resolveSessionsForProgram } from "@/lib/calendar-session-resolve";
 import { getSnapshot, mergeSessions, setMeta } from "@/lib/calendar-store";
 import type { Activity, SessionId } from "@/lib/data";
 import type { ProgramValue } from "@/lib/route-utils";
 
+const SESSION_NOTICE =
+  "Sesi dalam pautan tidak sah. Memaparkan sesi semasa.";
+
 function getGroupFromProgram(program: ProgramValue): "A" | "B" {
   return program === "Foundation/Professional" ? "A" : "B";
+}
+
+function metaFromSnapshot(snap: ReturnType<typeof getSnapshot>): MetaResponse {
+  return {
+    defaultSession: snap.defaultSession,
+    sessionOptions: snap.sessionOptions,
+    programOptions: snap.programOptions,
+  };
+}
+
+function friendlyFetchError(error: unknown): string {
+  if (error instanceof CalendarApiError) {
+    if (error.status >= 500) {
+      return "Calendar is temporarily unavailable. Please try again.";
+    }
+    if (error.status === 429) {
+      return "Too many requests. Please try again shortly.";
+    }
+  }
+  return "Failed to load calendar.";
 }
 
 function sessionHasCachedActivities(
@@ -84,6 +110,10 @@ interface CalendarDataGateProps {
   children: React.ReactNode;
   selectedSessions: SessionId[];
   selectedProgram: ProgramValue;
+  /** Malaysia calendar date (YYYY-MM-DD) for default session when ids are invalid. */
+  currentDateStr: string;
+  /** Sync parent state + cookie when invalid session ids are replaced. */
+  onSessionsCorrected?: (program: ProgramValue, sessions: SessionId[]) => void;
   /** When this equals the current load key and the store already has meta + those sessions, skip duplicate RSC fetch. */
   hydratedLoadKey?: string | null;
   /** Program used when SSR built the snapshot; must match `selectedProgram` to skip client refetch. */
@@ -95,25 +125,19 @@ interface CalendarDataGateProps {
 /**
  * Loads meta + session activities in the background. Always renders children immediately
  * (same shell as with bundled data); store updates re-render grid/list when data arrives.
- *
- * Fetch strategy: refetch all selected sessions when `selectedProgram` changes (Group B query
- * differs by program). When only sessions are added, fetch missing ids only. Retry refetches all targets.
- * Do not clear session activities before fetch — clearing caused empty store during the request,
- * wrong month fallbacks in grid and a brief empty list; mergeSessions overwrites when data arrives.
- *
- * Exposes `useCalendarCommittedProgram` + `useCalendarCommittedSessions`: grid/list should use these
- * (not route `selectedProgram` / raw `selectedSessions`) until the store matches that load, avoiding
- * empty cells when switching Group A ↔ Group B or Group B programs.
  */
 export function CalendarDataGate({
   children,
   selectedSessions,
   selectedProgram,
+  currentDateStr,
+  onSessionsCorrected,
   hydratedLoadKey = null,
   hydratedSnapshotProgram = null,
   serverHydrateKey = null,
 }: CalendarDataGateProps) {
   const [fetchError, setFetchError] = useState<string | null>(null);
+  const [sessionNotice, setSessionNotice] = useState(false);
   const [retryNonce, setRetryNonce] = useState(0);
   const [committedProgram, setCommittedProgram] = useState<ProgramValue>(
     () => hydratedSnapshotProgram ?? selectedProgram
@@ -123,6 +147,11 @@ export function CalendarDataGate({
   ]);
   const lastFetchedProgramRef = useRef<ProgramValue | undefined>(undefined);
   const prevServerHydrateKeyRef = useRef<string | null>(null);
+  const onSessionsCorrectedRef = useRef(onSessionsCorrected);
+
+  useEffect(() => {
+    onSessionsCorrectedRef.current = onSessionsCorrected;
+  }, [onSessionsCorrected]);
 
   const loadKey = useMemo(() => {
     const sessionsPart = [...selectedSessions].sort().join(",");
@@ -145,39 +174,23 @@ export function CalendarDataGate({
       try {
         const group = getGroupFromProgram(selectedProgram);
         const programQ = calendarProgramQueryForRoute(selectedProgram);
-        const targets = selectedSessions.filter((id) => id.startsWith(`${group}-`));
+        const inGroupCandidates = selectedSessions.filter((id) =>
+          id.startsWith(`${group}-`)
+        );
 
         let s = getSnapshot();
 
         const hydrationProgramOk =
           hydratedSnapshotProgram != null &&
           hydratedSnapshotProgram === selectedProgram;
-        // SSR hydrate key is fixed for the page lifetime; after fetching another Group B
-        // program, cached session rows are for that program — do not skip when switching back to All.
         const canTrustHydration =
           lastFetchedProgramRef.current === undefined ||
           lastFetchedProgramRef.current === selectedProgram;
-        if (
-          canTrustHydration &&
-          hydrationProgramOk &&
-          hydratedLoadKey != null &&
-          hydratedLoadKey === loadKey &&
-          s.sessionOptions.length > 0 &&
-          sessionsHaveHydratedActivities(s, targets)
-        ) {
-          lastFetchedProgramRef.current = selectedProgram;
-          if (!cancelled) {
-            setCommittedProgram(selectedProgram);
-            setCommittedSessions([...selectedSessions]);
-          }
-          if (retryNonce > 0 && !cancelled) setRetryNonce(0);
-          return;
-        }
 
         if (s.sessionOptions.length === 0) {
-          const meta = await fetchMetaCached({ entire: true });
+          const metaResponse = await fetchMetaCached({ entire: true });
           if (cancelled) return;
-          setMeta(meta);
+          setMeta(metaResponse);
         }
         s = getSnapshot();
         if (s.sessionOptions.length === 0) {
@@ -185,11 +198,45 @@ export function CalendarDataGate({
           return;
         }
 
+        const meta = metaFromSnapshot(s);
+        const resolved = resolveSessionsForProgram({
+          meta,
+          program: selectedProgram,
+          candidates: inGroupCandidates,
+          dateStr: currentDateStr,
+        });
+        const targets = resolved.sessions;
+        let effectiveSessions = [...targets];
+
+        if (resolved.wasAdjusted) {
+          if (!cancelled) setSessionNotice(true);
+          onSessionsCorrectedRef.current?.(selectedProgram, effectiveSessions);
+        }
+
+        const resolvedLoadKey = `${selectedProgram}|${[...targets].sort().join(",")}`;
+
+        if (
+          canTrustHydration &&
+          hydrationProgramOk &&
+          hydratedLoadKey != null &&
+          hydratedLoadKey === resolvedLoadKey &&
+          s.sessionOptions.length > 0 &&
+          sessionsHaveHydratedActivities(s, targets)
+        ) {
+          lastFetchedProgramRef.current = selectedProgram;
+          if (!cancelled) {
+            setCommittedProgram(selectedProgram);
+            setCommittedSessions([...effectiveSessions]);
+          }
+          if (retryNonce > 0 && !cancelled) setRetryNonce(0);
+          return;
+        }
+
         if (targets.length === 0) {
           lastFetchedProgramRef.current = selectedProgram;
           if (!cancelled) {
             setCommittedProgram(selectedProgram);
-            setCommittedSessions([...selectedSessions]);
+            setCommittedSessions([...effectiveSessions]);
           }
           if (retryNonce > 0 && !cancelled) setRetryNonce(0);
           return;
@@ -214,40 +261,82 @@ export function CalendarDataGate({
           lastFetchedProgramRef.current = selectedProgram;
           if (!cancelled) {
             setCommittedProgram(selectedProgram);
-            setCommittedSessions([...selectedSessions]);
+            setCommittedSessions([...effectiveSessions]);
           }
           if (retryNonce > 0 && !cancelled) setRetryNonce(0);
           return;
         }
 
         const merges: Record<string, { activities: Activity[] }> = {};
+        let fetchAdjusted = false;
+
         await Promise.all(
           sessionsToFetch.map(async (sid) => {
-            const acts = await fetchCalendarSession({
-              sessionId: sid,
-              group,
-              program: group === "B" ? (programQ ?? "All") : undefined,
-            });
-            merges[sid] = { activities: acts };
+            try {
+              const acts = await fetchCalendarSession({
+                sessionId: sid,
+                group,
+                program: group === "B" ? (programQ ?? "All") : undefined,
+              });
+              merges[sid] = { activities: acts };
+            } catch (e) {
+              if (e instanceof CalendarApiError && e.status === 400) {
+                const fallback = resolveSessionsForProgram({
+                  meta,
+                  program: selectedProgram,
+                  candidates: [],
+                  dateStr: currentDateStr,
+                }).sessions[0]!;
+                const acts = await fetchCalendarSession({
+                  sessionId: fallback,
+                  group,
+                  program: group === "B" ? (programQ ?? "All") : undefined,
+                });
+                merges[fallback] = { activities: acts };
+                const idx = effectiveSessions.indexOf(sid);
+                if (idx >= 0) {
+                  effectiveSessions[idx] = fallback;
+                } else {
+                  effectiveSessions = [fallback];
+                }
+                fetchAdjusted = true;
+                if (!cancelled) setSessionNotice(true);
+                return;
+              }
+              throw e;
+            }
           })
         );
+
+        if (fetchAdjusted) {
+          onSessionsCorrectedRef.current?.(selectedProgram, effectiveSessions);
+        }
+
         if (cancelled) return;
         mergeSessions(merges);
         lastFetchedProgramRef.current = selectedProgram;
         setCommittedProgram(selectedProgram);
-        setCommittedSessions([...selectedSessions]);
+        setCommittedSessions([...effectiveSessions]);
         if (retryNonce > 0 && !cancelled) setRetryNonce(0);
       } catch (e) {
         if (cancelled) return;
-        setFetchError(e instanceof Error ? e.message : "Failed to load calendar.");
+        setFetchError(friendlyFetchError(e));
       }
     })();
 
     return () => {
       cancelled = true;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- loadKey encodes program + sessions
-  }, [loadKey, retryNonce, hydratedLoadKey, hydratedSnapshotProgram, serverHydrateKey]);
+  }, [
+    loadKey,
+    retryNonce,
+    hydratedLoadKey,
+    hydratedSnapshotProgram,
+    serverHydrateKey,
+    currentDateStr,
+    selectedProgram,
+    selectedSessions,
+  ]);
 
   const committedView = useMemo(
     (): CalendarCommittedView => ({
@@ -259,6 +348,23 @@ export function CalendarDataGate({
 
   return (
     <CalendarCommittedViewContext.Provider value={committedView}>
+      {sessionNotice ? (
+        <div className="mx-auto max-w-[1000px] px-4 pt-4 sm:px-6 lg:px-4">
+          <div
+            role="status"
+            className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-sm text-amber-950 dark:text-amber-100"
+          >
+            <span>{SESSION_NOTICE}</span>
+            <button
+              type="button"
+              className="shrink-0 rounded-md border border-border bg-background px-3 py-1 text-xs font-medium text-foreground hover:bg-muted"
+              onClick={() => setSessionNotice(false)}
+            >
+              Tutup
+            </button>
+          </div>
+        </div>
+      ) : null}
       {fetchError ? (
         <div className="mx-auto max-w-[1000px] px-4 pt-4 sm:px-6 lg:px-4">
           <div

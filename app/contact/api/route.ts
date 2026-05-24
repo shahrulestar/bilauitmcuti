@@ -10,6 +10,7 @@ import {
   verifyTurnstileToken,
 } from "@/lib/turnstile";
 import { isTurnstileVerificationRequired } from "@/lib/turnstile-config";
+import { jsonError, getClientIp, formatNotificationTime } from "@/lib/api-response";
 
 
 const MAX_BODY_SIZE_BYTES = 10 * 1024;
@@ -54,27 +55,6 @@ function parseContactRequest(raw: unknown): { success: true; data: ContactReques
     success: true,
     data: { who, category, message, startedAt, website, email, turnstileToken, rating: parsedRating },
   };
-}
-
-function jsonError(message: string, status: number) {
-  return NextResponse.json({ error: message }, { status });
-}
-
-function getClientIp(request: NextRequest): string {
-  return (
-    request.headers.get("cf-connecting-ip") ||
-    request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
-    request.headers.get("x-real-ip") ||
-    "unknown"
-  );
-}
-
-function formatNotificationTime(date: Date): string {
-  return date.toLocaleString("en-MY", {
-    timeZone: "Asia/Kuala_Lumpur",
-    dateStyle: "medium",
-    timeStyle: "short",
-  });
 }
 
 function buildContactNotificationText(

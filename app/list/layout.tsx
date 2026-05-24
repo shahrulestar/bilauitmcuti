@@ -8,14 +8,14 @@ export const metadata: Metadata = {
   description: 'Interactive UiTM academic calendar. View registration dates, lecture schedules, examination periods, and breaks. Includes regional schedule variations for Kedah, Kelantan, and Terengganu. Supports dark/light themes and offline access.',
   robots: { index: false, follow: true },
   alternates: {
-    canonical: 'https://bilauitmcuti.com/',
+    canonical: 'https://bilauitmcuti.com/list',
   },
   openGraph: {
     siteName: 'Bila UiTM Cuti',
     title: 'Bila UiTM Cuti',
     description: 'Interactive calendar showing UiTM academic schedules, registration dates, lecture periods, and examination dates.',
     type: 'website',
-    url: 'https://bilauitmcuti.com/',
+    url: 'https://bilauitmcuti.com/list',
     locale: 'ms_MY',
     images: [
       {

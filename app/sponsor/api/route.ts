@@ -15,6 +15,7 @@ import {
   verifyTurnstileToken,
 } from "@/lib/turnstile";
 import { isTurnstileVerificationRequired } from "@/lib/turnstile-config";
+import { jsonError, getClientIp } from "@/lib/api-response";
 
 
 const MIN_SUBMIT_TIME_MS = 3000;
@@ -65,19 +66,6 @@ function parseSponsorFields(raw: Record<string, unknown>): { success: true; data
   }
 
   return { success: true, data: { anonymous, nickname, socialPlatform, socialHandle, message, turnstileToken, startedAt, website } };
-}
-
-function jsonError(message: string, status: number) {
-  return NextResponse.json({ error: message }, { status });
-}
-
-function getClientIp(request: NextRequest): string {
-  return (
-    request.headers.get("cf-connecting-ip") ||
-    request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
-    request.headers.get("x-real-ip") ||
-    "unknown"
-  );
 }
 
 function buildSponsorNotificationText(params: {

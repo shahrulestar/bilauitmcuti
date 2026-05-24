@@ -98,6 +98,16 @@ function normalizeApiActivity(raw: Record<string, unknown>): Activity {
   return activity;
 }
 
+export class CalendarApiError extends Error {
+  readonly status: number;
+
+  constructor(status: number, message: string) {
+    super(message);
+    this.name = "CalendarApiError";
+    this.status = status;
+  }
+}
+
 async function fetchJsonWithRetry(url: string): Promise<unknown> {
   let attempt = 0;
   const maxAttempts = 4;
@@ -119,14 +129,15 @@ async function fetchJsonWithRetry(url: string): Promise<unknown> {
 
     if (!res.ok) {
       const text = await res.text().catch(() => "");
-      throw new Error(
-        `Calendar API ${res.status}: ${text.slice(0, 200) || res.statusText}`
+      throw new CalendarApiError(
+        res.status,
+        text.slice(0, 200) || res.statusText
       );
     }
 
     return (await res.json()) as unknown;
   }
-  throw new Error("Calendar API: rate limited after retries");
+  throw new CalendarApiError(429, "rate limited after retries");
 }
 
 function asMetaPayload(data: unknown): MetaResponse {

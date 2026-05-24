@@ -12,7 +12,9 @@
     "dev": "next dev",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "test:smoke": "echo smoke-placeholder",
+    "test:smoke": "node scripts/smoke.mjs",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "start": "next start",
     "pages:dev": "wrangler pages dev .vercel/output/static --compatibility-flag=nodejs_compat --ai=AI",
     "preview": "pnpm run build:pages && pnpm run pages:dev"

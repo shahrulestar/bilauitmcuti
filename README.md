@@ -28,17 +28,14 @@ Academic calendar web app for Universiti Teknologi MARA (UiTM) — Malaysia's la
 - Dark and light theme with system detection
 
 ### Contact & sponsor
-- **Contact** (`/contact`): feedback form; optional email; submissions are sent to Discord when `DISCORD_WEBHOOK_URL` is configured; protected by Cloudflare Turnstile
+- **Feedback** (`/feedback`): feedback form; optional email; submissions are sent to Discord when `DISCORD_WEBHOOK_URL` is configured; protected by Cloudflare Turnstile (`/contact` redirects here)
 - **Sponsor** (`/sponsor`): sponsorship form with optional nickname or anonymous mode, social platform + handle/URL, message, proof-of-payment upload (image or PDF), and Turnstile; a **Show payment QR** control reveals the static QR image at `public/sponsor-qr.png` (replace this file with your real QR). Submissions use the **same** Discord webhook as contact and engagement (summary text + proof file attachment in one message)
 
 ## Tech Stack
 
 - **Framework:** Next.js 16 (App Router), React 19, TypeScript
 - **Styling:** Tailwind CSS 4, shadcn/ui, Radix UI
-- **Scrolling:** Lenis (smooth wheel / touch sync on calendar routes; chat route uses native scroll)
 - **AI:** Cloudflare Workers AI — production: `@cf/google/gemma-4-26b-a4b-it`; dev/preview: `@cf/meta/llama-3.2-3b-instruct`
-- **Calendar UI:** react-day-picker, date-fns
-- **Validation:** Zod
 - **Deployment:** Cloudflare Pages (`@cloudflare/next-on-pages`)
 
 ## Getting Started
@@ -98,6 +95,8 @@ Open [http://localhost:3000](http://localhost:3000).
 ```bash
 pnpm lint        # ESLint
 pnpm typecheck   # TypeScript (tsc --noEmit)
+pnpm test        # Vitest unit tests
+pnpm test:smoke  # HTTP smoke checks (requires dev/preview server; set SMOKE_BASE_URL if needed)
 ```
 
 ### Production Build
@@ -138,14 +137,17 @@ The UI requests **`/api/v1/meta`** and **`/api/v1/calendar`** (and the legacy **
 ```
 app/
   page.tsx                 # Homepage (grid view)
-  layout.tsx               # Root layout, metadata, theme, Lenis (non-chat)
+  layout.tsx               # Root layout, metadata, theme
   [program]/               # Dynamic program-specific routes
   chat/
     page.tsx               # AI chat interface
     api/route.ts           # Chat API (rate limiting, validation, AI)
+  feedback/
+    page.tsx               # Feedback form (Discord webhook + Turnstile)
+    api/route.ts           # Re-exports contact POST handler
   contact/
-    page.tsx               # Contact form (Discord webhook + Turnstile)
-    api/route.ts           # Contact POST handler
+    page.tsx               # Redirects to /feedback
+    api/route.ts           # Contact POST handler (shared with feedback)
   sponsor/
     page.tsx               # Sponsor form (QR, proof upload, Discord webhook + Turnstile)
     api/route.ts           # Sponsor multipart POST handler
@@ -169,15 +171,15 @@ lib/
   data.ts                  # Academic calendar logic (activities, dates)
   calendar-api.ts          # Client fetch helpers (same-origin)
   calendar-store.ts        # Client calendar session store
-  env.ts                   # Centralized env validation
+  env.ts                   # Workers AI binding health check (used by /api/health)
   rate-limit.ts            # Rate limiting (in-memory per isolate)
   logger.ts
   uitm-info.ts
   cookie-utils.ts          # Filter persistence
-  system-rules.json        # AI system prompts
 public/
   manifest.json            # PWA manifest
   sw.js                    # Service worker
+  system-rules.json        # AI system prompts
   sponsor-qr.png           # Placeholder payment QR for /sponsor (replace with your asset)
 ```
 

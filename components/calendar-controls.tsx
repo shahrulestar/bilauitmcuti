@@ -41,12 +41,16 @@ import { useCalendarHydrationVersion } from '@/components/calendar-hydration-con
 import { getSnapshot, subscribe } from '@/lib/calendar-store';
 import type { SessionId } from '@/lib/data';
 import { getLabelForProgramValue, getRoutePath } from '@/lib/route-utils';
+import { replaceCalendarHistoryUrl } from '@/lib/share-url';
 import type { ViewMode } from '@/app/page';
 import type { ProgramValue } from '@/lib/route-utils';
 import { sessionSubmenuItemClass } from '@/lib/session-submenu-item-class';
 
 import { SessionSubmenuItemLabel } from '@/components/session-submenu-item-label';
 import { useEngagementPrompt } from '@/components/engagement-prompt-provider';
+import { usePwaInstalled } from '@/hooks/use-pwa-installed';
+import { CalendarFilterToggle } from '@/components/calendar/filter-toggle';
+import { PwaInstallButton } from '@/components/calendar/pwa-install-hint';
 
 interface CalendarControlsProps {
   selectedProgram: string;
@@ -110,7 +114,7 @@ export function CalendarControls({
   const [activeSubmenu, setActiveSubmenu] = useState<string | null>(null);
   const keepDropdownOpenRef = useRef(false);
   const overlayOpenScrollYRef = useRef(0);
-  const [isPWAInstalled, setIsPWAInstalled] = useState(false);
+  const isPWAInstalled = usePwaInstalled();
   const [currentFooterText, setCurrentFooterText] = useState(0);
   const { recordEngagementAction } = useEngagementPrompt();
 
@@ -164,7 +168,7 @@ export function CalendarControls({
     } else {
       const newPath = getRoutePath(programValue, viewMode);
       if (newPath !== pathname) {
-        window.history.replaceState(null, '', newPath);
+        replaceCalendarHistoryUrl(newPath);
       }
     }
     recordEngagementAction('session_change');
@@ -177,7 +181,7 @@ export function CalendarControls({
     } else {
       const newPath = getRoutePath(program, viewMode);
       if (newPath !== pathname) {
-        window.history.replaceState(null, '', newPath);
+        replaceCalendarHistoryUrl(newPath);
       }
     }
     recordEngagementAction('program_change');
@@ -197,17 +201,6 @@ export function CalendarControls({
     },
     [onViewModeChange, router, selectedProgram, recordEngagementAction]
   );
-
-  // Check if app is installed as PWA
-  useEffect(() => {
-    const isInStandaloneMode = window.matchMedia('(display-mode: standalone)').matches;
-    const isInFullScreenMode = document.fullscreenElement !== null;
-    const isInMinimalUIMode = (window.navigator as any).standalone === true;
-    
-    if (isInStandaloneMode || isInFullScreenMode || isInMinimalUIMode) {
-      setIsPWAInstalled(true);
-    }
-  }, []);
 
   // Memoize filtered program options to avoid recalculation
   const groupAOptions = useMemo(() => programOptions.filter(p => p.group === 'A'), [programOptions]);
@@ -567,24 +560,12 @@ export function CalendarControls({
                 <div className="space-y-3 transition-none">
                   {/* Activity Type Toggles */}
                   <div className="space-y-2 transition-none">
-                    <label className="flex items-center justify-between cursor-pointer py-0.5 transition-none">
-                      <span className="text-sm font-medium text-foreground">Registration</span>
-                      <div className={`relative inline-flex h-6 w-11 items-center rounded-full transition-none ${showRegistration ? 'bg-primary' : 'bg-muted'}`}
-                        style={{ transition: 'none' }}
-                      >
-                        <span
-                          className={`inline-block h-4 w-4 transform rounded-full transition-none shadow-sm ${showRegistration ? 'bg-background' : 'bg-background dark:bg-foreground'}`}
-                          style={{ transform: showRegistration ? 'translateX(20px)' : 'translateX(2px)', transition: 'none' }}
-                        />
-                        <input
-                          type="checkbox"
-                          checked={showRegistration}
-                          onChange={(e) => onFilterToggle(e.target.checked, onShowRegistrationChange)}
-                          className="sr-only"
-                          aria-label="Toggle registration events"
-                        />
-                      </div>
-                    </label>
+                    <CalendarFilterToggle
+                      label="Registration"
+                      checked={showRegistration}
+                      onChange={(checked) => onFilterToggle(checked, onShowRegistrationChange)}
+                      ariaLabel="Toggle registration events"
+                    />
 
                     <label className="flex items-center justify-between cursor-pointer py-0.5 transition-none">
                       <span className="text-sm font-medium text-foreground">Lecture</span>
@@ -758,17 +739,7 @@ export function CalendarControls({
                     {/* Buttons Container */}
                     <div className="flex flex-col gap-2 w-full transition-none">
                       {/* Download PWA Button - Primary, only show if not already installed */}
-                      {!isPWAInstalled && (
-                        <Button
-                          size="sm"
-                          variant="default"
-                          onMouseEnter={() => router.prefetch('/pwa')}
-                          onClick={() => router.push('/pwa')}
-                          className="w-full !h-[38px] justify-center border-border text-center transition-none"
-                        >
-                          Download as PWA
-                        </Button>
-                      )}
+                      <PwaInstallButton isInstalled={isPWAInstalled} />
 
                       {/* Submit Feedback Button - Secondary */}
                       <Link href="/feedback" className="w-full">

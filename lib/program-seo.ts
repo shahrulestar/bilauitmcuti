@@ -36,3 +36,7 @@ export function getProgramPageTitle(programSlug: string): string {
 export function getProgramCanonicalUrl(programSlug: string): string {
   return `${siteBase}/${programSlug}`
 }
+
+export function getProgramListCanonicalUrl(programSlug: string): string {
+  return `${siteBase}/${programSlug}/list`
+}
