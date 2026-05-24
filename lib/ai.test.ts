@@ -40,9 +40,8 @@ describe("resolveProductionChatModelChain", () => {
     ]);
   });
 
-  it("buffers production replies (no token stream to client)", () => {
-    vi.stubEnv("NODE_ENV", "production");
+  it("never streams partial tokens to the chat client", () => {
     expect(shouldStreamTokensToClient("bilauitmcuti.com")).toBe(false);
-    expect(shouldStreamTokensToClient("localhost:3000")).toBe(true);
+    expect(shouldStreamTokensToClient("localhost:3000")).toBe(false);
   });
 });

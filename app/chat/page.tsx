@@ -81,7 +81,6 @@ import {
   getChatErrorMessage,
   getRandomLoadingPhrase,
   consumeChatStream,
-  revealReplyWithTyping,
   LOADING_INDICATOR_DELAY_MS,
   MAX_CHAT_MESSAGE_LENGTH,
   parseChatResponse,
@@ -272,7 +271,6 @@ export default function ChatPage() {
   const [loadingPhrase, setLoadingPhrase] = useState("");
   const [showThinkingIndicator, setShowThinkingIndicator] = useState(false);
   const thinkingDelayRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const typingAbortRef = useRef<AbortController | null>(null);
 
   const clearThinkingDelay = useCallback(() => {
     if (thinkingDelayRef.current) {
@@ -509,8 +507,6 @@ export default function ChatPage() {
     setMessages(updatedMessages);
     setInput("");
     setIsLoading(true);
-    typingAbortRef.current?.abort();
-    typingAbortRef.current = new AbortController();
     startThinkingDelay();
     recordEngagementAction("chat_send");
     let didAttemptFetch = false;
@@ -548,9 +544,7 @@ export default function ChatPage() {
       let maxAttempts = 3;
       let chatRequestSucceeded = false;
       let usedStreamPlaceholder = false;
-      let receivedStreamTokens = false;
       const assistantId = (now + 1).toString();
-      const typingSignal = typingAbortRef.current.signal;
       const isRetryableStatus = (s: number) =>
         s === 429 || s === 500 || s === 502 || s === 503 || s === 504;
 
@@ -578,30 +572,10 @@ export default function ChatPage() {
             usedStreamPlaceholder = true;
 
             await consumeChatStream(res, {
-              onToken: (token) => {
-                receivedStreamTokens = true;
-                clearThinkingDelay();
-                setShowThinkingIndicator(false);
-                setMessages((prev) => {
-                  const existing = prev.find((m) => m.id === assistantId);
-                  if (!existing) {
-                    return [
-                      ...prev,
-                      {
-                        id: assistantId,
-                        role: "assistant",
-                        content: token,
-                        isComplete: false,
-                        userPrompt: trimmed,
-                      },
-                    ];
-                  }
-                  return prev.map((m) =>
-                    m.id === assistantId ? { ...m, content: m.content + token } : m
-                  );
-                });
+              onToken: () => {
+                /* Wait for done — no partial text while the model runs */
               },
-              onDone: async (payload) => {
+              onDone: (payload) => {
                 content = payload.reply;
                 chatRequestSucceeded = true;
                 clearThinkingDelay();
@@ -609,90 +583,38 @@ export default function ChatPage() {
                 const doneAt = Date.now();
                 const replyText = payload.reply ?? "";
 
-                const commitAssistantReply = (text: string) => {
-                  setMessages((prev) => {
-                    const hasMsg = prev.some((m) => m.id === assistantId);
-                    if (!hasMsg) {
-                      return [
-                        ...prev,
-                        {
-                          id: assistantId,
-                          role: "assistant",
-                          content: text,
-                          correlationId: payload.correlationId,
-                          userPrompt: trimmed,
-                          isComplete: true,
-                          timestamp: doneAt,
-                        },
-                      ];
-                    }
-                    return prev.map((m) =>
-                      m.id === assistantId
-                        ? {
-                            ...m,
-                            content: text,
-                            correlationId: payload.correlationId,
-                            userPrompt: trimmed,
-                            isComplete: true,
-                            timestamp: doneAt,
-                          }
-                        : m
-                    );
-                  });
-                  setIsTurnstileSessionVerified(true);
-                  setTurnstileToken("");
-                  turnstileRef.current?.reset();
-                };
-
-                const useTypingReveal =
-                  payload.revealTyping === true ||
-                  (!receivedStreamTokens && replyText.length > 0);
-
-                if (useTypingReveal) {
-                  setMessages((prev) => {
-                    const hasMsg = prev.some((m) => m.id === assistantId);
-                    if (hasMsg) {
-                      return prev.map((m) =>
-                        m.id === assistantId
-                          ? {
-                              ...m,
-                              content: "",
-                              correlationId: payload.correlationId,
-                              userPrompt: trimmed,
-                              isComplete: false,
-                            }
-                          : m
-                      );
-                    }
+                setMessages((prev) => {
+                  const hasMsg = prev.some((m) => m.id === assistantId);
+                  if (!hasMsg) {
                     return [
                       ...prev,
                       {
                         id: assistantId,
                         role: "assistant",
-                        content: "",
+                        content: replyText,
                         correlationId: payload.correlationId,
                         userPrompt: trimmed,
-                        isComplete: false,
+                        isComplete: true,
+                        timestamp: doneAt,
                       },
                     ];
-                  });
-
-                  await revealReplyWithTyping({
-                    fullText: replyText,
-                    signal: typingSignal,
-                    onChunk: (visible) => {
-                      setMessages((prev) =>
-                        prev.map((m) =>
-                          m.id === assistantId
-                            ? { ...m, content: visible, isComplete: false }
-                            : m
-                        )
-                      );
-                    },
-                  });
-                }
-
-                commitAssistantReply(replyText);
+                  }
+                  return prev.map((m) =>
+                    m.id === assistantId
+                      ? {
+                          ...m,
+                          content: replyText,
+                          correlationId: payload.correlationId,
+                          userPrompt: trimmed,
+                          isComplete: true,
+                          timestamp: doneAt,
+                        }
+                      : m
+                  );
+                });
+                setIsTurnstileSessionVerified(true);
+                setTurnstileToken("");
+                turnstileRef.current?.reset();
               },
               onError: (payload) => {
                 content = payload.error;

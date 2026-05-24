@@ -129,9 +129,9 @@ export function resolveWorkersAiModelId(requestHost?: string | null): string {
   return resolveProductionChatModelChain(requestHost)[0]!;
 }
 
-/** Dev streams tokens to the UI; production buffers until the final cleaned reply. */
-export function shouldStreamTokensToClient(requestHost?: string | null): boolean {
-  return resolveWorkersAiModelTier(requestHost) === "dev";
+/** Chat UI shows the full reply only after loading; never stream partial tokens to the client. */
+export function shouldStreamTokensToClient(_requestHost?: string | null): boolean {
+  return false;
 }
 
 export function getWorkersAiTierLimits(tier: WorkersAiModelTier): WorkersAiTierLimits {

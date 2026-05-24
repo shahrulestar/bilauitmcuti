@@ -20,8 +20,6 @@ export function sseResponse(
 export interface ChatStreamDonePayload {
   reply: string;
   correlationId: string;
-  /** When true, client should run a typing reveal (server buffered thinking). */
-  revealTyping?: boolean;
 }
 
 export interface ChatStreamErrorPayload {
