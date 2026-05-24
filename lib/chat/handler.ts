@@ -4,6 +4,7 @@ import {
   getMaxOutputTokensForHost,
   resolveProductionChatModelChain,
   resolveWorkersAiModelTier,
+  shouldStreamTokensToClient,
   type ChatMessage,
 } from "@/lib/ai";
 import { getLanguageTurnDirective } from "@/lib/chat-language";
@@ -341,6 +342,8 @@ export async function POST(request: NextRequest) {
       ? collectAllowedDateTokens(primaryActivities)
       : new Set<string>();
 
+    const streamTokensToClient = shouldStreamTokensToClient(requestHost);
+
     const runLlm = async (
       onToken: (token: string) => void | Promise<void>
     ): Promise<string> => {
@@ -349,7 +352,7 @@ export async function POST(request: NextRequest) {
             sanitizedMessage,
             systemPromptWithCompletion,
             sanitizedHistory,
-            { ...modelBudget, requestHost, onToken }
+            { ...modelBudget, requestHost, onToken, emitTokensToClient: streamTokensToClient }
           )
         : await askAiWithRetry(
             sanitizedMessage,
@@ -368,7 +371,7 @@ export async function POST(request: NextRequest) {
               sanitizedMessage,
               systemPromptWithCompletion + DATE_VALIDATION_RETRY_NUDGE,
               sanitizedHistory,
-              { ...modelBudget, requestHost, onToken }
+              { ...modelBudget, requestHost, onToken, emitTokensToClient: streamTokensToClient }
             )
           : await askAiWithRetry(
               sanitizedMessage,
@@ -387,9 +390,11 @@ export async function POST(request: NextRequest) {
           const encoder = new TextEncoder();
           const enqueue = (text: string) => controller.enqueue(encoder.encode(text));
           try {
-            const onToken = (token: string) => {
-              enqueue(encodeSseEvent("token", { token }));
-            };
+            const onToken = streamTokensToClient
+              ? (token: string) => {
+                  enqueue(encodeSseEvent("token", { token }));
+                }
+              : () => {};
             const reply = await runLlm(onToken);
             setCachedReply(cacheKey, reply);
             enqueue(

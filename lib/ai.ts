@@ -129,6 +129,11 @@ export function resolveWorkersAiModelId(requestHost?: string | null): string {
   return resolveProductionChatModelChain(requestHost)[0]!;
 }
 
+/** Dev streams tokens to the UI; production buffers until the final cleaned reply. */
+export function shouldStreamTokensToClient(requestHost?: string | null): boolean {
+  return resolveWorkersAiModelTier(requestHost) === "dev";
+}
+
 export function getWorkersAiTierLimits(tier: WorkersAiModelTier): WorkersAiTierLimits {
   return TIER_LIMITS[tier];
 }
@@ -567,6 +572,8 @@ export interface StreamWorkersAiOptions {
   temperature?: number;
   requestHost?: string | null;
   onToken: (token: string) => void | Promise<void>;
+  /** When false, model still runs (and may stream internally) but onToken is not called until the end. */
+  emitTokensToClient?: boolean;
 }
 
 /** Stream tokens from Workers AI; falls back to buffered completion if streaming unsupported. */
@@ -582,6 +589,8 @@ export async function streamWorkersAi(
   const messages = buildMessages(prompt, systemPrompt, history, limits);
   const max_tokens = options.maxTokens ?? limits.maxOutputTokens;
   const temperature = options.temperature ?? DEFAULT_TEMPERATURE;
+  const emitTokens =
+    options.emitTokensToClient ?? shouldStreamTokensToClient(options.requestHost);
 
   let lastError: unknown = null;
   for (let i = 0; i < modelChain.length; i++) {
@@ -597,7 +606,7 @@ export async function streamWorkersAi(
       let full = "";
       for await (const token of stream) {
         full += token;
-        await options.onToken(token);
+        if (emitTokens) await options.onToken(token);
       }
       if (!full.trim()) {
         full = await workersAiChatCompletion({
@@ -607,7 +616,7 @@ export async function streamWorkersAi(
           temperature,
         });
         if (full.trim()) {
-          await options.onToken(full);
+          if (emitTokens) await options.onToken(full);
           return full;
         }
         const emptyErr = new Error(`Empty response from model (${modelId})`);
@@ -624,7 +633,7 @@ export async function streamWorkersAi(
           max_tokens,
           temperature,
         });
-        await options.onToken(full);
+        if (emitTokens) await options.onToken(full);
         return full;
       }
       lastError = err;

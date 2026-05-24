@@ -1,111 +1,87 @@
-/** Group A short — exams, breaks, lectures, quick admin (Asasi). */
+/** Group A — questions 1–15 (registration, fees, appeals). */
 const SUGGESTIONS_GROUP_A_SHORT = [
-  "When is Ujian Pertengahan Semester?",
-  "Bila Cuti Pertengahan Semester?",
-  "When is Peperiksaan Akhir?",
-  "Bila Minggu Ulangkaji?",
-  "When is Cuti Semester?",
-  "When is Aidil Fitri break?",
-  "When is MDS?",
-  "When is Entrance Survey?",
-  "When is Gugur Taraf (GT)?",
-  "When is SuFO?",
-  "Bila tarikh akhir yuran?",
-  "When is Lecture 1?",
-  "When can I print exam slip?",
-  "When does Lecture 3 start?",
-  "When is Asasi online registration?",
-  "When is the next break on my calendar?",
-];
-
-/** Group A long — Asasi intake, registration process, appeals (different topics from short). */
-const SUGGESTIONS_GROUP_A_LONG = [
-  "When is Persetujuan Menerima Tawaran UiTM Asasi open?",
-  "When is Pendaftaran Secara Fizikal Sebagai Pelajar Asasi?",
-  "When is Pendaftaran Kursus Pelajar Baharu dan Lama?",
-  "When is Proses Serahan Dokumen Pelajar Baharu Asasi?",
-  "When does Permohonan Penangguhan Pembayaran Yuran open?",
-  "When is Tempoh Pengesahan Kursus Berdaftar semester ini?",
-  "When is Permohonan Tambah atau Gugur Kursus Lewat?",
-  "When is Permohonan Rayuan Pembatalan Gugur Taraf (RPGT)?",
-  "When is Gugur Taraf Bagi Pelajar Tidak Bayar Yuran (GT2)?",
-  "When is Gugur Taraf Muktamad on the calendar this semester?",
-  "When is Proses Exit Survey for this semester on the calendar?",
+  "Bila boleh buat persetujuan menerima tawaran UiTM Asasi?",
+  "Bila tarikh pendaftaran online sebagai pelajar Asasi UiTM?",
+  "Bila pendaftaran secara fizikal pelajar baharu Group A?",
+  "Bila proses serahan dokumen pelajar baharu Asasi?",
   "Bila tarikh akhir muat naik gambar kad pelajar di iStudent?",
-  "When is Asasi second intake registration (Rayuan)?",
-  "When does Lecture 2 start and end for this semester?",
-  "When is Tarikh Akhir Keputusan Penangguhan Yuran?",
-  "When is Tarikh Akhir Kemaskini Rekod Pelajar di iStudent?",
+  "Bila tarikh akhir pengemaskinian rekod pelajar di iStudent Portal?",
+  "Bila Program Minggu Destini Siswa (MDS) untuk Group A?",
+  "Bila boleh daftar kursus untuk pelajar baharu dan lama Group A?",
+  "Bila tempoh permohonan penangguhan pembayaran yuran Group A?",
+  "Bila tarikh akhir keputusan permohonan penangguhan pembayaran yuran?",
+  "Bila tempoh validasi kursus berdaftar semester semasa Group A?",
+  "Bila boleh mohon daftar atau gugur kursus lewat atau luar tempoh?",
+  "Bila tarikh akhir pembayaran yuran Group A?",
+  "Bila Gugur Taraf (GT) akan berlaku untuk Group A?",
+  "Bila boleh hantar Permohonan Rayuan Pembatalan Gugur Taraf (RPGT)?",
 ];
 
-/** Group A (Foundation/Professional) — 50% short, 50% long. */
+/** Group A — questions 16–30 (appeals, exams, breaks). */
+const SUGGESTIONS_GROUP_A_LONG = [
+  "Bila keputusan RPGT akan dikeluarkan?",
+  "Bila tarikh akhir bayar yuran bagi pelajar yang lulus RPGT?",
+  "Bila Gugur Taraf kedua (GT2) untuk pelajar yang masih tidak bayar yuran?",
+  "Bila Gugur Taraf Muktamad untuk Group A?",
+  "Bila pelajar Group A boleh mula cetak slip menduduki peperiksaan?",
+  "Bila kuliah bermula untuk Group A semester ini?",
+  "Bila Proses Entrance Survey untuk Group A?",
+  "Bila Ujian Pertengahan Semester Group A?",
+  "Bila Cuti Pertengahan Semester Group A?",
+  "Bila Cuti Khas Perayaan Aidil Fitri untuk Group A?",
+  "Bila Minggu Ulangkaji untuk Group A?",
+  "Bila Penilaian atau Peperiksaan Akhir Group A?",
+  "Bila Proses Exit Survey Group A?",
+  "Bila Student Feedback Online (SuFO) Group A?",
+  "Bila Cuti Semester Group A bermula?",
+];
+
 export const SUGGESTIONS_GROUP_A = [
   ...SUGGESTIONS_GROUP_A_SHORT,
   ...SUGGESTIONS_GROUP_A_LONG,
 ];
 
-/** Group B short — EET, short sem, intersession, hostel, e-PJJ (diploma/degree). */
+/** Group B — questions 1–15 (registration, fees, appeals). */
 const SUGGESTIONS_GROUP_B_SHORT = [
-  "When is EET Speaking?",
-  "When is Short Semester?",
-  "When is Intersession Classes?",
-  "When is PDS?",
-  "Bila Minggu Ulangkaji?",
-  "When is mid-sem break?",
-  "When is Cuti Semester?",
-  "When is Gugur Taraf (GT)?",
-  "When is MDS?",
-  "Bila tarikh akhir yuran?",
-  "When can I print exam slip?",
-  "When is Lecture 1?",
-  "When is hostel registration?",
-  "When is diploma intake registration?",
-  "When is part-time intake?",
-  "When is SuFO?",
+  "Bila boleh buat persetujuan menerima tawaran UiTM secara online untuk Group B?",
+  "Bila pendaftaran online sebagai pelajar sepenuh masa Group B?",
+  "Bila pendaftaran fizikal dan serahan dokumen pelajar baharu Group B?",
+  "Bila Program Minggu Destini Siswa (MDS) dan Program Minggu Edu 5.0@UiTM Group B?",
+  "Bila Program Pemantapan Destini Siswa (PDS) untuk Group B?",
+  "Bila pendaftaran kolej penginapan pelajar baharu Group B?",
+  "Bila pendaftaran pelajar baharu tawaran kedua Group B?",
+  "Bila pendaftaran kursus pelajar baharu mod ePJJ atau PLK?",
+  "Bila tarikh akhir muat naik gambar kad pelajar di iStudent Portal Group B?",
+  "Bila tarikh akhir kemaskini rekod pelajar di iStudent Portal Group B?",
+  "Bila tempoh permohonan penangguhan pembayaran yuran via Online Fee Deferment?",
+  "Bila tarikh akhir keputusan permohonan penangguhan pembayaran yuran Group B?",
+  "Bila tempoh validasi kursus berdaftar semester semasa Group B?",
+  "Bila boleh mohon daftar atau gugur kursus lewat atau luar tempoh Group B?",
+  "Bila tarikh akhir pembayaran yuran Group B?",
 ];
 
-/** Group B long — programme intake, EET written, kolej, part-time (different topics from short). */
+/** Group B — questions 16–30 (appeals, exams, breaks). */
 const SUGGESTIONS_GROUP_B_LONG = [
-  "When is Penilaian / Peperiksaan Akhir / EET (Bertulis)?",
-  "When does Pendaftaran Kursus Pelajar Sarjana Muda open?",
-  "When is Pendaftaran Kursus Pelajar Pra-Diploma dan Diploma?",
-  "When is Pendaftaran Kursus Pelajar Baharu mod ePJJ / PLK?",
-  "When is Permohonan Penangguhan Pembayaran Yuran this semester?",
-  "When is Tempoh Validasi Kursus Berdaftar for this semester?",
-  "When is Permohonan Daftar atau Gugur Kursus Lewat?",
-  "When is Permohonan Rayuan Pembatalan Gugur Taraf (RPGT)?",
-  "When is Gugur Taraf Muktamad on the calendar this semester?",
-  "When is Peperiksaan Intersesi or Short Semester exam week?",
-  "When is Persetujuan Menerima Tawaran UiTM for Bachelor?",
-  "When is Pendaftaran Fizikal & Serahan Dokumen Pelajar Baharu?",
-  "When is Pendaftaran Kursus English Exit Test (EET699)?",
-  "When is Pendaftaran Pelajar Baharu for Master or PhD?",
-  "When is Cuti Pertengahan Semester / Krismas on Group B?",
-  "When is Pendaftaran Kolej Penginapan for returning students?",
+  "Bila Gugur Taraf (GT) berlaku untuk Group B?",
+  "Bila boleh hantar Permohonan Rayuan Pembatalan Gugur Taraf (RPGT) Group B?",
+  "Bila keputusan rayuan pembatalan Gugur Taraf (RPGT) Group B dikeluarkan?",
+  "Bila Gugur Taraf kedua (GT2) untuk pelajar yang masih tidak daftar kursus dan tiada pembayaran yuran?",
+  "Bila tarikh akhir bayar yuran bagi pelajar yang diluluskan penangguhan yuran Group B?",
+  "Bila Gugur Taraf Muktamad untuk Group B?",
+  "Bila pelajar Group B boleh mula cetak slip menduduki peperiksaan?",
+  "Bila kuliah bermula untuk Group B semester ini?",
+  "Bila Proses Entrance Survey untuk Group B?",
+  "Bila Cuti Pertengahan Semester atau Cuti Perayaan Group B?",
+  "Bila Minggu Ulangkaji untuk Group B?",
+  "Bila English Exit Test (EET Speaking) Group B?",
+  "Bila Penilaian atau Peperiksaan Akhir atau EET Bertulis Group B?",
+  "Bila Short Semester untuk Group B?",
+  "Bila Cuti Semester Group B bermula?",
 ];
 
-/** Group B (Pre-Diploma onwards) — 50% short, 50% long. */
 export const SUGGESTIONS_GROUP_B = [
   ...SUGGESTIONS_GROUP_B_SHORT,
   ...SUGGESTIONS_GROUP_B_LONG,
-];
-
-export const SUGGESTIONS_GENERAL_NEUTRAL = [
-  "How is Group A different from Group B?",
-  "Apa beza sesi, semester, dan penggal di UiTM?",
-  "How do I read registration, lecture, exam, and break on this calendar?",
-  "Are Malaysia public holidays on the UiTM calendar?",
-  "How many UiTM campuses are there?",
-];
-
-export const SUGGESTIONS_GENERAL_EXTRA_A = [
-  "Which programmes use Group A?",
-  "What is UiTM Foundation (Asasi) in brief?",
-];
-
-export const SUGGESTIONS_GENERAL_EXTRA_B = [
-  "Which programmes use Group B?",
-  "What is UiTM e-PJJ in brief?",
 ];
 
 const DISPLAY_COUNT = 5;
@@ -150,20 +126,22 @@ export function getRandomSuggestions(group: "A" | "B", exclude: string[]): strin
       exclude
     );
     if (balanced.length >= DISPLAY_COUNT) return balanced;
-  } else {
-    const balanced = pickBalancedGroupSuggestions(
-      SUGGESTIONS_GROUP_B_SHORT,
-      SUGGESTIONS_GROUP_B_LONG,
-      exclude
+    const pool = SUGGESTIONS_GROUP_A.filter((s) => !exclude.includes(s));
+    return shuffle(pool.length >= DISPLAY_COUNT ? pool : SUGGESTIONS_GROUP_A).slice(
+      0,
+      DISPLAY_COUNT
     );
-    if (balanced.length >= DISPLAY_COUNT) return balanced;
   }
 
-  const groupPool =
-    group === "A"
-      ? [...SUGGESTIONS_GROUP_A, ...SUGGESTIONS_GENERAL_NEUTRAL, ...SUGGESTIONS_GENERAL_EXTRA_A]
-      : [...SUGGESTIONS_GROUP_B, ...SUGGESTIONS_GENERAL_NEUTRAL, ...SUGGESTIONS_GENERAL_EXTRA_B];
-  const available = groupPool.filter((s) => !exclude.includes(s));
-  const pool = available.length >= DISPLAY_COUNT ? available : groupPool;
-  return shuffle(pool).slice(0, DISPLAY_COUNT);
+  const balanced = pickBalancedGroupSuggestions(
+    SUGGESTIONS_GROUP_B_SHORT,
+    SUGGESTIONS_GROUP_B_LONG,
+    exclude
+  );
+  if (balanced.length >= DISPLAY_COUNT) return balanced;
+  const pool = SUGGESTIONS_GROUP_B.filter((s) => !exclude.includes(s));
+  return shuffle(pool.length >= DISPLAY_COUNT ? pool : SUGGESTIONS_GROUP_B).slice(
+    0,
+    DISPLAY_COUNT
+  );
 }

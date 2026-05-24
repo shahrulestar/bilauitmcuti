@@ -5,40 +5,49 @@ import {
   SUGGESTIONS_GROUP_B,
 } from "@/components/chat/suggestion-data";
 
-function isShortSuggestion(text: string): boolean {
-  return text.length <= 48;
-}
+const POOL_SIZE = 30;
+const HALF_POOL = 15;
 
 describe("suggestion pools", () => {
-  it("Group A has equal short and long counts", () => {
-    const short = SUGGESTIONS_GROUP_A.filter(isShortSuggestion);
-    const long = SUGGESTIONS_GROUP_A.filter((s) => !isShortSuggestion(s));
-    expect(short.length).toBe(long.length);
+  it("Group A has 30 questions", () => {
+    expect(SUGGESTIONS_GROUP_A).toHaveLength(POOL_SIZE);
   });
 
-  it("Group B has equal short and long counts", () => {
-    const short = SUGGESTIONS_GROUP_B.filter(isShortSuggestion);
-    const long = SUGGESTIONS_GROUP_B.filter((s) => !isShortSuggestion(s));
-    expect(short.length).toBe(long.length);
+  it("Group B has 30 questions", () => {
+    expect(SUGGESTIONS_GROUP_B).toHaveLength(POOL_SIZE);
   });
 });
 
 describe("getRandomSuggestions", () => {
-  it("returns a mix of short and long for Group A", () => {
+  it("returns 5 suggestions from Group A pools", () => {
     const picks = getRandomSuggestions("A", []);
     expect(picks).toHaveLength(5);
-    const short = picks.filter(isShortSuggestion);
-    const long = picks.filter((s) => !isShortSuggestion(s));
-    expect(short.length).toBeGreaterThanOrEqual(2);
-    expect(long.length).toBeGreaterThanOrEqual(2);
+    expect(picks.every((s) => SUGGESTIONS_GROUP_A.includes(s))).toBe(true);
   });
 
-  it("returns a mix of short and long for Group B", () => {
+  it("returns 5 suggestions from Group B pools", () => {
     const picks = getRandomSuggestions("B", []);
     expect(picks).toHaveLength(5);
-    const short = picks.filter(isShortSuggestion);
-    const long = picks.filter((s) => !isShortSuggestion(s));
-    expect(short.length).toBeGreaterThanOrEqual(2);
-    expect(long.length).toBeGreaterThanOrEqual(2);
+    expect(picks.every((s) => SUGGESTIONS_GROUP_B.includes(s))).toBe(true);
+  });
+
+  it("mixes first-half and second-half pools for Group A", () => {
+    const firstHalf = SUGGESTIONS_GROUP_A.slice(0, HALF_POOL);
+    const secondHalf = SUGGESTIONS_GROUP_A.slice(HALF_POOL);
+    const picks = getRandomSuggestions("A", []);
+    const fromFirst = picks.filter((s) => firstHalf.includes(s)).length;
+    const fromSecond = picks.filter((s) => secondHalf.includes(s)).length;
+    expect(fromFirst).toBeGreaterThanOrEqual(2);
+    expect(fromSecond).toBeGreaterThanOrEqual(2);
+  });
+
+  it("mixes first-half and second-half pools for Group B", () => {
+    const firstHalf = SUGGESTIONS_GROUP_B.slice(0, HALF_POOL);
+    const secondHalf = SUGGESTIONS_GROUP_B.slice(HALF_POOL);
+    const picks = getRandomSuggestions("B", []);
+    const fromFirst = picks.filter((s) => firstHalf.includes(s)).length;
+    const fromSecond = picks.filter((s) => secondHalf.includes(s)).length;
+    expect(fromFirst).toBeGreaterThanOrEqual(2);
+    expect(fromSecond).toBeGreaterThanOrEqual(2);
   });
 });

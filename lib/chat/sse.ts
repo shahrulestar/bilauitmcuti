@@ -20,6 +20,8 @@ export function sseResponse(
 export interface ChatStreamDonePayload {
   reply: string;
   correlationId: string;
+  /** When true, client should run a typing reveal (server buffered thinking). */
+  revealTyping?: boolean;
 }
 
 export interface ChatStreamErrorPayload {
@@ -61,7 +63,7 @@ export async function consumeChatStream(
   response: Response,
   handlers: {
     onToken: (token: string) => void;
-    onDone: (payload: ChatStreamDonePayload) => void;
+    onDone: (payload: ChatStreamDonePayload) => void | Promise<void>;
     onError: (payload: ChatStreamErrorPayload) => void;
   }
 ): Promise<void> {
@@ -98,20 +100,31 @@ export async function consumeChatStream(
   const reader = response.body.getReader();
   const decoder = new TextDecoder();
   let buffer = "";
+  let donePromise: Promise<void> | undefined;
+
+  const handleEvent = (event: string, data: unknown) => {
+    if (event === "token") {
+      const payload = data as ChatStreamTokenPayload;
+      if (payload.token) handlers.onToken(payload.token);
+    } else if (event === "done") {
+      donePromise = Promise.resolve(
+        handlers.onDone(data as ChatStreamDonePayload)
+      );
+    } else if (event === "error") {
+      handlers.onError(data as ChatStreamErrorPayload);
+    }
+  };
 
   while (true) {
     const { done, value } = await reader.read();
     if (done) break;
     buffer += decoder.decode(value, { stream: true });
-    buffer = parseSseBuffer(buffer, (event, data) => {
-      if (event === "token") {
-        const payload = data as ChatStreamTokenPayload;
-        if (payload.token) handlers.onToken(payload.token);
-      } else if (event === "done") {
-        handlers.onDone(data as ChatStreamDonePayload);
-      } else if (event === "error") {
-        handlers.onError(data as ChatStreamErrorPayload);
-      }
-    });
+    buffer = parseSseBuffer(buffer, handleEvent);
   }
+
+  if (buffer.trim()) {
+    parseSseBuffer(`${buffer}\n\n`, handleEvent);
+  }
+
+  if (donePromise) await donePromise;
 }

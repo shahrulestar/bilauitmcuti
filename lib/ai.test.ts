@@ -5,6 +5,7 @@ import {
   MODEL_WORKERS_AI_PRODUCTION_BACKUP,
   resolveProductionChatModelChain,
   resolveWorkersAiModelTier,
+  shouldStreamTokensToClient,
 } from "@/lib/ai";
 
 describe("resolveProductionChatModelChain", () => {
@@ -37,5 +38,11 @@ describe("resolveProductionChatModelChain", () => {
     expect(resolveProductionChatModelChain("localhost:3000")).toEqual([
       MODEL_WORKERS_AI_DEV,
     ]);
+  });
+
+  it("buffers production replies (no token stream to client)", () => {
+    vi.stubEnv("NODE_ENV", "production");
+    expect(shouldStreamTokensToClient("bilauitmcuti.com")).toBe(false);
+    expect(shouldStreamTokensToClient("localhost:3000")).toBe(true);
   });
 });

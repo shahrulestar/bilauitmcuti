@@ -121,6 +121,7 @@ export async function streamAiWithRetry(
     temperature: number;
     requestHost?: string | null;
     onToken: (token: string) => void | Promise<void>;
+    emitTokensToClient?: boolean;
   }
 ): Promise<string> {
   let lastError: unknown = null;
@@ -132,6 +133,7 @@ export async function streamAiWithRetry(
         temperature: options.temperature,
         requestHost: options.requestHost,
         onToken: options.onToken,
+        emitTokensToClient: options.emitTokensToClient,
       });
     } catch (err) {
       lastError = err;

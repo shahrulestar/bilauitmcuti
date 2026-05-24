@@ -1,6 +1,7 @@
 import { CHAT_MAX_HISTORY_CONTENT_LENGTH, CHAT_MAX_MESSAGE_LENGTH } from "@/lib/chat/limits";
 export { consumeChatStream } from "@/lib/chat/sse";
 export type { ChatStreamDonePayload } from "@/lib/chat/sse";
+export { revealReplyWithTyping } from "@/lib/chat/typing-reveal";
 
 export function getChatErrorMessage(res: Response, fallback: string): string {
   if (res.status === 429) return "Too many requests. Please wait a moment before trying again.";
