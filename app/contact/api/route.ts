@@ -137,7 +137,7 @@ export async function POST(request: NextRequest) {
       email,
       time: formatNotificationTime(new Date()),
     });
-    await sendDiscordWebhook({ embeds: [embed] });
+    await sendDiscordWebhook({ kind: "rate_feedback", embeds: [embed] });
 
     return withVerifiedCookie(NextResponse.json({ message: "Thanks! Your message has been submitted." }));
   } catch (error) {

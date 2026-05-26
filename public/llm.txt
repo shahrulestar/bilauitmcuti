@@ -24,7 +24,7 @@ Base URL: https://bilauitmcuti.com
 ### Static Pages
 - **/** — Home. All programs calendar in grid view. Main entry point.
 - **/list** — All programs calendar in list view. Chronological list of activities.
-- **/pwa** — How to install the app as a Progressive Web App (Desktop, iOS, Android), offline features, and disclaimer.
+- **/download** — How to install as a Progressive Web App or save as a browser bookmark (Desktop, iOS, Android).
 - **/chat** — AI chat assistant for UiTM academic calendar queries (bot-restricted, not indexed).
 
 ### Program-Specific Pages

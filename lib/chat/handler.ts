@@ -18,9 +18,15 @@ import {
 import {
   getActivitiesForSession,
   getDefaultSessionForGroup,
+  getGroupFromSession,
   getProgramOptions,
   type SessionId,
 } from "@/lib/data";
+import {
+  addDatesFromContextText,
+  collectAllowedDateTokens,
+} from "@/lib/chat/allowed-dates";
+import { mergeSessionsForLoad, resolveQueryScope } from "@/lib/chat/query-scope";
 import { UITM_GENERAL_INFO } from "@/lib/uitm-info";
 import {
   getClientIpForTurnstile,
@@ -31,48 +37,65 @@ import { isTurnstileVerificationRequired } from "@/lib/turnstile-config";
 import { jsonError } from "@/lib/api-response";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { logger } from "@/lib/logger";
-import { getModelResponseBudget, streamAiWithRetry, askAiWithRetry } from "@/lib/chat/ai-retry";
 import {
-  buildCalendarSystemPrompt,
+  getModelResponseBudget,
+  streamAiWithRetry,
+  askAiWithRetry,
+  askAgentWithRetry,
+} from "@/lib/chat/ai-retry";
+import {
+  agentModeForModelChain,
+  buildAgentTurnContext,
+  buildCompactFallbackSystemPrompt,
+  isChatAgentEnabled,
+} from "@/lib/chat/agent";
+import {
   buildComparisonContext,
   buildResearchSystemPrompt,
   buildSessionListContext,
-  computeQuickReferenceForSessions,
   formatActivitiesAsContext,
   formatPrimaryCalendarContext,
   getActivitiesFromSessions,
+  getFilteredActivitiesForSession,
   getFilteredGroupBActivities,
   MAX_PRIMARY_CONTEXT_CHARS,
-  MAX_PRIMARY_CONTEXT_CHARS_COMPACT,
-  MAX_PRIMARY_CONTEXT_CHARS_NARROW,
   narrowActivitiesForSecondaryReference,
   resolveEffectiveSessions,
 } from "@/lib/chat/context";
-import { resolveCalendarContextIntent, isNarrowCalendarIntent } from "@/lib/chat/calendar-intent";
+import { resolveCalendarContextIntent } from "@/lib/chat/calendar-intent";
+import {
+  buildDataContextForTurn,
+  shouldUseCalendarIntentFilter,
+  topicNeedsCalendarPrompt,
+} from "@/lib/chat/build-data-context";
+import {
+  flattenActivitiesWithSession,
+  matchActivitiesInMessage,
+} from "@/lib/chat/activity-match";
+import {
+  buildChatAssistantSystemPrompt,
+  usesResearchStylePrompt,
+} from "@/lib/chat/chat-prompt";
+import { routeChatTopics } from "@/lib/chat/topic-router";
 import {
   getCalendarUnderstandingDirective,
   getCompletionInstruction,
-  isCalendarQuestion,
   isComparisonQuestion,
   isSimpleCalendarQuestion,
   isTableFormatRequested,
   messageAsksDetail,
+  messageNeedsListOrSchedule,
   needsSecondaryGroupContext,
   needsUitmKnowledgeSupplement,
 } from "@/lib/chat/intent";
 import {
-  buildLectureWeekQuickReference,
-  needsLectureWeekContext,
-} from "@/lib/chat/lecture-week-context";
-import {
-  buildPublicHolidayChatContext,
-  needsPublicHolidayContext,
-} from "@/lib/chat/public-holiday-context";
-import {
-  collectAllowedDateTokens,
   DATE_VALIDATION_RETRY_NUDGE,
   replyHasUnknownCalendarDates,
 } from "@/lib/chat/reply-validation";
+import {
+  detectIncompleteReply,
+  REPLY_COMPLETION_RETRY_NUDGE,
+} from "@/lib/chat/reply-completion";
 import {
   CHAT_TURNSTILE_COOKIE,
   CHAT_TURNSTILE_COOKIE_MAX_AGE_SECONDS,
@@ -82,7 +105,7 @@ import {
 import { generateCorrelationId, getCachedReply, setCachedReply } from "@/lib/chat/response-cache";
 import { cleanAiReply, sanitizeMessage } from "@/lib/chat/sanitize";
 import { getSystemRules } from "@/lib/chat/system-rules";
-import { getTodayISO, toReadableDate } from "@/lib/chat/dates";
+import { getTodayISO, toPromptDate } from "@/lib/chat/dates";
 import { encodeSseEvent, SSE_HEADERS } from "@/lib/chat/sse";
 import { mapChatError } from "@/lib/chat/map-error";
 
@@ -193,18 +216,31 @@ export async function POST(request: NextRequest) {
       validSessionIds
     );
 
+    const todayISO = getTodayISO();
+    const todayFormatted = toPromptDate(todayISO);
+
+    const queryScope = resolveQueryScope(
+      sanitizedMessage,
+      primaryGroup,
+      validSessionIds,
+      todayISO
+    );
+    const loadSessions = mergeSessionsForLoad(
+      effectiveSessions,
+      queryScope,
+      primaryGroup,
+      getGroupFromSession
+    );
+
     await loadActivitiesIntoStoreForChat(
       selectedProgram,
       primaryGroup,
-      effectiveSessions
+      loadSessions
     );
 
-    const todayISO = getTodayISO();
-    const todayFormatted = toReadableDate(todayISO);
-
-    let contextSessionIds: SessionId[] = effectiveSessions;
+    let contextSessionIds: SessionId[] = loadSessions;
     let primaryActivities = getActivitiesFromSessions(
-      effectiveSessions,
+      loadSessions,
       selectedProgram,
       primaryGroup
     );
@@ -223,6 +259,15 @@ export async function POST(request: NextRequest) {
 
     const contextIntent = resolveCalendarContextIntent(sanitizedMessage);
 
+    const flatPool = flattenActivitiesWithSession(contextSessionIds, (sid) =>
+      getFilteredActivitiesForSession(sid, selectedProgram, primaryGroup)
+    );
+    const activityMatches = matchActivitiesInMessage(sanitizedMessage, flatPool);
+    const hasMatchedActivity = activityMatches.length > 0;
+
+    const topicRoute = routeChatTopics(sanitizedMessage, hasMatchedActivity);
+    const useIntentFilter = shouldUseCalendarIntentFilter(topicRoute, activityMatches.length);
+
     const secondaryActivitiesRaw =
       primaryGroup === "A"
         ? getFilteredGroupBActivities(selectedProgram, [getDefaultSessionForGroup("B")])
@@ -233,7 +278,8 @@ export async function POST(request: NextRequest) {
       contextSessionIds,
       selectedProgram,
       primaryGroup,
-      contextIntent
+      contextIntent,
+      { useIntentFilter }
     );
     const secondaryContext = formatActivitiesAsContext(secondaryActivities);
     const sessionListContext = buildSessionListContext(primaryGroup, effectiveSessions);
@@ -241,25 +287,9 @@ export async function POST(request: NextRequest) {
     const comparisonContext = multipleSessionsSelected
       ? buildComparisonContext(effectiveSessions, selectedProgram, primaryGroup)
       : "";
-    const primaryDesc =
-      primaryGroup === "A"
-        ? "Foundation/Professional - Semester December 2025 to May 2026"
-        : "Pre-Diploma, Diploma, Bachelor's Degree, Master's & PhD - Semester March to August 2026";
-    const secondaryDesc =
-      primaryGroup === "A"
-        ? "Pre-Diploma, Diploma, Bachelor's Degree, Master's & PhD - Semester March to August 2026"
-        : "Foundation/Professional - Semester December 2025 to May 2026";
-
-    let quickReference = computeQuickReferenceForSessions(
-      contextSessionIds,
-      selectedProgram,
-      primaryGroup,
-      todayISO,
-      contextIntent
-    );
 
     const sanitizedHistory: ChatMessage[] = (history ?? [])
-      .slice(-2)
+      .slice(-4)
       .map((msg) => ({
         role: msg.role,
         content:
@@ -269,92 +299,123 @@ export async function POST(request: NextRequest) {
     const origin = new URL(request.url).origin;
     await getSystemRules(origin);
 
-    const useCalendarPrompt = isCalendarQuestion(sanitizedMessage);
+    const useCalendarPrompt = topicNeedsCalendarPrompt(topicRoute.topics);
+
+    const { dataContext, publicHolidayDirective } = await buildDataContextForTurn({
+      message: sanitizedMessage,
+      todayISO,
+      route: topicRoute,
+      contextSessionIds,
+      primaryGroup,
+      program: selectedProgram,
+      queryScope,
+      effectiveSessions,
+      primaryActivities,
+      contextIntent,
+      useIntentFilter,
+    });
+
+    let dataContextFull = dataContext;
+    if (comparisonContext) {
+      dataContextFull = dataContextFull
+        ? `${dataContextFull}\n\n=== SESSION COMPARISON ===\n${comparisonContext}`
+        : comparisonContext;
+    }
+
     const isCompareRequested =
       multipleSessionsSelected && isComparisonQuestion(sanitizedMessage);
     const wantsTableOutput =
       isCompareRequested || isTableFormatRequested(sanitizedMessage);
-    const isSimple = isSimpleCalendarQuestion(sanitizedMessage);
+    const isSimple = isSimpleCalendarQuestion(sanitizedMessage, { hasMatchedActivity });
     const asksDetail = messageAsksDetail(sanitizedMessage);
-
-    if (
-      useCalendarPrompt &&
-      needsLectureWeekContext(contextIntent, sanitizedMessage)
-    ) {
-      const lectureWeekRef = await buildLectureWeekQuickReference(
-        contextSessionIds,
-        todayISO
-      );
-      if (lectureWeekRef) {
-        quickReference = quickReference
-          ? `${quickReference}\n${lectureWeekRef}`
-          : lectureWeekRef;
-      }
-    }
-
-    let publicHolidayRef = "";
-    let publicHolidayDirective = "";
-    if (needsPublicHolidayContext(sanitizedMessage)) {
-      const phCtx = await buildPublicHolidayChatContext(sanitizedMessage, todayISO);
-      publicHolidayRef = phCtx.block;
-      publicHolidayDirective = phCtx.directive;
-      if (publicHolidayRef) {
-        quickReference = quickReference
-          ? `${quickReference}\n${publicHolidayRef}`
-          : publicHolidayRef;
-      }
-    }
+    const needsList = messageNeedsListOrSchedule(sanitizedMessage);
 
     const includeSecondary =
       useCalendarPrompt && needsSecondaryGroupContext(sanitizedMessage, primaryGroup);
     const includeUitmSupplement =
-      !useCalendarPrompt ||
-      (!isSimple && !asksDetail) ||
+      topicRoute.topics.includes("uitm_general") ||
       needsUitmKnowledgeSupplement(sanitizedMessage);
 
-    const feeDefermentQuestion =
-      contextIntent === "fee" &&
-      /\b(penangguhan|deferment)\b/i.test(sanitizedMessage);
-    const maxPrimaryChars = isNarrowCalendarIntent(contextIntent)
-      ? feeDefermentQuestion
-        ? MAX_PRIMARY_CONTEXT_CHARS_COMPACT
-        : MAX_PRIMARY_CONTEXT_CHARS_NARROW
-      : isSimple && !asksDetail
-        ? MAX_PRIMARY_CONTEXT_CHARS_COMPACT
-        : MAX_PRIMARY_CONTEXT_CHARS;
+    const maxPrimaryChars = needsList || hasMatchedActivity
+      ? MAX_PRIMARY_CONTEXT_CHARS
+      : MAX_PRIMARY_CONTEXT_CHARS;
 
-    const systemPrompt = useCalendarPrompt
-      ? buildCalendarSystemPrompt(
-          programLabel,
-          primaryGroup,
-          secondaryGroup,
+    const useResearchOnly =
+      usesResearchStylePrompt(topicRoute.topics) && !useCalendarPrompt;
+
+    const requestHost = request.headers.get("host");
+    const useAgentPath = isChatAgentEnabled();
+    const modelChain = resolveProductionChatModelChain(requestHost);
+    const agentMode = useAgentPath ? agentModeForModelChain(modelChain) : "compact";
+
+    const agentTurnContext = buildAgentTurnContext({
+      message: sanitizedMessage,
+      todayISO,
+      todayFormatted,
+      program: selectedProgram,
+      programLabel,
+      primaryGroup,
+      secondaryGroup,
+      effectiveSessions,
+      contextSessionIds,
+      topicRoute,
+      activityMatches: activityMatches,
+      queryScope,
+      contextIntent,
+      useIntentFilter,
+      primaryActivities,
+      sessionListContext,
+      comparisonContext,
+      includeSecondary,
+    });
+
+    let systemPrompt = "";
+    if (!useAgentPath || agentMode !== "tools") {
+      if (useAgentPath && agentMode === "compact") {
+        systemPrompt = await buildCompactFallbackSystemPrompt({
+          ctx: agentTurnContext,
           sessionListContext,
-          primaryContext,
-          includeSecondary ? secondaryContext : "",
-          primaryDesc,
-          secondaryDesc,
-          todayFormatted,
-          quickReference,
+          secondaryContext,
           comparisonContext,
+          includeSecondary,
+          includeUitmSupplement,
+          uitmSupplement: UITM_GENERAL_INFO,
           wantsTableOutput,
           multipleSessionsSelected,
-          includeUitmSupplement ? UITM_GENERAL_INFO : "",
-          effectiveSessions.length,
-          {
-            includeSecondaryContext: includeSecondary,
-            maxPrimaryChars,
-          }
-        )
-      : buildResearchSystemPrompt(todayFormatted) +
-        (publicHolidayRef
-          ? `\n\n${publicHolidayRef}`
-          : "");
+          contextIntent,
+          useIntentFilter,
+        });
+      } else {
+        systemPrompt = useResearchOnly
+          ? buildResearchSystemPrompt(todayFormatted) +
+            (dataContextFull ? `\n\n${dataContextFull}` : "")
+          : buildChatAssistantSystemPrompt({
+              programLabel,
+              primaryGroup,
+              secondaryGroup,
+              todayFormatted,
+              sessionListContext,
+              primaryContext,
+              secondaryContext: includeSecondary ? secondaryContext : "",
+              dataContext: dataContextFull,
+              topics: topicRoute.topics,
+              selectedSessionCount: effectiveSessions.length,
+              forceTableOutput: wantsTableOutput,
+              multipleSessionsSelected,
+              uitmSupplement: includeUitmSupplement ? UITM_GENERAL_INFO : "",
+              includeSecondaryContext: includeSecondary,
+              maxPrimaryChars,
+            });
+      }
+    }
 
     const cacheKey = [
+      useAgentPath ? `agent:${agentMode}` : "legacy",
       todayISO,
       selectedProgram,
       effectiveSessions.join(","),
-      useCalendarPrompt ? "calendar" : "research",
+      topicRoute.topics.join("+"),
+      hasMatchedActivity ? "matched" : "nomatch",
       wantsTableOutput ? "table" : "normal",
       sanitizedMessage,
       JSON.stringify(sanitizedHistory),
@@ -373,71 +434,163 @@ export async function POST(request: NextRequest) {
       return withVerifiedCookie(jsonError(noAi.message, noAi.status));
     }
 
-    const requestHost = request.headers.get("host");
     const modelTier = resolveWorkersAiModelTier(requestHost);
-    const modelChain = resolveProductionChatModelChain(requestHost);
     const maxOutputTokens = getMaxOutputTokensForHost(requestHost);
     const modelBudget = getModelResponseBudget(
       sanitizedMessage,
-      useCalendarPrompt,
+      !useResearchOnly,
       wantsTableOutput,
-      maxOutputTokens
+      maxOutputTokens,
+      { hasMatchedActivity }
     );
     const languageDirective = getLanguageTurnDirective(sanitizedMessage, sanitizedHistory);
-    const understandingDirective = useCalendarPrompt
-      ? getCalendarUnderstandingDirective(sanitizedMessage)
-      : "";
+    const understandingDirective =
+      !useResearchOnly && topicRoute.topics.includes("academic_calendar")
+        ? getCalendarUnderstandingDirective(sanitizedMessage)
+        : "";
+
     const systemPromptWithCompletion =
       systemPrompt +
-      getCompletionInstruction(isSimple, asksDetail) +
+      getCompletionInstruction(isSimple, asksDetail, needsList, hasMatchedActivity) +
       understandingDirective +
       publicHolidayDirective +
       languageDirective;
 
-    const allowedDates = useCalendarPrompt
-      ? collectAllowedDateTokens(primaryActivities)
+    const validationActivityPool = !useResearchOnly
+      ? getActivitiesFromSessions(loadSessions, selectedProgram, primaryGroup)
+      : [];
+    const allowedDates = !useResearchOnly
+      ? collectAllowedDateTokens(validationActivityPool)
       : new Set<string>();
+    if (!useResearchOnly) {
+      addDatesFromContextText(allowedDates, dataContextFull);
+      addDatesFromContextText(allowedDates, primaryContext);
+    }
 
     const streamTokensToClient = shouldStreamTokensToClient(requestHost);
 
     const runLlm = async (
       onToken: (token: string) => void | Promise<void>
     ): Promise<string> => {
-      let rawReply = wantStream
-        ? await streamAiWithRetry(
-            sanitizedMessage,
-            systemPromptWithCompletion,
-            sanitizedHistory,
-            { ...modelBudget, requestHost, onToken, emitTokensToClient: streamTokensToClient }
-          )
-        : await askAiWithRetry(
-            sanitizedMessage,
-            systemPromptWithCompletion,
-            sanitizedHistory,
-            { ...modelBudget, requestHost }
-          );
+      let rawReply: string;
+      if (useAgentPath && agentMode === "tools") {
+        const agentResult = await askAgentWithRetry({
+          userMessage: sanitizedMessage,
+          history: sanitizedHistory,
+          ctx: agentTurnContext,
+          requestHost,
+          maxTokens: modelBudget.maxTokens,
+          temperature: modelBudget.temperature,
+          extraSystemDirectives: systemPromptWithCompletion,
+          onToken,
+          emitTokensToClient: streamTokensToClient,
+        });
+        rawReply = agentResult.reply;
+      } else if (wantStream) {
+        rawReply = await streamAiWithRetry(
+          sanitizedMessage,
+          systemPromptWithCompletion,
+          sanitizedHistory,
+          { ...modelBudget, requestHost, onToken, emitTokensToClient: streamTokensToClient }
+        );
+      } else {
+        rawReply = await askAiWithRetry(
+          sanitizedMessage,
+          systemPromptWithCompletion,
+          sanitizedHistory,
+          { ...modelBudget, requestHost }
+        );
+      }
 
       if (
-        useCalendarPrompt &&
+        !useResearchOnly &&
+        !hasMatchedActivity &&
         allowedDates.size > 0 &&
         replyHasUnknownCalendarDates(rawReply, allowedDates)
       ) {
-        rawReply = wantStream
-          ? await streamAiWithRetry(
-              sanitizedMessage,
+        if (useAgentPath && agentMode === "tools") {
+          const agentRetry = await askAgentWithRetry({
+            userMessage: sanitizedMessage,
+            history: sanitizedHistory,
+            ctx: agentTurnContext,
+            requestHost,
+            maxTokens: modelBudget.maxTokens,
+            temperature: modelBudget.temperature,
+            extraSystemDirectives:
               systemPromptWithCompletion + DATE_VALIDATION_RETRY_NUDGE,
-              sanitizedHistory,
-              { ...modelBudget, requestHost, onToken, emitTokensToClient: streamTokensToClient }
-            )
-          : await askAiWithRetry(
-              sanitizedMessage,
-              systemPromptWithCompletion + DATE_VALIDATION_RETRY_NUDGE,
-              sanitizedHistory,
-              { ...modelBudget, requestHost }
-            );
+            onToken,
+            emitTokensToClient: streamTokensToClient,
+          });
+          rawReply = agentRetry.reply;
+        } else if (wantStream) {
+          rawReply = await streamAiWithRetry(
+            sanitizedMessage,
+            systemPromptWithCompletion + DATE_VALIDATION_RETRY_NUDGE,
+            sanitizedHistory,
+            { ...modelBudget, requestHost, onToken, emitTokensToClient: streamTokensToClient }
+          );
+        } else {
+          rawReply = await askAiWithRetry(
+            sanitizedMessage,
+            systemPromptWithCompletion + DATE_VALIDATION_RETRY_NUDGE,
+            sanitizedHistory,
+            { ...modelBudget, requestHost }
+          );
+        }
       }
 
-      return normalizeAssistantTables(cleanAiReply(rawReply));
+      const cleanedFirst = normalizeAssistantTables(cleanAiReply(rawReply));
+      const incomplete = detectIncompleteReply(cleanedFirst, needsList || asksDetail);
+      if (incomplete) {
+        const bumpedBudget = {
+          ...modelBudget,
+          maxTokens: Math.min(
+            maxOutputTokens,
+            Math.max(modelBudget.maxTokens, Math.floor(modelBudget.maxTokens * 1.5), 2048)
+          ),
+        };
+        let retryReply: string;
+        if (useAgentPath && agentMode === "tools") {
+          const agentCompletion = await askAgentWithRetry({
+            userMessage: sanitizedMessage,
+            history: sanitizedHistory,
+            ctx: agentTurnContext,
+            requestHost,
+            maxTokens: bumpedBudget.maxTokens,
+            temperature: bumpedBudget.temperature,
+            extraSystemDirectives:
+              systemPromptWithCompletion + REPLY_COMPLETION_RETRY_NUDGE,
+            onToken,
+            emitTokensToClient: streamTokensToClient,
+          });
+          retryReply = agentCompletion.reply;
+        } else if (wantStream) {
+          retryReply = await streamAiWithRetry(
+            sanitizedMessage,
+            systemPromptWithCompletion + REPLY_COMPLETION_RETRY_NUDGE,
+            sanitizedHistory,
+            {
+              ...bumpedBudget,
+              requestHost,
+              onToken,
+              emitTokensToClient: streamTokensToClient,
+            }
+          );
+        } else {
+          retryReply = await askAiWithRetry(
+            sanitizedMessage,
+            systemPromptWithCompletion + REPLY_COMPLETION_RETRY_NUDGE,
+            sanitizedHistory,
+            { ...bumpedBudget, requestHost }
+          );
+        }
+        const cleanedRetry = normalizeAssistantTables(cleanAiReply(retryReply));
+        if (cleanedRetry.length >= cleanedFirst.length) {
+          return cleanedRetry;
+        }
+      }
+
+      return cleanedFirst;
     };
 
     if (wantStream) {

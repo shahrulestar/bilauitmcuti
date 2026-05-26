@@ -73,14 +73,26 @@ function isLocalOrPreviewHost(host: string): boolean {
   );
 }
 
+function isStrictLocalDevHost(host: string): boolean {
+  const h = normalizeHost(host);
+  return h === "localhost" || h.endsWith(".localhost") || h === "127.0.0.1";
+}
+
+function isWorkersAiUseProductionModelLocally(): boolean {
+  const v = process.env.WORKERS_AI_USE_PRODUCTION_MODEL;
+  return v === "1" || v === "true";
+}
+
 function isCloudflarePagesPreviewDeploy(): boolean {
   const url = process.env.CF_PAGES_URL?.toLowerCase() ?? "";
   return url.includes(".pages.dev");
 }
 
 /**
- * Production uses Gemma (+ Gemini Flash Lite backup); dev/preview use Llama.
- * Optional overrides: WORKERS_AI_MODEL, WORKERS_AI_BACKUP_MODEL, WORKERS_AI_USE_DEV_MODEL=1.
+ * Production (bilauitmcuti.com): Gemma 4 + Gemini Flash Lite backup.
+ * Local + Pages preview (*.pages.dev, localhost): Llama 3.2 3B.
+ * Optional: WORKERS_AI_MODEL, WORKERS_AI_BACKUP_MODEL, WORKERS_AI_USE_DEV_MODEL=1,
+ * WORKERS_AI_USE_PRODUCTION_MODEL=1 (strict localhost only — test Gemma locally).
  */
 export function resolveWorkersAiModelTier(requestHost?: string | null): WorkersAiModelTier {
   const override = process.env.WORKERS_AI_MODEL?.trim();
@@ -97,7 +109,15 @@ export function resolveWorkersAiModelTier(requestHost?: string | null): WorkersA
 
   if (requestHost) {
     if (isProductionSiteHost(requestHost)) return "production";
-    if (isLocalOrPreviewHost(requestHost)) return "dev";
+    if (isLocalOrPreviewHost(requestHost)) {
+      if (
+        isWorkersAiUseProductionModelLocally() &&
+        isStrictLocalDevHost(requestHost)
+      ) {
+        return "production";
+      }
+      return "dev";
+    }
   }
 
   if (process.env.NODE_ENV !== "production") return "dev";
@@ -639,6 +659,223 @@ export async function streamWorkersAi(
       lastError = err;
       if (!shouldTryNextModelInChain(err, isLast)) throw err;
       continue;
+    }
+  }
+  throw lastError;
+}
+
+// --- Agent / function calling ---
+
+export interface WorkersAiToolCall {
+  name: string;
+  arguments: Record<string, unknown>;
+}
+
+export type AgentChatMessage =
+  | {
+      role: "system" | "user" | "assistant";
+      content: string;
+      tool_calls?: WorkersAiToolCall[];
+    }
+  | { role: "tool"; name: string; content: string };
+
+/** Models that support Workers AI traditional function calling in this app. */
+export function supportsFunctionCalling(modelId: string): boolean {
+  if (isGemmaThinkingCapableModel(modelId)) return true;
+  if (isGooglePartnerModelId(modelId)) return true;
+  return false;
+}
+
+export function extractToolCalls(result: unknown): WorkersAiToolCall[] {
+  if (!result || typeof result !== "object") return [];
+  const r = result as Record<string, unknown>;
+  const raw = r.tool_calls ?? r.toolCalls;
+  if (!Array.isArray(raw)) return [];
+  const calls: WorkersAiToolCall[] = [];
+  for (const item of raw) {
+    const parsed = parseToolCallEntry(item);
+    if (parsed) calls.push(parsed);
+  }
+  return calls;
+}
+
+function parseToolCallEntry(call: unknown): WorkersAiToolCall | null {
+  if (!call || typeof call !== "object") return null;
+  const c = call as Record<string, unknown>;
+  const name = typeof c.name === "string" ? c.name : "";
+  if (!name) return null;
+  let args: unknown = c.arguments ?? c.args;
+  if (typeof args === "string") {
+    try {
+      args = JSON.parse(args) as unknown;
+    } catch {
+      args = {};
+    }
+  }
+  const argumentsRecord =
+    args && typeof args === "object" && !Array.isArray(args)
+      ? (args as Record<string, unknown>)
+      : {};
+  return { name, arguments: argumentsRecord };
+}
+
+function agentMessageToApi(msg: AgentChatMessage): Record<string, unknown> {
+  if (msg.role === "tool") {
+    return { role: "tool", name: msg.name, content: msg.content };
+  }
+  const out: Record<string, unknown> = { role: msg.role, content: msg.content };
+  if (msg.role === "assistant" && msg.tool_calls?.length) {
+    out.tool_calls = msg.tool_calls.map((tc) => ({
+      name: tc.name,
+      arguments: tc.arguments,
+    }));
+  }
+  return out;
+}
+
+function buildAgentModelRunInput(
+  modelId: string,
+  messages: AgentChatMessage[],
+  tools: Array<{ name: string; description: string; parameters: unknown }>,
+  max_tokens: number,
+  temperature: number
+): Record<string, unknown> {
+  const apiMessages = messages.map(agentMessageToApi);
+  if (isGooglePartnerModelId(modelId)) {
+    const textMessages = messages.filter(
+      (m): m is Extract<AgentChatMessage, { role: "system" | "user" | "assistant" }> =>
+        m.role !== "tool"
+    );
+    const input: Record<string, unknown> = {
+      contents: messagesToGeminiContents(
+        textMessages.map((m) => ({ role: m.role, content: m.content }))
+      ),
+      generationConfig: {
+        maxOutputTokens: max_tokens,
+        temperature,
+      },
+    };
+    if (tools.length > 0) input.tools = tools;
+    return input;
+  }
+  const input: Record<string, unknown> = {
+    messages: apiMessages,
+    max_tokens,
+    temperature,
+  };
+  if (tools.length > 0) input.tools = tools;
+  if (isGemmaThinkingCapableModel(modelId)) {
+    input.chat_template_kwargs = { enable_thinking: false, thinking: false };
+  }
+  return input;
+}
+
+export interface RunWorkersAiAgentParams {
+  userMessage: string;
+  systemPrompt: string;
+  history?: ChatMessage[];
+  preloadMessages?: AgentChatMessage[];
+  tools: Array<{ name: string; description: string; parameters: unknown }>;
+  requestHost?: string | null;
+  maxTokens: number;
+  temperature: number;
+  maxToolSteps: number;
+  executeTool: (name: string, args: Record<string, unknown>) => Promise<string>;
+  onToken?: (token: string) => void | Promise<void>;
+  emitTokensToClient?: boolean;
+}
+
+/** Tool-calling agent loop; only models with supportsFunctionCalling are used. */
+export async function runWorkersAiAgent(params: RunWorkersAiAgentParams): Promise<string> {
+  const ai = await getAiBinding();
+  if (!ai) {
+    const err = new Error(
+      "Workers AI binding not available. Add an AI binding named AI in Cloudflare Pages, or run pnpm preview locally."
+    );
+    Object.assign(err, { status: 503 });
+    throw err;
+  }
+
+  const tier = resolveWorkersAiModelTier(params.requestHost);
+  const limits = getWorkersAiTierLimits(tier);
+  const modelChain = resolveProductionChatModelChain(params.requestHost).filter((id) =>
+    supportsFunctionCalling(id)
+  );
+  if (modelChain.length === 0) {
+    throw new Error("No function-calling model available in the configured chain");
+  }
+
+  const workingMessages: AgentChatMessage[] = [
+    {
+      role: "system",
+      content: truncate(params.systemPrompt, limits.maxSystemChars),
+    },
+  ];
+
+  if (params.history?.length) {
+    const recent = params.history.slice(-limits.maxHistoryMessages);
+    for (const msg of recent) {
+      workingMessages.push({
+        role: msg.role,
+        content: truncate(msg.content, limits.maxMessageChars),
+      });
+    }
+  }
+
+  if (params.preloadMessages?.length) {
+    workingMessages.push(...params.preloadMessages);
+  }
+
+  workingMessages.push({
+    role: "user",
+    content: truncate(params.userMessage, limits.maxUserPromptChars),
+  });
+
+  let lastError: unknown = null;
+  for (let i = 0; i < modelChain.length; i++) {
+    const modelId = modelChain[i]!;
+    const isLast = i === modelChain.length - 1;
+    try {
+      for (let step = 0; step < params.maxToolSteps; step++) {
+        const input = buildAgentModelRunInput(
+          modelId,
+          workingMessages,
+          params.tools,
+          params.maxTokens,
+          params.temperature
+        );
+        const result = await ai.run(modelId, input);
+        const toolCalls = extractToolCalls(result);
+        if (toolCalls.length === 0) {
+          return extractWorkersAiContent(result);
+        }
+        workingMessages.push({
+          role: "assistant",
+          content: "",
+          tool_calls: toolCalls,
+        });
+        for (const call of toolCalls) {
+          const toolContent = await params.executeTool(call.name, call.arguments);
+          workingMessages.push({
+            role: "tool",
+            name: call.name,
+            content: toolContent,
+          });
+        }
+      }
+
+      const finalInput = buildAgentModelRunInput(
+        modelId,
+        workingMessages,
+        [],
+        params.maxTokens,
+        params.temperature
+      );
+      const finalResult = await ai.run(modelId, finalInput);
+      return extractWorkersAiContent(finalResult);
+    } catch (err) {
+      lastError = err;
+      if (!shouldTryNextModelInChain(err, isLast)) throw err;
     }
   }
   throw lastError;

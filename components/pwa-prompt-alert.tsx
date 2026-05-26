@@ -84,7 +84,7 @@ export function PwaPromptAlert() {
 
   function handleLearn() {
     handleDismiss();
-    router.push('/pwa');
+    router.push('/download');
   }
 
   if (!shouldShow || !isAppearDelayComplete) return null;

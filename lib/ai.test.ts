@@ -40,6 +40,23 @@ describe("resolveProductionChatModelChain", () => {
     ]);
   });
 
+  it("uses Gemma on localhost when WORKERS_AI_USE_PRODUCTION_MODEL=1", () => {
+    vi.stubEnv("WORKERS_AI_USE_PRODUCTION_MODEL", "1");
+    expect(resolveWorkersAiModelTier("localhost:3000")).toBe("production");
+    expect(resolveProductionChatModelChain("localhost:3000")).toEqual([
+      MODEL_WORKERS_AI_PRODUCTION,
+      MODEL_WORKERS_AI_PRODUCTION_BACKUP,
+    ]);
+  });
+
+  it("uses Llama on Pages preview even when WORKERS_AI_USE_PRODUCTION_MODEL=1", () => {
+    vi.stubEnv("WORKERS_AI_USE_PRODUCTION_MODEL", "1");
+    expect(resolveWorkersAiModelTier("my-branch.pages.dev")).toBe("dev");
+    expect(resolveProductionChatModelChain("my-branch.pages.dev")).toEqual([
+      MODEL_WORKERS_AI_DEV,
+    ]);
+  });
+
   it("never streams partial tokens to the chat client", () => {
     expect(shouldStreamTokensToClient("bilauitmcuti.com")).toBe(false);
     expect(shouldStreamTokensToClient("localhost:3000")).toBe(false);

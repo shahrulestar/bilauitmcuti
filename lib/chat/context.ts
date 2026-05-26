@@ -13,7 +13,7 @@ import { TABLE_OUTPUT_RULE } from "@/lib/chat/intent";
 import {
   toComparableDateValue,
   toDateFormat,
-  toReadableDate,
+  toPromptDate,
 } from "@/lib/chat/dates";
 
 export function getActivityDedupeKey(a: Activity): string {
@@ -106,17 +106,30 @@ export function formatActivitiesAsContext(activities: Activity[]): string {
 
   return sorted
     .map((a) => {
-      let line = `- ${a.name}: ${toDateFormat(a.startDate)}`;
-      if (a.endDate) line += ` to ${toDateFormat(a.endDate)}`;
+      let line = `- ${a.name}: ${toPromptDate(a.startDate)}`;
+      if (a.endDate) line += ` to ${toPromptDate(a.endDate)}`;
       if (a.duration) line += ` (${a.duration})`;
       if (a.details) line += ` — ${a.details}`;
       if (a.regionalStartDate) {
-        line += `\n  Kedah, Kelantan, and Terengganu (regional dates): ${toDateFormat(a.regionalStartDate)}`;
-        if (a.regionalEndDate) line += ` to ${toDateFormat(a.regionalEndDate)}`;
+        line += `\n  Kedah, Kelantan, and Terengganu (regional dates): ${toPromptDate(a.regionalStartDate)}`;
+        if (a.regionalEndDate) line += ` to ${toPromptDate(a.regionalEndDate)}`;
       }
       return line;
     })
     .join("\n");
+}
+
+/** Key milestones kept when intent filter narrows the primary list. */
+export function formatKeyMilestonesContext(activities: Activity[]): string {
+  const key = dedupeActivities(activities.filter((a) => isKeyScheduleActivityForReference(a)));
+  if (key.length === 0) return "";
+  const sorted = [...key].sort(
+    (a, b) => toComparableDateValue(a.startDate) - toComparableDateValue(b.startDate)
+  );
+  return [
+    "=== KEY MILESTONES (full session — always check for registration, lecture, exam, break) ===",
+    formatActivitiesAsContext(sorted),
+  ].join("\n");
 }
 
 export function sessionLabelForContext(sessionId: SessionId): string {
@@ -144,22 +157,45 @@ export function formatPrimaryCalendarContext(
   sessionIds: SessionId[],
   program: string,
   group: "A" | "B",
-  contextIntent?: CalendarContextIntent
+  contextIntent?: CalendarContextIntent,
+  options?: { useIntentFilter?: boolean }
 ): string {
   if (sessionIds.length === 0) return "";
-  const applyIntent = (acts: Activity[]) =>
-    contextIntent && contextIntent !== "all"
+  const allowIntentFilter = options?.useIntentFilter !== false;
+  const applyIntent = (acts: Activity[]) => {
+    if (!allowIntentFilter) return acts;
+    return contextIntent && contextIntent !== "all"
       ? filterActivitiesByContextIntent(acts, contextIntent)
       : acts;
+  };
+
+  const narrowIntent =
+    allowIntentFilter &&
+    contextIntent &&
+    contextIntent !== "all" &&
+    contextIntent !== "days_until" &&
+    contextIntent !== "lecture_count";
 
   if (sessionIds.length === 1) {
-    const acts = applyIntent(getFilteredActivitiesForSession(sessionIds[0]!, program, group));
-    return formatActivitiesAsContext(acts);
+    const sid = sessionIds[0]!;
+    const allActs = getFilteredActivitiesForSession(sid, program, group);
+    const acts = applyIntent(allActs);
+    let out = formatActivitiesAsContext(acts);
+    if (narrowIntent && acts.length < allActs.length) {
+      const milestones = formatKeyMilestonesContext(allActs);
+      if (milestones) out += `\n\n${milestones}`;
+    }
+    return out;
   }
   const parts: string[] = [];
   for (const sid of sessionIds) {
-    const acts = applyIntent(getFilteredActivitiesForSession(sid, program, group));
+    const allActs = getFilteredActivitiesForSession(sid, program, group);
+    const acts = applyIntent(allActs);
     parts.push(`=== SESSION ${sessionLabelForContext(sid)} ===`, formatActivitiesAsContext(acts));
+    if (narrowIntent && acts.length < allActs.length) {
+      const milestones = formatKeyMilestonesContext(allActs);
+      if (milestones) parts.push(milestones);
+    }
   }
   return parts.join("\n\n");
 }
@@ -228,8 +264,8 @@ export function computeQuickReference(activities: Activity[], todayISO: string):
   if (currentActivities.length > 0) {
     const current = currentActivities
       .map((a) => {
-        let s = `${a.name} (${toReadableDate(a.startDate)}`;
-        if (a.endDate) s += ` to ${toReadableDate(a.endDate)}`;
+        let s = `${a.name} (${toPromptDate(a.startDate)}`;
+        if (a.endDate) s += ` to ${toPromptDate(a.endDate)}`;
         s += `)`;
         return s;
       })
@@ -240,23 +276,23 @@ export function computeQuickReference(activities: Activity[], todayISO: string):
   }
 
   if (nextBreak) {
-    let s = `NEXT BREAK: ${nextBreak.name} (${toReadableDate(nextBreak.startDate)}`;
-    if (nextBreak.endDate) s += ` to ${toReadableDate(nextBreak.endDate)}`;
+    let s = `NEXT BREAK: ${nextBreak.name} (${toPromptDate(nextBreak.startDate)}`;
+    if (nextBreak.endDate) s += ` to ${toPromptDate(nextBreak.endDate)}`;
     s += `)`;
     if (nextBreak.details) s += ` — ${nextBreak.details}`;
     lines.push(s);
   }
 
   if (nextExam) {
-    let s = `NEXT EXAM: ${nextExam.name} (${toReadableDate(nextExam.startDate)}`;
-    if (nextExam.endDate) s += ` to ${toReadableDate(nextExam.endDate)}`;
+    let s = `NEXT EXAM: ${nextExam.name} (${toPromptDate(nextExam.startDate)}`;
+    if (nextExam.endDate) s += ` to ${toPromptDate(nextExam.endDate)}`;
     s += `)`;
     lines.push(s);
   }
 
   if (semesterBreak && semesterBreak !== nextBreak) {
-    let s = `SEMESTER BREAK: ${semesterBreak.name} (${toReadableDate(semesterBreak.startDate)}`;
-    if (semesterBreak.endDate) s += ` to ${toReadableDate(semesterBreak.endDate)}`;
+    let s = `SEMESTER BREAK: ${semesterBreak.name} (${toPromptDate(semesterBreak.startDate)}`;
+    if (semesterBreak.endDate) s += ` to ${toPromptDate(semesterBreak.endDate)}`;
     s += `)`;
     lines.push(s);
   }

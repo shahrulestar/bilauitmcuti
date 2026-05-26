@@ -6,13 +6,23 @@ describe("getModelResponseBudget", () => {
 
   it("caps simple calendar questions", () => {
     const budget = getModelResponseBudget("When is the next break?", true, false, ceiling);
-    expect(budget.maxTokens).toBe(384);
+    expect(budget.maxTokens).toBe(512);
     expect(budget.temperature).toBe(0.1);
   });
 
   it("caps table/compare requests", () => {
     const budget = getModelResponseBudget("Compare sessions in a table", true, true, ceiling);
-    expect(budget.maxTokens).toBe(1536);
+    expect(budget.maxTokens).toBe(2048);
+  });
+
+  it("raises cap for list/schedule questions", () => {
+    const budget = getModelResponseBudget(
+      "Senarai semua minggu kuliah 1-14",
+      true,
+      false,
+      ceiling
+    );
+    expect(budget.maxTokens).toBe(3072);
   });
 
   it("caps detailed calendar questions higher than simple", () => {

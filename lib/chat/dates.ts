@@ -69,3 +69,24 @@ export function toReadableDate(dateStr: string): string {
   }
   return dateStr;
 }
+
+/**
+ * Token-efficient date for chat prompts: "DD Mon YYYY" with a 3-letter month
+ * (English: Jan, Feb, Mar, ...). The model translates to "Mac/Ogos/Dis" for
+ * Bahasa Melayu replies; keeping a single spelling in context keeps the prompt
+ * compact and reduces date-format hallucinations.
+ */
+export function toPromptDate(dateStr: string): string {
+  const months = [
+    "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+    "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+  ];
+  const normalized = normalizeDateString(dateStr);
+  const match = normalized.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (match) {
+    const day = parseInt(match[3], 10);
+    const monthIdx = parseInt(match[2], 10) - 1;
+    return `${String(day).padStart(2, "0")} ${months[monthIdx]} ${match[1]}`;
+  }
+  return dateStr;
+}

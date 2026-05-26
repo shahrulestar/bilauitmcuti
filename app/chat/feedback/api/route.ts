@@ -3,6 +3,7 @@ export const runtime = "edge";
 import { NextRequest, NextResponse } from "next/server";
 import {
   buildChatFeedbackEmbed,
+  chatFeedbackWebhookKind,
   getDiscordWebhookUrl,
   sendDiscordWebhook,
 } from "@/lib/discord-webhook";
@@ -93,14 +94,14 @@ export async function POST(request: NextRequest) {
     const parsed = parseFeedbackRequest(rawBody);
     if (!parsed.success) return jsonError(parsed.error, 400);
 
-    // Fail fast with a clear message if webhook is not configured (same env as contact/engagement).
+    const webhookKind = chatFeedbackWebhookKind(parsed.data.rating);
     try {
-      getDiscordWebhookUrl();
+      getDiscordWebhookUrl(webhookKind);
     } catch (envErr) {
       const errMsg = envErr instanceof Error ? envErr.message : String(envErr);
-      logger.warn("Chat feedback: DISCORD_WEBHOOK_URL missing", { logId, errMsg });
+      logger.warn("Chat feedback: Discord webhook missing", { logId, webhookKind, errMsg });
       return jsonError(
-        "Feedback is not configured. Set DISCORD_WEBHOOK_URL in .env.local and restart the dev server.",
+        "Feedback is not configured. Set DISCORD_WEBHOOK_CHAT_HELPFUL and DISCORD_WEBHOOK_CHAT_NOT_HELPFUL in .env.local and restart the dev server.",
         503
       );
     }
@@ -114,7 +115,7 @@ export async function POST(request: NextRequest) {
       correlationId: parsed.data.correlationId,
     });
 
-    await sendDiscordWebhook({ embeds: [embed] });
+    await sendDiscordWebhook({ kind: webhookKind, embeds: [embed] });
 
     return NextResponse.json({ message: "Thanks for your feedback!" });
   } catch (error) {
@@ -122,11 +123,14 @@ export async function POST(request: NextRequest) {
     logger.error("Chat feedback API error", { logId, errMsg });
 
     if (errMsg.includes("Discord webhook failed")) {
-      return jsonError("Could not deliver feedback to Discord. Check DISCORD_WEBHOOK_URL.", 502);
-    }
-    if (errMsg.includes("DISCORD_WEBHOOK_URL")) {
       return jsonError(
-        "Feedback is not configured. Set DISCORD_WEBHOOK_URL in .env.local and restart the dev server.",
+        "Could not deliver feedback to Discord. Check DISCORD_WEBHOOK_CHAT_HELPFUL and DISCORD_WEBHOOK_CHAT_NOT_HELPFUL.",
+        502
+      );
+    }
+    if (errMsg.includes("DISCORD_WEBHOOK_CHAT_")) {
+      return jsonError(
+        "Feedback is not configured. Set DISCORD_WEBHOOK_CHAT_HELPFUL and DISCORD_WEBHOOK_CHAT_NOT_HELPFUL in .env.local and restart the dev server.",
         503
       );
     }

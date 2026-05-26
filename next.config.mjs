@@ -47,6 +47,11 @@ const nextConfig = {
         destination: '/foundation-professional',
         permanent: true, // HTTP 308
       },
+      {
+        source: '/pwa',
+        destination: '/download',
+        permanent: true, // HTTP 308
+      },
     ]
   },
   async headers() {

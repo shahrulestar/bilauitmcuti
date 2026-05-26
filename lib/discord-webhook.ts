@@ -5,7 +5,15 @@ const DISCORD_EMBED_FIELD_NAME_MAX_LENGTH = 256;
 const DISCORD_EMBED_FIELD_VALUE_MAX_LENGTH = 1024;
 const DISCORD_EMBED_MAX_COUNT = 10;
 
-let _discordWebhookUrl: string | null = null;
+export type DiscordWebhookKind = "rate_feedback" | "chat_helpful" | "chat_not_helpful";
+
+const WEBHOOK_ENV_KEYS: Record<DiscordWebhookKind, string> = {
+  rate_feedback: "DISCORD_WEBHOOK_RATE_FEEDBACK",
+  chat_helpful: "DISCORD_WEBHOOK_CHAT_HELPFUL",
+  chat_not_helpful: "DISCORD_WEBHOOK_CHAT_NOT_HELPFUL",
+};
+
+const _discordWebhookUrls: Partial<Record<DiscordWebhookKind, string>> = {};
 
 export interface DiscordEmbedField {
   name: string;
@@ -21,18 +29,24 @@ export interface DiscordEmbed {
   fields?: DiscordEmbedField[];
 }
 
-export function getDiscordWebhookUrl(): string {
-  if (_discordWebhookUrl) return _discordWebhookUrl;
-  const url = process.env.DISCORD_WEBHOOK_URL?.trim();
+export function getDiscordWebhookUrl(kind: DiscordWebhookKind): string {
+  const cached = _discordWebhookUrls[kind];
+  if (cached) return cached;
+  const envKey = WEBHOOK_ENV_KEYS[kind];
+  const url = process.env[envKey]?.trim();
   if (!url) {
     const devHint =
       process.env.NODE_ENV !== "production"
-        ? " Set DISCORD_WEBHOOK_URL in .env.local (replace TELEGRAM_*) and restart `pnpm dev`."
+        ? ` Set ${envKey} in .env.local and restart \`pnpm dev\`.`
         : "";
-    throw new Error(`Discord env validation failed: DISCORD_WEBHOOK_URL is required.${devHint}`);
+    throw new Error(`Discord env validation failed: ${envKey} is required.${devHint}`);
   }
-  _discordWebhookUrl = url;
-  return _discordWebhookUrl;
+  _discordWebhookUrls[kind] = url;
+  return url;
+}
+
+export function chatFeedbackWebhookKind(rating: "up" | "down"): DiscordWebhookKind {
+  return rating === "up" ? "chat_helpful" : "chat_not_helpful";
 }
 
 function truncate(value: string, maxLength: number): string {
@@ -70,10 +84,11 @@ async function assertDiscordResponseOk(response: Response): Promise<void> {
 }
 
 export async function sendDiscordWebhook(params: {
+  kind: DiscordWebhookKind;
   content?: string;
   embeds: DiscordEmbed[];
 }): Promise<void> {
-  const url = getDiscordWebhookUrl();
+  const url = getDiscordWebhookUrl(params.kind);
   const payload: { content?: string; embeds: DiscordEmbed[] } = {
     embeds: normalizeEmbeds(params.embeds),
   };
@@ -90,11 +105,12 @@ export async function sendDiscordWebhook(params: {
 }
 
 export async function sendDiscordWebhookWithFile(params: {
+  kind: DiscordWebhookKind;
   content?: string;
   embeds: DiscordEmbed[];
   file: File;
 }): Promise<void> {
-  const url = getDiscordWebhookUrl();
+  const url = getDiscordWebhookUrl(params.kind);
   const payload: { content?: string; embeds: DiscordEmbed[] } = {
     embeds: normalizeEmbeds(params.embeds),
   };
@@ -163,7 +179,7 @@ function excerptForDiscord(text: string, max = CHAT_FEEDBACK_EXCERPT_CHARS): str
   return t.slice(0, max - 3) + "...";
 }
 
-/** Simple embed for chat thumbs — same webhook as contact/engagement (no ISO timestamp field). */
+/** Simple embed for chat thumbs (no ISO timestamp field). */
 export function buildChatFeedbackEmbed(params: {
   rating: "up" | "down";
   userMessage: string;

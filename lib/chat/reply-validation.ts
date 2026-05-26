@@ -1,17 +1,4 @@
-import { toDateFormat } from "@/lib/chat/dates";
-import type { Activity } from "@/lib/data";
-
-/** Collect DD-MM-YYYY strings present in calendar activities for soft reply checks. */
-export function collectAllowedDateTokens(activities: Activity[]): Set<string> {
-  const allowed = new Set<string>();
-  for (const a of activities) {
-    if (a.startDate) allowed.add(toDateFormat(a.startDate));
-    if (a.endDate) allowed.add(toDateFormat(a.endDate));
-    if (a.regionalStartDate) allowed.add(toDateFormat(a.regionalStartDate));
-    if (a.regionalEndDate) allowed.add(toDateFormat(a.regionalEndDate));
-  }
-  return allowed;
-}
+export { collectAllowedDateTokens } from "@/lib/chat/allowed-dates";
 
 const DATE_IN_REPLY_RE = /\b(\d{2}-\d{2}-\d{4})\b/g;
 
@@ -30,4 +17,4 @@ export function replyHasUnknownCalendarDates(
 }
 
 export const DATE_VALIDATION_RETRY_NUDGE =
-  "\n\nCRITICAL: Your previous answer included dates not present in the calendar context. Reply again using ONLY dates from the GROUP calendar sections and QUICK REFERENCE. Do not invent dates.";
+  "\n\nCRITICAL: Your previous answer included dates not present in the context blocks (GROUP calendar, LECTURE WEEKS, MALAYSIA PUBLIC HOLIDAYS, or QUICK REFERENCE). Reply again copying dates exactly from those API-backed blocks. Do not invent dates or infer from session label month ranges alone.";

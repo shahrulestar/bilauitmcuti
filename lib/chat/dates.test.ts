@@ -4,6 +4,7 @@ import {
   getTodayISO,
   normalizeDateString,
   toComparableDateValue,
+  toPromptDate,
 } from "./dates";
 
 describe("getTodayISO", () => {
@@ -44,5 +45,16 @@ describe("toComparableDateValue", () => {
     expect(toComparableDateValue("2026-05-24")).toBeLessThan(
       toComparableDateValue("2026-05-25")
     );
+  });
+});
+
+describe("toPromptDate", () => {
+  it("uses 3-letter English month", () => {
+    expect(toPromptDate("2026-03-15")).toBe("15 Mar 2026");
+    expect(toPromptDate("2026-08-01")).toBe("01 Aug 2026");
+  });
+
+  it("accepts DD-MM-YYYY input", () => {
+    expect(toPromptDate("15-03-2026")).toBe("15 Mar 2026");
   });
 });

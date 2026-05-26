@@ -28,7 +28,7 @@ Academic calendar web app for Universiti Teknologi MARA (UiTM) — Malaysia's la
 - Dark and light theme with system detection
 
 ### Contact & sponsor
-- **Feedback** (`/feedback`): feedback form; optional email; submissions are sent to Discord when `DISCORD_WEBHOOK_URL` is configured; protected by Cloudflare Turnstile (`/contact` redirects here)
+- **Feedback** (`/feedback`): feedback form; optional email; submissions are sent to Discord when `DISCORD_WEBHOOK_RATE_FEEDBACK` is configured; protected by Cloudflare Turnstile (`/contact` redirects here)
 - **Sponsor** (`/sponsor`): sponsorship form with optional nickname or anonymous mode, social platform + handle/URL, message, proof-of-payment upload (image or PDF), and Turnstile; a **Show payment QR** control reveals the static QR image at `public/sponsor-qr.png` (replace this file with your real QR). Submissions use the **same** Discord webhook as contact and engagement (summary text + proof file attachment in one message)
 
 ## Tech Stack
@@ -61,12 +61,14 @@ Copy the example file and add your keys:
 cp .env.example .env.local
 ```
 
-If you migrated from Telegram, remove `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID` from `.env.local` and set `DISCORD_WEBHOOK_URL` instead. Restart `pnpm dev` after changing env (Next.js reloads `.env.local` on save, but a restart is safest).
+If you migrated from Telegram, remove `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID` from `.env.local` and set the Discord webhook env vars instead. Restart `pnpm dev` after changing env (Next.js reloads `.env.local` on save, but a restart is safest).
 
 | Variable | Required | Purpose |
 |----------|----------|---------|
 | Workers AI binding (`AI`) | Yes (for chat) | Pages Functions binding; configure in Cloudflare Dashboard or use `pnpm preview` locally |
-| `DISCORD_WEBHOOK_URL` | Optional | Contact, engagement rating, and sponsor form notifications (server-only; do not commit) |
+| `DISCORD_WEBHOOK_RATE_FEEDBACK` | Optional | Star rating, feedback form, sponsor form (server-only) |
+| `DISCORD_WEBHOOK_CHAT_HELPFUL` | Optional | Chat AI thumbs up (`POST /chat/feedback/api`) |
+| `DISCORD_WEBHOOK_CHAT_NOT_HELPFUL` | Optional | Chat AI thumbs down |
 | `NEXT_PUBLIC_TURNSTILE_SITE_KEY` | Yes (contact, chat, sponsor in production) | Cloudflare Turnstile site key (public) |
 | `TURNSTILE_SECRET_KEY` | Yes (for server verification) | Cloudflare Turnstile secret; never expose to the client |
 | `CALENDAR_API_BASE` | Optional | Server-only override for the calendar HTTP API origin (default `https://api.bilauitmcuti.com`). Do **not** use `NEXT_PUBLIC_*` — the browser calls same-origin `/api/v1/...` only. |
@@ -76,7 +78,9 @@ Sponsor uploads: max proof file size **10 MB** (see `SPONSOR_MAX_FILE_BYTES` in 
 Example:
 
 ```env
-DISCORD_WEBHOOK_URL=https://discord.com/api/webhooks/your_webhook_id/your_webhook_token
+DISCORD_WEBHOOK_RATE_FEEDBACK=https://discord.com/api/webhooks/your_rate_feedback_id/your_token
+DISCORD_WEBHOOK_CHAT_HELPFUL=https://discord.com/api/webhooks/your_chat_helpful_id/your_token
+DISCORD_WEBHOOK_CHAT_NOT_HELPFUL=https://discord.com/api/webhooks/your_chat_not_helpful_id/your_token
 NEXT_PUBLIC_TURNSTILE_SITE_KEY=your_turnstile_site_key_here
 TURNSTILE_SECRET_KEY=your_turnstile_secret_key_here
 # CALENDAR_API_BASE=https://api.bilauitmcuti.com
@@ -120,7 +124,7 @@ pnpm start         # standard Next.js server (not used in production on CF)
 
 **After first deploy:** Pages **Settings → Functions** → enable **`nodejs_compat`** for production and preview; set compatibility date to at least `2022-11-30`.
 
-**Bindings / env:** Workers AI binding named `AI`, optional `DISCORD_WEBHOOK_URL`, Turnstile (`NEXT_PUBLIC_TURNSTILE_SITE_KEY`, `TURNSTILE_SECRET_KEY`), optional `CALENDAR_API_BASE`.
+**Bindings / env:** Workers AI binding named `AI`, optional Discord webhooks (`DISCORD_WEBHOOK_*`), Turnstile (`NEXT_PUBLIC_TURNSTILE_SITE_KEY`, `TURNSTILE_SECRET_KEY`), optional `CALENDAR_API_BASE`.
 
 **Troubleshooting:**
 - **“routes were not configured to run with the Edge Runtime”:** Run `node scripts/add-edge-runtime.mjs` or add `export const runtime = 'edge'` to every dynamic route/API.

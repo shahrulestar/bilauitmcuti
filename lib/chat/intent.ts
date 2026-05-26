@@ -211,7 +211,76 @@ export function isTableFormatRequested(message: string): boolean {
 export const TABLE_OUTPUT_RULE =
   "\n\nTABLE OUTPUT RULE (MANDATORY): The user asked for a table. Put the schedule or comparison inside a [TABLE]...[/TABLE] block only. Format:\n[TABLE]\n| Activity | Date |\n| --- | --- |\n| (event name) | (date or range) |\n[/TABLE]\nRules: First row inside [TABLE] MUST be real column headers (e.g. Activity, Date)—NOT a group title. Put group/program title as ONE plain-text line immediately BEFORE [TABLE]. Use pipe | between columns. Do NOT output raw markdown tables outside [TABLE]. For session comparisons, first column = session id + label. Sort data rows by date ascending (earliest first) unless the user asked for latest first.";
 
-export function isSimpleCalendarQuestion(message: string): boolean {
+const LIST_OR_SCHEDULE_KEYWORDS = [
+  "senarai",
+  "list",
+  "list all",
+  "list out",
+  "semua",
+  "all activities",
+  "all dates",
+  "jadual",
+  "schedule",
+  "calendar for",
+  "kalendar",
+  "this month",
+  "next month",
+  "bulan ini",
+  "bulan depan",
+  "minggu ini",
+  "minggu depan",
+  "week 1",
+  "week 14",
+  "minggu 1",
+  "minggu 14",
+  "weeks 1",
+  "minggu 1 -",
+  "minggu 1-",
+  "weeks 1 -",
+  "weeks 1-",
+  "every week",
+  "setiap minggu",
+  "minggu kuliah",
+  "lecture week",
+  "lecture weeks",
+  "weekly",
+  "mingguan",
+  "berapa minggu",
+  "how many weeks",
+  "berapa hari",
+  "between",
+  "antara",
+  "from ",
+  "dari tarikh",
+  "sehingga",
+  "until",
+  "compare",
+  "banding",
+  "bezakan",
+  "perbandingan",
+];
+
+const WEEK_RANGE_REGEX = /\b(minggu|week)s?\s*\d+\s*(-|to|hingga|sehingga|sampai)\s*\d+\b/i;
+const MONTH_NAME_REGEX =
+  /\b(jan|feb|mac|march|apr|april|may|mei|jun|jul|julai|ogos|aug|august|sep|sept|september|okt|oct|october|nov|november|dis|dec|december|disember)\b/i;
+
+export function messageNeedsListOrSchedule(message: string): boolean {
+  const lower = message.toLowerCase();
+  if (WEEK_RANGE_REGEX.test(lower)) return true;
+  if (LIST_OR_SCHEDULE_KEYWORDS.some((kw) => lower.includes(kw))) return true;
+  if (MONTH_NAME_REGEX.test(lower)) {
+    return /\b(senarai|list|jadual|schedule|aktiviti|activities|kalendar|calendar|semua|all|every|setiap)\b/.test(
+      lower
+    );
+  }
+  return false;
+}
+
+export function isSimpleCalendarQuestion(
+  message: string,
+  options?: { hasMatchedActivity?: boolean }
+): boolean {
+  if (options?.hasMatchedActivity) return false;
   const lower = message.toLowerCase().trim();
   const simpleHints = [
     "when",
@@ -224,13 +293,14 @@ export function isSimpleCalendarQuestion(message: string): boolean {
     "start",
     "end",
     "akhir",
-    "cuti",
-    "break",
-    "exam",
-    "peperiksaan",
   ];
   const hasSimpleHint = simpleHints.some((kw) => lower.includes(kw));
-  return hasSimpleHint && lower.length <= 120;
+  if (!hasSimpleHint) return false;
+  if (lower.length > 120) return false;
+  if (messageNeedsListOrSchedule(message)) return false;
+  if (messageAsksDetail(message)) return false;
+  if (isTableFormatRequested(message)) return false;
+  return true;
 }
 
 /** Long user input — allow a larger completion budget. */
@@ -325,15 +395,36 @@ export function getCalendarUnderstandingDirective(message: string): string {
   return directive;
 }
 
+/**
+ * Tells the model which API-backed block is authoritative for each topic.
+ */
+export function getCalendarDataSourcesDirective(): string {
+  return [
+    "\n\nTHREE API DATA SOURCES (mandatory — never mix or guess):",
+    "1) UiTM ACADEMIC CALENDAR — GROUP sections and activity lines (pendaftaran, kuliah, peperiksaan, cuti, yuran, GT). Copy each event's start/end dates exactly as shown. Session label months (e.g. Mar–Aug in the session name) are NOT boundaries: events may start before March and end after August — trust the activity dates and SESSION TIMELINE API span, not the label alone.",
+    "2) LECTURE WEEKS — LECTURE WEEKS / CURRENT LECTURE WEEK blocks only (from /api/v1/lecture-weeks). Use for minggu kuliah, week number, and Week 1..N date ranges. Do NOT derive lecture week dates from GROUP 'Kuliah' activity rows.",
+    "3) MALAYSIA PUBLIC HOLIDAYS — MALAYSIA PUBLIC HOLIDAYS block only (cuti umum). Do NOT list UiTM semester breaks as public holidays, or vice versa. For 'is UiTM off on X', check both GROUP break/cuti rows and the public holiday block if relevant.",
+    "If blocks disagree, prefer the specialized block (lecture weeks for weeks; public holidays for cuti umum; GROUP for academic events).",
+  ].join("\n");
+}
+
 export function getCompletionInstruction(
   isSimple: boolean,
-  asksDetail: boolean
+  asksDetail: boolean,
+  needsList: boolean = false,
+  hasMatchedActivity: boolean = false
 ): string {
+  if (hasMatchedActivity) {
+    return "\n\nIMPORTANT: The user named a specific calendar activity. Answer using MATCHED ACTIVITIES dates exactly. Do not substitute a different event or NEXT BREAK.";
+  }
+  if (needsList) {
+    return "\n\nIMPORTANT (LIST/SCHEDULE ANSWER): Write the FULL list the user asked for. Never end the reply at a header, colon, or empty line. Every dash/numbered/[TABLE] row must have its date filled in. If a section header is written (e.g. \"Group B (Diploma):\"), follow it with at least one content line on the next line. Continue until the list is complete.";
+  }
   if (isSimple) {
-    return "\n\nKeep the reply to 1–3 sentences with the date. No planning or checklists in the output.";
+    return "\n\nKeep the reply to 1–3 sentences with the date. No planning or checklists in the output. Always end with a full sentence and proper punctuation.";
   }
   if (asksDetail) {
-    return "\n\nIMPORTANT: Finish every sentence and paragraph completely—never stop mid-thought or mid-list. Use enough length to answer fully without truncating.";
+    return "\n\nIMPORTANT: Finish every sentence and paragraph completely—never stop mid-thought, mid-list, or right after a colon. Use enough length to answer fully without truncating.";
   }
-  return "\n\nIMPORTANT: Be concise but complete. Finish every sentence; avoid filler and unrelated calendar items.";
+  return "\n\nIMPORTANT: Be concise but complete. Finish every sentence; never end after a colon or header. Avoid filler and unrelated calendar items.";
 }

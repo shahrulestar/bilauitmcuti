@@ -48,7 +48,7 @@ export async function POST(request: NextRequest) {
       rating: parsed.data.rating,
       time: formatNotificationTime(new Date()),
     });
-    await sendDiscordWebhook({ embeds: [embed] });
+    await sendDiscordWebhook({ kind: "rate_feedback", embeds: [embed] });
 
     return NextResponse.json({ message: "Thanks for your rating!" });
   } catch (error) {

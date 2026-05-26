@@ -167,6 +167,13 @@ export function getDefaultSessionForGroup(group: ProgramGroup): SessionId {
   return opt?.id ?? (group === "A" ? "A-20251" : "B-20263");
 }
 
+/** Min/max dates from loaded API activities for a session (authoritative span). */
+export function getSessionActivityDateRange(
+  sessionId: SessionId
+): { start: string; end: string } | null {
+  return getSessionDateRange(sessionId);
+}
+
 /** Get session date range from activities (min start, max end). */
 function getSessionDateRange(sessionId: SessionId): { start: string; end: string } | null {
   const activities = getActivitiesForSession(sessionId);

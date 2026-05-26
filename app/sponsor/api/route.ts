@@ -170,7 +170,7 @@ export async function POST(request: NextRequest) {
       time: new Date().toISOString(),
     });
 
-    await sendDiscordWebhookWithFile({ embeds: [embed], file: proof });
+    await sendDiscordWebhookWithFile({ kind: "rate_feedback", embeds: [embed], file: proof });
 
     return withVerifiedCookie(NextResponse.json({ message: "Thanks! Your sponsorship details were submitted." }));
   } catch (error) {

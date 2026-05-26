@@ -16,8 +16,8 @@ export function PwaInstallButton({ isInstalled }: PwaInstallButtonProps) {
     <Button
       size="sm"
       variant="default"
-      onMouseEnter={() => router.prefetch('/pwa')}
-      onClick={() => router.push('/pwa')}
+      onMouseEnter={() => router.prefetch('/download')}
+      onClick={() => router.push('/download')}
       className="w-full !h-[38px] justify-center border-border text-center transition-none"
     >
       Download as PWA

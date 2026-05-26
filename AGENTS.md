@@ -10,17 +10,26 @@ pnpm install
 
 ## Required Environment
 
-- **Workers AI binding** — required for chat. In Cloudflare Pages: Settings → Bindings → Add → **Workers AI** → variable name `AI` (production + preview). Local: `pnpm run preview` after `build:pages`. Also declared in [`wrangler.jsonc`](wrangler.jsonc). No API key secret for inference. **Production only** (`bilauitmcuti.com`): primary **Gemma 4** (`@cf/google/gemma-4-26b-a4b-it`), backup **Gemini 3.1 Flash Lite** (`google/gemini-3.1-flash-lite` on fallback). **Dev / preview**: **Llama 3.2 3B**. Overrides: `WORKERS_AI_MODEL`, `WORKERS_AI_BACKUP_MODEL`, `WORKERS_AI_USE_DEV_MODEL=1`. See `lib/ai.ts` (`resolveProductionChatModelChain`).
+- **Workers AI binding** — required for chat. In Cloudflare Pages: Settings → Bindings → Add → **Workers AI** → variable name `AI` (production + preview). Local: `pnpm run preview` after `build:pages`. Also declared in [`wrangler.jsonc`](wrangler.jsonc). No API key secret for inference. **Production** (`bilauitmcuti.com` only): **Gemma 4** (`@cf/google/gemma-4-26b-a4b-it`) + backup **Gemini 3.1 Flash Lite** (`google/gemini-3.1-flash-lite`). **Local + Pages preview** (default): **Llama 3.2 3B** (`@cf/meta/llama-3.2-3b-instruct`). Optional localhost-only Gemma test: `WORKERS_AI_USE_PRODUCTION_MODEL=1`. Overrides: `WORKERS_AI_MODEL`, `WORKERS_AI_BACKUP_MODEL`, `WORKERS_AI_USE_DEV_MODEL=1`. See `lib/ai.ts` (`resolveWorkersAiModelTier`, `resolveProductionChatModelChain`).
 - `NEXT_PUBLIC_TURNSTILE_SITE_KEY` + `TURNSTILE_SECRET_KEY` — required for Turnstile on feedback, sponsor, and chat in production. Set `NEXT_PUBLIC_TURNSTILE_SITE_KEY` in **Pages build environment** (inlined into the client bundle), or `TURNSTILE_SITE_KEY` at runtime (client loads via `GET /api/turnstile/config`).
 
 ## Optional Environment
 
-- `DISCORD_WEBHOOK_URL` — optional server-only webhook for contact, engagement rating, sponsor form, and **chat AI thumbs up/down** (`POST /chat/feedback/api`). Do not use `NEXT_PUBLIC_*` or commit the URL.
+- `DISCORD_WEBHOOK_RATE_FEEDBACK` — optional server-only webhook for star rating, feedback form, and sponsor form. `DISCORD_WEBHOOK_CHAT_HELPFUL` / `DISCORD_WEBHOOK_CHAT_NOT_HELPFUL` — chat AI thumbs up/down (`POST /chat/feedback/api`). Do not use `NEXT_PUBLIC_*` or commit URLs.
 - `CALENDAR_API_BASE` — optional server-only override for the calendar API origin (default `https://api.bilauitmcuti.com`). Do not use `NEXT_PUBLIC_*` for this: the upstream URL must not be embedded in client bundles.
+- `CHAT_USE_AGENT` — set to `1` or `true` to enable tool-calling agent chat (see [`lib/chat/agent/run-agent.ts`](lib/chat/agent/run-agent.ts)).
 
 **Browser vs server:** The calendar UI calls **`/api/v1/meta`** and **`/api/v1/calendar`** (same origin); legacy **`/api/calendar-proxy/v1/...`** still works. CSP `connect-src` allows `'self'` only for calendar traffic (not the upstream host). The proxy allowlists those paths and forwards to `CALENDAR_API_BASE`. Chat and other server code call the upstream URL directly.
 
 **Chat API (`POST /chat/api`):** Hybrid responses — cache hits return JSON `{ reply, correlationId, path }`; LLM calls with `stream: true` (default) return **SSE** (`text/event-stream`) with `token` and `done` events. Thumbs feedback posts to **`POST /chat/feedback/api`** with the assistant `correlationId`.
+
+**Chat assistant pipeline** ([`lib/chat/handler.ts`](lib/chat/handler.ts)):
+
+- **Topic router** ([`lib/chat/topic-router.ts`](lib/chat/topic-router.ts)) — `academic_calendar` | `lecture_weeks` | `public_holiday` | `uitm_general` (mixed allowed).
+- **Activity match** ([`lib/chat/activity-match.ts`](lib/chat/activity-match.ts)) — authoritative rows when the user names an official calendar event.
+- **Agent mode** (`CHAT_USE_AGENT=1`, [`lib/chat/agent/`](lib/chat/agent/)) — hybrid tool calling on Workers AI (Gemma 4 / Gemini backup). The model calls tools (`search_calendar_activities`, `get_academic_calendar`, `get_lecture_weeks`, `get_public_holidays`, `search_uitm_knowledge`, etc.) instead of receiving full calendar dumps in the system prompt. Topic router narrows which tools are exposed per turn. Dev Llama 3.2 uses **compact context fallback** (same APIs, smaller prompt) when agent is enabled.
+- **Legacy mode** (default) — preloads `DATA CONTEXT` via [`lib/chat/build-data-context.ts`](lib/chat/build-data-context.ts) and [`lib/chat/chat-prompt.ts`](lib/chat/chat-prompt.ts).
+- Reply validation / completion retry: [`lib/chat/reply-validation.ts`](lib/chat/reply-validation.ts), [`lib/chat/reply-completion.ts`](lib/chat/reply-completion.ts).
 
 ## Commands
 
