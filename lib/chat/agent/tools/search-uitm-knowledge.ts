@@ -8,11 +8,26 @@ interface SearchSection {
 }
 
 function tokenize(text: string): string[] {
-  return text
+  const normalized = text
     .toLowerCase()
+    // Common typo seen in user queries.
+    .replace(/\bcollage\b/g, "college");
+
+  const tokenAliases: Record<string, string> = {
+    yuran: "fee",
+    fees: "fee",
+    tuition: "fee",
+    hostel: "college",
+  };
+
+  return normalized
     .replace(/[^\p{L}\p{N}\s]/gu, " ")
     .split(/\s+/)
-    .filter((w) => w.length > 2);
+    .flatMap((w) => {
+      if (w.length <= 2) return [];
+      const alias = tokenAliases[w];
+      return alias ? [w, alias] : [w];
+    });
 }
 
 function buildSections(): SearchSection[] {
@@ -104,6 +119,79 @@ function buildSections(): SearchSection[] {
       [
         channels?.length ? `Channels:\n${channels.map((c) => `- ${c}`).join("\n")}` : "",
         admission.note ? String(admission.note) : "",
+      ]
+        .filter(Boolean)
+        .join("\n")
+    );
+  }
+
+  const examGrades = data.examGrades as
+    | {
+        passing?: { grades?: string[]; status?: string };
+        failing?: { grades?: string[]; status?: string };
+      }
+    | undefined;
+  if (examGrades) {
+    const passing = examGrades.passing;
+    const failing = examGrades.failing;
+    push(
+      "exam-grades",
+      "Exam Grades",
+      [
+        passing?.grades?.length
+          ? `Passing (${passing.status ?? "LU"}): ${passing.grades.join(", ")}`
+          : "",
+        failing?.grades?.length
+          ? `Failing (${failing.status ?? "GA"}): ${failing.grades.join(", ")}`
+          : "",
+      ]
+        .filter(Boolean)
+        .join("\n")
+    );
+  }
+
+  const studentFees = data.studentFees as
+    | {
+        title?: string;
+        tuition?: {
+          semester1?: { diploma?: string; degree?: string };
+          semester2AndAbove?: { diploma?: string; degree?: string };
+        };
+        collegePerSemester?: {
+          double?: string;
+          triple?: string;
+          quad?: string;
+          labels?: { double?: string; triple?: string; quad?: string };
+        };
+        electricalPerItemPerSemester?: string;
+        electricalNote?: string;
+        disclaimer?: string;
+      }
+    | undefined;
+  if (studentFees) {
+    push(
+      "student-fees",
+      "Student Fees",
+      [
+        studentFees.title ? `Title: ${studentFees.title}` : "",
+        studentFees.tuition?.semester1
+          ? `Semester 1 tuition — Diploma: ${studentFees.tuition.semester1.diploma ?? "-"}, Degree: ${studentFees.tuition.semester1.degree ?? "-"}`
+          : "",
+        studentFees.tuition?.semester2AndAbove
+          ? `Semester 2+ tuition — Diploma: ${studentFees.tuition.semester2AndAbove.diploma ?? "-"}, Degree: ${studentFees.tuition.semester2AndAbove.degree ?? "-"}`
+          : "",
+        studentFees.collegePerSemester
+          ? [
+              "College per semester:",
+              `- ${studentFees.collegePerSemester.labels?.double ?? "Bilik Berdua"}: ${studentFees.collegePerSemester.double ?? "-"}`,
+              `- ${studentFees.collegePerSemester.labels?.triple ?? "Bilik Bertiga"}: ${studentFees.collegePerSemester.triple ?? "-"}`,
+              `- ${studentFees.collegePerSemester.labels?.quad ?? "Bilik Berempat"}: ${studentFees.collegePerSemester.quad ?? "-"}`,
+            ].join("\n")
+          : "",
+        studentFees.electricalPerItemPerSemester
+          ? `${studentFees.electricalNote ?? "Electrical item fee per semester"}: ${studentFees.electricalPerItemPerSemester}`
+          : "",
+        studentFees.disclaimer ? `Disclaimer: ${studentFees.disclaimer}` : "",
       ]
         .filter(Boolean)
         .join("\n")

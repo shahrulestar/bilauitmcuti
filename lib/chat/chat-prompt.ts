@@ -1,5 +1,10 @@
 import { TABLE_OUTPUT_RULE } from "@/lib/chat/intent";
 import type { ChatTopic } from "@/lib/chat/topic-router";
+import {
+  CHAT_ANSWER_MODE_POLICY,
+  CHAT_GRACEFUL_FALLBACK_POLICY,
+  CHAT_RESPONSE_FORMAT_RULES,
+} from "@/lib/chat/response-format";
 
 const CHATBOT_IDENTITY = `You are "Bila UiTM Cuti?" — a chatbot for UiTM students.
 
@@ -15,9 +20,10 @@ const DATA_POLICY = `DATA RULES (short):
 - Academic event dates → GROUP calendar / MATCHED ACTIVITIES lines only.
 - Lecture week numbers and ranges → LECTURE WEEKS blocks only.
 - Cuti umum / public holidays → MALAYSIA PUBLIC HOLIDAYS block only (not UiTM Cuti Semester unless they ask UiTM schedule).
+- IMPORTANT TERM SPLIT: "cuti/holiday/break" can mean two different things. UiTM break terms (e.g. Cuti Semester, Cuti Pertengahan Semester, study/revision week) are academic calendar rows, not public holidays. Public holidays are only national/state holidays in MALAYSIA PUBLIC HOLIDAYS.
 - Same activity name may exist for Group A and Group B with different dates — state group/session when both appear.
 - If MATCHED ACTIVITIES lists a row, that row is authoritative for the user's question.
-- Dates: DD-MM-YYYY or DD Mon YYYY (3-letter month). No markdown. Match the user's language (English / Bahasa Melayu / mixed).`;
+- Never invent dates. For explain/opinion questions, use DATA CONTEXT when available and give helpful guidance; mark uncertainty if exact facts are missing.`;
 
 export interface BuildChatPromptParams {
   programLabel: string;
@@ -73,6 +79,9 @@ export function buildChatAssistantSystemPrompt(params: BuildChatPromptParams): s
   let result = [
     CHATBOT_IDENTITY,
     DATA_POLICY,
+    CHAT_ANSWER_MODE_POLICY,
+    CHAT_GRACEFUL_FALLBACK_POLICY,
+    CHAT_RESPONSE_FORMAT_RULES,
     topicLine,
     `Program: ${programLabel} (GROUP ${primaryGroup}). Default to GROUP ${primaryGroup} unless the user asks about Group ${secondaryGroup}.`,
     `TODAY (Malaysia, UTC+8): ${todayFormatted}`,

@@ -1,4 +1,5 @@
 import { CHAT_LONG_MESSAGE_THRESHOLD_CHARS } from "@/lib/chat/limits";
+import { CHAT_IN_SCOPE_COMPLETION_HINT } from "@/lib/chat/response-format";
 
 const PUBLIC_HOLIDAY_KEYWORDS = [
   "public holiday",
@@ -426,5 +427,8 @@ export function getCompletionInstruction(
   if (asksDetail) {
     return "\n\nIMPORTANT: Finish every sentence and paragraph completely—never stop mid-thought, mid-list, or right after a colon. Use enough length to answer fully without truncating.";
   }
-  return "\n\nIMPORTANT: Be concise but complete. Finish every sentence; never end after a colon or header. Avoid filler and unrelated calendar items.";
+  return (
+    "\n\nIMPORTANT: Be concise but complete. Finish every sentence; never end after a colon or header. Avoid filler and unrelated calendar items." +
+    CHAT_IN_SCOPE_COMPLETION_HINT
+  );
 }

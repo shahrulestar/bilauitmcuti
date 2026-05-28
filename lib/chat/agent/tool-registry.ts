@@ -36,6 +36,16 @@ export function buildToolRegistryForTurn(ctx: AgentTurnContext): ChatToolName[] 
     tools.add("search_calendar_activities");
   }
 
+  const hasUitmScope =
+    topics.includes("academic_calendar") ||
+    topics.includes("lecture_weeks") ||
+    topics.includes("public_holiday") ||
+    topics.includes("uitm_general");
+
+  if (hasUitmScope && !tools.has("search_uitm_knowledge")) {
+    tools.add("search_uitm_knowledge");
+  }
+
   if (tools.size === 0) {
     tools.add("search_calendar_activities");
     tools.add("get_academic_calendar");

@@ -1022,12 +1022,10 @@ export default function ChatPage() {
                       </ContextMenuContent>
                     </ContextMenu>
                   ) : (
-                    <div
-                      className="max-w-[80%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed bg-secondary dark:bg-[#2A2A2A] text-foreground rounded-bl-md"
-                    >
+                    <div className="w-full px-1 py-1 text-sm leading-relaxed text-foreground">
                       <FormattedMessage content={msg.content} />
                       {assistantFinished && (
-                        <div className="text-right text-xs text-muted-foreground mt-1">
+                        <div className="text-right text-xs text-muted-foreground mt-2">
                           {formatTime24(msg.timestamp ?? Date.now())}
                         </div>
                       )}
@@ -1069,7 +1067,7 @@ export default function ChatPage() {
 
             {showThinkingUi && (
               <div className="flex flex-col items-start gap-1">
-                <div className="bg-secondary dark:bg-[#2A2A2A] rounded-2xl rounded-bl-md px-4 py-3">
+                <div className="px-1 py-1">
                   <div className="flex gap-1.5">
                     <span className="w-2 h-2 rounded-full bg-muted-foreground/40 animate-bounce [animation-delay:0ms]" />
                     <span className="w-2 h-2 rounded-full bg-muted-foreground/40 animate-bounce [animation-delay:150ms]" />

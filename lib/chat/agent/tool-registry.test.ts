@@ -32,6 +32,7 @@ describe("buildToolRegistryForTurn", () => {
     const tools = buildToolRegistryForTurn(baseCtx());
     expect(tools).toContain("search_calendar_activities");
     expect(tools).toContain("get_academic_calendar");
+    expect(tools).toContain("search_uitm_knowledge");
     expect(tools).not.toContain("get_lecture_weeks");
   });
 

@@ -42,4 +42,8 @@ describe("messageAsksPublicHoliday", () => {
   it("detects cuti umum", () => {
     expect(messageAsksPublicHoliday("senarai cuti umum Johor")).toBe(true);
   });
+
+  it("does not treat uiTM academic break as public holiday", () => {
+    expect(messageAsksPublicHoliday("bila cuti semester uitm")).toBe(false);
+  });
 });

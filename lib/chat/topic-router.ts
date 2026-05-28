@@ -52,6 +52,16 @@ const PUBLIC_HOLIDAY_PHRASES = [
   "holiday on",
 ];
 
+const ACADEMIC_BREAK_PHRASES = [
+  "cuti semester",
+  "semester break",
+  "break semester",
+  "cuti pertengahan",
+  "mid-semester break",
+  "study week",
+  "minggu ulangkaji",
+];
+
 const UITM_GENERAL_PHRASES = [
   "kampus",
   "campus",
@@ -135,8 +145,14 @@ export function messageAsksLectureWeeks(message: string): boolean {
 
 export function messageAsksPublicHoliday(message: string): boolean {
   const lower = message.toLowerCase();
+  const hasAcademicBreakPhrase = includesAny(lower, ACADEMIC_BREAK_PHRASES);
+  const hasPublicHolidayScope = /\b(malaysia|negeri|state|umum|awam|johor|selangor|sabah|sarawak|kedah|kelantan|terengganu|kl|kuala lumpur)\b/.test(
+    lower
+  );
+
+  if (hasAcademicBreakPhrase && !hasPublicHolidayScope) return false;
   if (includesAny(lower, PUBLIC_HOLIDAY_PHRASES)) return true;
-  if (/\b(cuti|holiday)\b/.test(lower) && /\b(malaysia|negeri|state|umum|awam|johor|selangor|sabah|sarawak|kedah|kelantan|terengganu|kl|kuala lumpur)\b/.test(lower)) {
+  if (/\b(cuti|holiday)\b/.test(lower) && hasPublicHolidayScope) {
     return true;
   }
   return false;

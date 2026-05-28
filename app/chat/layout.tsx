@@ -8,6 +8,10 @@ export const metadata: Metadata = {
   title: "Chat - Bila UiTM Cuti",
   description:
     "Ask AI about your UiTM academic calendar. Get instant answers about lecture dates, exam schedules, breaks, and registration periods for all programs.",
+  robots: {
+    index: false,
+    follow: true,
+  },
   alternates: {
     canonical: "https://bilauitmcuti.com/chat",
   },

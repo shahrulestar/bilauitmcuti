@@ -31,6 +31,31 @@ function parseToolArgs(args: Record<string, unknown>): Record<string, unknown> {
   return args ?? {};
 }
 
+function formatToolMiss(params: {
+  tool: string;
+  searched: string;
+  scope: string;
+  suggest: string;
+}): string {
+  return [
+    "=== TOOL RESULT (no exact match) ===",
+    `Tool: ${params.tool}`,
+    `Scope: ${params.scope}`,
+    `Searched: ${params.searched}`,
+    "Exact rows: none in this scope.",
+    `Next: ${params.suggest}`,
+    "You may still answer explain/opinion/justification questions with general UiTM guidance — label uncertainty; do not invent dates.",
+  ].join("\n");
+}
+
+function sessionScopeLine(ctx: AgentTurnContext): string {
+  const sessions =
+    ctx.effectiveSessions.length > 0
+      ? ctx.effectiveSessions.join(", ")
+      : ctx.contextSessionIds.join(", ") || "(default)";
+  return `Program ${ctx.programLabel}, GROUP ${ctx.primaryGroup}, session(s) ${sessions}`;
+}
+
 export async function executeChatTool(
   name: ChatToolName,
   args: Record<string, unknown>,
@@ -93,7 +118,12 @@ function executeSearchCalendarActivities(
     return truncateToolOutput(lines.join("\n"));
   }
 
-  return "(no matching calendar activities — try get_academic_calendar or rephrase the event name)";
+  return formatToolMiss({
+    tool: "search_calendar_activities",
+    searched: query || ctx.message,
+    scope: sessionScopeLine(ctx),
+    suggest: "call get_academic_calendar for full session calendar, or rephrase the official activity name",
+  });
 }
 
 function executeGetAcademicCalendar(
@@ -153,7 +183,14 @@ function executeGetUpcomingEvents(ctx: AgentTurnContext): string {
     ctx.todayISO,
     ctx.useIntentFilter ? ctx.contextIntent : "all"
   );
-  if (!ref) return "(no upcoming hints for this session)";
+  if (!ref) {
+    return formatToolMiss({
+      tool: "get_upcoming_events",
+      searched: "next/upcoming events",
+      scope: sessionScopeLine(ctx),
+      suggest: "call get_academic_calendar or search_calendar_activities for specific event names",
+    });
+  }
   return truncateToolOutput(
     `=== UPCOMING HINTS (today ${ctx.todayISO}) ===\n${ref}`
   );
@@ -177,10 +214,26 @@ async function executeGetLectureWeeks(
 
   if (wantTable) {
     const table = await buildLectureWeeksTableBlock(ctx.contextSessionIds);
-    return truncateToolOutput(table || "(lecture weeks data unavailable)");
+    return truncateToolOutput(
+      table ||
+        formatToolMiss({
+          tool: "get_lecture_weeks",
+          searched: "full lecture week table",
+          scope: sessionScopeLine(ctx),
+          suggest: "lecture week API may be unavailable for this session",
+        })
+    );
   }
   const quick = await buildLectureWeekQuickReference(ctx.contextSessionIds, ctx.todayISO);
-  return truncateToolOutput(quick || "(lecture weeks data unavailable)");
+  return truncateToolOutput(
+    quick ||
+      formatToolMiss({
+        tool: "get_lecture_weeks",
+        searched: "current lecture week",
+        scope: sessionScopeLine(ctx),
+        suggest: "try full_table=true if user asked for all weeks",
+      })
+  );
 }
 
 async function executeGetPublicHolidays(
@@ -192,7 +245,16 @@ async function executeGetPublicHolidays(
   const ph = await buildPublicHolidayChatContext(query, ctx.todayISO);
   const parts: string[] = [];
   if (ph.block) parts.push(ph.block);
-  if (!ph.block) parts.push("(no public holiday rows for this query)");
+  if (!ph.block) {
+    parts.push(
+      formatToolMiss({
+        tool: "get_public_holidays",
+        searched: query,
+        scope: `Malaysia public holidays (today ${ctx.todayISO})`,
+        suggest: "try a specific month, state, or date in the query",
+      })
+    );
+  }
   return truncateToolOutput(parts.join("\n\n"));
 }
 

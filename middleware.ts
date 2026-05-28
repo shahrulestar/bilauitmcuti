@@ -120,6 +120,7 @@ function handleSessionQueryRedirect(request: NextRequest): NextResponse | null {
 
 export function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
+  const isChatApiPath = pathname === "/chat/api" || pathname.startsWith("/chat/api/");
 
   const sessionRedirect = handleSessionQueryRedirect(request);
   if (sessionRedirect) return sessionRedirect;
@@ -127,11 +128,9 @@ export function middleware(request: NextRequest) {
   // Allow /chat/api POST from our page (Referer/Origin) to reduce mobile false-positives
   if (isLikelyRealBrowser(request, pathname)) return NextResponse.next();
   if (isBot(request)) {
-    if (pathname === "/chat/api" || pathname.startsWith("/chat/api/")) {
+    if (isChatApiPath) {
       return NextResponse.json({ error: "Access denied" }, { status: 403 });
     }
-    // /chat page: redirect to homepage
-    return NextResponse.redirect(new URL("/", request.url));
   }
   return NextResponse.next();
 }
