@@ -3,7 +3,6 @@ import type { MetadataRoute } from 'next'
 const baseUrl = 'https://bilauitmcuti.com'
 
 const programSlugs = [
-  'foundation-professional',
   'pre-diploma',
   'diploma',
   'diploma-part-time',

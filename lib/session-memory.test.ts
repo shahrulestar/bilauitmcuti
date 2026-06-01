@@ -18,7 +18,7 @@ describe("session-memory", () => {
   });
 
   it("filters sessions by group prefix", () => {
-    expect(normalizeSessionsForGroup(["A-20251", "B-20263"], "A")).toEqual(["A-20251"]);
+    expect(normalizeSessionsForGroup(["A-20251", "B-20263"], "A")).toEqual([]);
     expect(normalizeSessionsForGroup(["A-20251", "B-20263"], "B")).toEqual(["B-20263"]);
   });
 

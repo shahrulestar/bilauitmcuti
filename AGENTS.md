@@ -40,7 +40,7 @@ pnpm install
 | `pnpm typecheck` | Run TypeScript check |
 | `pnpm build` | Next.js production build only (`next build`) |
 | `pnpm build:pages` | Cloudflare Pages bundle via `@cloudflare/next-on-pages` → `.vercel/output/` |
-| `pnpm dev` | Next.js dev server (with Pages bindings via `setupDevPlatform`) |
+| `pnpm dev` | Next.js dev server (Workers AI via `setupDevPlatform`; run `npx wrangler login` if edge-preview auth fails) |
 | `pnpm preview` | Build for Pages + `wrangler pages dev` locally |
 | `pnpm pages:dev` | Preview last Pages build locally (requires `build:pages` first) |
 

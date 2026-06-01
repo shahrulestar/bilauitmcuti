@@ -1,4 +1,5 @@
 import { getGroupFromSession, type SessionId } from "@/lib/data";
+import { isGroupASessionId } from "@/lib/group-a-sessions";
 import type { ProgramValue } from "@/lib/route-utils";
 
 export function getGroupFromProgram(program: ProgramValue): "A" | "B" {
@@ -14,7 +15,10 @@ export function normalizeSessionsForGroup(
   group: "A" | "B"
 ): SessionId[] {
   const unique = Array.from(new Set(sessionIds));
-  return unique.filter((id) => getGroupFromSession(id) === group);
+  if (group === "A") {
+    return unique.filter((id) => isGroupASessionId(id));
+  }
+  return unique.filter((id) => getGroupFromSession(id) === "B");
 }
 
 export function areSessionListsEqual(left: SessionId[], right: SessionId[]): boolean {

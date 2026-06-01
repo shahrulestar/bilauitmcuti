@@ -9,7 +9,7 @@ Academic calendar web app for Universiti Teknologi MARA (UiTM) — Malaysia's la
 ### Academic Calendar
 - Grid and list views for the 2026 academic calendar
 - Program-specific schedules: Foundation, Pre-Diploma, Diploma, Bachelor's, Master's, PhD
-- Group A (Dec 2025 – May 2026) and Group B (Mar – Aug 2026)
+- Group A (Foundation/Professional cohorts) and Group B (Mar – Aug 2026)
 - Regional date variations for Kedah, Kelantan, and Terengganu (Friday–Saturday weekend states)
 - Filter by event type: registration, lectures, exams, breaks
 - Countdown to next activity
@@ -89,10 +89,14 @@ TURNSTILE_SECRET_KEY=your_turnstile_secret_key_here
 ### Development
 
 ```bash
+pnpm install
+npx wrangler login   # once per machine — required for Workers AI in `pnpm dev`
 pnpm dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000).
+
+`pnpm dev` loads Cloudflare bindings (including **Workers AI**) via Wrangler remote preview. If you see `edge-preview` / `Authentication error [code: 10000]`, run `npx wrangler login` again (OAuth tokens expire or go stale).
 
 ### Checks
 

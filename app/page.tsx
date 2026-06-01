@@ -29,9 +29,6 @@ export default function Page() {
       <nav aria-label="Program shortcuts" className="sr-only">
         <ul>
           <li>
-            <Link href="/foundation-professional">Foundation/Professional</Link>
-          </li>
-          <li>
             <Link href="/diploma">Diploma</Link>
           </li>
           <li>

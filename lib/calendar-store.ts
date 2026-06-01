@@ -9,7 +9,7 @@ export interface CalendarSnapshot {
   sessions: Record<string, { activities: Activity[] }>;
 }
 
-const FALLBACK_DEFAULT_SESSION = "A-20251";
+const FALLBACK_DEFAULT_SESSION = "B-20263";
 
 const emptySnapshot: CalendarSnapshot = {
   version: 0,

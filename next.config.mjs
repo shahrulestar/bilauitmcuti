@@ -44,7 +44,7 @@ const nextConfig = {
       },
       {
         source: '/foundation',
-        destination: '/foundation-professional',
+        destination: '/',
         permanent: true, // HTTP 308
       },
       {

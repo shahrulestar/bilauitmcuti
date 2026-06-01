@@ -35,7 +35,7 @@ import { getSnapshot as getCalendarSnapshot } from "./calendar-store";
 
 export type SessionId = string;
 
-const STATIC_DEFAULT_SESSION_FALLBACK: SessionId = "A-20251";
+const STATIC_DEFAULT_SESSION_FALLBACK: SessionId = "B-20263";
 
 /** When API meta has not loaded yet (SSR / first paint). */
 export function getDefaultSessionFallback(): SessionId {
@@ -103,7 +103,7 @@ function getMonthsBetweenDates(startDate: Date, endDate: Date): Array<{ month: n
 }
 
 /**
- * Infer calendar year from session id (e.g. B-20263 → 2026, A-20251 → 2025).
+ * Infer calendar year from session id (e.g. B-20263 → 2026, A-20264 → 2026).
  * Used when activities are not loaded yet so the grid/list month strip matches the session, not "today + 6 months".
  */
 export function inferAcademicYearFromSessionId(sessionId: SessionId): number | null {
@@ -164,7 +164,10 @@ export function getGroupFromSession(sessionId: SessionId): ProgramGroup {
 /** Get default session for a group (first session in options for that group). */
 export function getDefaultSessionForGroup(group: ProgramGroup): SessionId {
   const opt = getCalendarSnapshot().sessionOptions.find((s) => s.group === group);
-  return opt?.id ?? (group === "A" ? "A-20251" : "B-20263");
+  if (opt) return opt.id;
+  const opts = getSessionOptionsForGroup(group);
+  if (opts.length > 0) return opts[0]!.id;
+  return "B-20263";
 }
 
 /** Min/max dates from loaded API activities for a session (authoritative span). */
@@ -333,7 +336,7 @@ export function pickSessionIdForDateFromApiOptions(
   sessionOptions: SessionOptionLike[]
 ): SessionId {
   const opts = sessionOptions.filter((s) => s.group === group);
-  if (opts.length === 0) return group === "A" ? "A-20251" : "B-20263";
+  if (opts.length === 0) return "B-20263";
   const normalizedDate = normalizeDateString(dateStr);
 
   for (const s of opts) {

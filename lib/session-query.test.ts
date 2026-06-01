@@ -34,9 +34,9 @@ describe("session query URL helpers", () => {
     );
   });
 
-  it("round-trips session ids from search params", () => {
+  it("round-trips session ids from search params and ignores unknown Group A ids", () => {
     const params = new URLSearchParams("B-20263&A-20251");
-    expect(parseSessionIdsFromSearchParams(params)).toEqual(["B-20263", "A-20251"]);
+    expect(parseSessionIdsFromSearchParams(params)).toEqual(["B-20263"]);
   });
 
   it("homepage session query ignores cookie Foundation and uses All for Group B", () => {
@@ -48,10 +48,8 @@ describe("session query URL helpers", () => {
     );
   });
 
-  it("homepage session query uses Foundation for Group A only sessions", () => {
-    expect(resolveProgramForSessionQuery("/", ["A-20251"], "All")).toBe(
-      "Foundation/Professional"
-    );
+  it("homepage session query ignores unknown Group A session ids", () => {
+    expect(resolveProgramForSessionQuery("/", ["A-20251"], "All")).toBe("All");
   });
 
   it("program route wins over cookie for session query", () => {
@@ -60,13 +58,10 @@ describe("session query URL helpers", () => {
     ).toBe("Diploma");
   });
 
-  it("redirects homepage to program route when Group A sessions consumed", () => {
+  it("resolves clean calendar path for program routes", () => {
     expect(
       resolveCleanCalendarPath("/", "Foundation/Professional", "grid")
     ).toBe("/foundation-professional");
-    expect(resolveCleanCalendarPath("/list", "Foundation/Professional", "list")).toBe(
-      "/foundation-professional/list"
-    );
     expect(resolveCleanCalendarPath("/", "All", "grid")).toBe("/");
   });
 });

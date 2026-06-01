@@ -154,11 +154,6 @@ export default function RootLayout({
                   hasPart: [
                     {
                       '@type': 'SiteNavigationElement',
-                      name: 'Foundation/Professional',
-                      url: 'https://bilauitmcuti.com/foundation-professional',
-                    },
-                    {
-                      '@type': 'SiteNavigationElement',
                       name: 'Diploma',
                       url: 'https://bilauitmcuti.com/diploma',
                     },

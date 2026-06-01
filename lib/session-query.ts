@@ -1,4 +1,5 @@
 import type { FilterStates } from "@/lib/cookie-utils";
+import { isGroupASessionId } from "@/lib/group-a-sessions";
 import { type SessionId } from "@/lib/data";
 import {
   getGroupFromProgram,
@@ -13,14 +14,14 @@ import {
   type ProgramValue,
 } from "@/lib/route-utils";
 
-/** Session id format used as query key, e.g. `B-20263`, `A-20251`. */
+/** Session id format used as query key, e.g. `B-20263`, `A-20264`. */
 export const SESSION_ID_QUERY_PATTERN = /^[AB]-\d+$/;
 
 export function isSessionIdQueryKey(key: string): boolean {
   return SESSION_ID_QUERY_PATTERN.test(key);
 }
 
-/** Collect session ids from query keys matching `A-20251` / `B-20263`. */
+/** Collect session ids from query keys matching `A-20264` / `B-20263`. */
 export function parseSessionIdsFromSearchParams(
   searchParams: URLSearchParams
 ): SessionId[] {
@@ -28,6 +29,7 @@ export function parseSessionIdsFromSearchParams(
   const result: SessionId[] = [];
   for (const key of searchParams.keys()) {
     if (!isSessionIdQueryKey(key) || seen.has(key)) continue;
+    if (key.startsWith("A-") && !isGroupASessionId(key)) continue;
     seen.add(key);
     result.push(key);
   }
@@ -44,7 +46,7 @@ export function buildCleanCalendarUrl(pathname: string): string {
 
 const SITE_ORIGIN = "https://bilauitmcuti.com";
 
-/** Bare session keys joined for the query string, e.g. `B-20263&A-20251`. */
+/** Bare session keys joined for the query string, e.g. `B-20263&A-20264`. */
 export function buildSessionQueryString(sessionIds: SessionId[]): string {
   return sessionIds.filter(isSessionIdQueryKey).join("&");
 }
@@ -101,9 +103,13 @@ export function resolveProgramForSessionQuery(
   const fromPath = resolveProgramFromCalendarPath(pathname);
   if (fromPath !== "All") return fromPath;
 
+  const activeSessionIds = sessionIds.filter(
+    (id) => !id.startsWith("A-") || isGroupASessionId(id)
+  );
+
   if (isHomepageCalendarPath(pathname)) {
-    const hasA = sessionIds.some((id) => id.startsWith("A-"));
-    const hasB = sessionIds.some((id) => id.startsWith("B-"));
+    const hasA = activeSessionIds.some((id) => id.startsWith("A-"));
+    const hasB = activeSessionIds.some((id) => id.startsWith("B-"));
     if (hasA && !hasB) return "Foundation/Professional";
     return "All";
   }

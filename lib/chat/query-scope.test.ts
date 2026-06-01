@@ -8,7 +8,7 @@ import {
   type ResolvedQueryScope,
 } from "@/lib/chat/query-scope";
 
-const validIds = new Set(["A-20251", "B-20262", "B-20263", "B-20264"]);
+const validIds = new Set(["A-20264", "A-20272", "B-20262", "B-20263", "B-20264"]);
 
 describe("extractMentionedSessionIds", () => {
   it("finds explicit session ids with dash", () => {
@@ -58,7 +58,7 @@ describe("mergeSessionsForLoad", () => {
 
   it("drops mentioned ids from other groups", () => {
     const scope: ResolvedQueryScope = {
-      mentioned: ["A-20251"],
+      mentioned: ["A-20264"],
       relativeId: null,
       relativeKind: null,
     };

@@ -30,7 +30,7 @@ function defaultSessionForGroup(
   dateStr: string
 ): SessionId {
   if (meta.sessionOptions.length === 0) {
-    return group === "A" ? "A-20251" : "B-20263";
+    return "B-20263";
   }
   return pickSessionIdForDateFromApiOptions(group, dateStr, meta.sessionOptions);
 }
@@ -63,6 +63,11 @@ export function resolveSessionsForProgram(
       known.length !== inGroup.length ||
       !inGroup.every((id, i) => known[i] === id);
     return { sessions: known, wasAdjusted };
+  }
+
+  const groupOptions = params.meta.sessionOptions.filter((s) => s.group === group);
+  if (groupOptions.length === 0) {
+    return { sessions: [], wasAdjusted: inGroup.length > 0 };
   }
 
   return {

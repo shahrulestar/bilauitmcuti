@@ -1,4 +1,5 @@
 import type { Activity, ActivityType } from "./data";
+import { applyGroupASessionsToMeta } from "./group-a-sessions";
 
 export interface SessionOptionRow {
   id: string;
@@ -152,8 +153,12 @@ function asMetaPayload(data: unknown): MetaResponse {
     ? (o.programOptions as ProgramOptionRow[])
     : [];
   const defaultSession =
-    typeof o.defaultSession === "string" ? o.defaultSession : "A-20251";
-  return { defaultSession, sessionOptions, programOptions };
+    typeof o.defaultSession === "string" ? o.defaultSession : "B-20263";
+  return applyGroupASessionsToMeta({
+    defaultSession,
+    sessionOptions,
+    programOptions,
+  });
 }
 
 export interface FetchMetaOptions {
