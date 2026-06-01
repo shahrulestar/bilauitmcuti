@@ -74,6 +74,8 @@ All dynamic routes must export `export const runtime = 'edge'`. Restore with `no
 
 `wrangler.jsonc` sets `pages_build_output_dir` for Pages + local `wrangler pages dev`. See `.cursor/rules/cloudflare-pages-deploy.mdc`.
 
+**Do not add `account_id` to `wrangler.jsonc`.** Pages rejects it at deploy (`Configuration file for Pages projects does not support "account_id"`). The Pages project already belongs to one Cloudflare account. Local Workers AI (`pnpm dev`, `ai.remote: true`) needs `npx wrangler login` when OAuth is stale (`Authentication error [code: 10000]`) — re-login fixes that; hardcoding `account_id` does not and must not be committed.
+
 ## Cloudflare Zaraz + Google Analytics 4
 
 Analytics uses **GA4** (`G-D94Q17TQ22`) delivered through **Cloudflare Zaraz** on the edge — no `gtag.js` in the app bundle. Zaraz auto-injects on proxied `bilauitmcuti.com` traffic.

@@ -1,7 +1,6 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "bilauitmcuti",
-  "account_id": "5dbf12da0008697e6457e69df449aa6b",
   "pages_build_output_dir": ".vercel/output/static",
   "compatibility_date": "2025-11-01",
   "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],

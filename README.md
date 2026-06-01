@@ -1,209 +1,106 @@
+![Bila UiTM Cuti? — academic calendar for UiTM](public/all-cover.png)
+
 # Bila UiTM Cuti?
 
-Academic calendar web app for Universiti Teknologi MARA (UiTM) — Malaysia's largest public university. Built to help students quickly check semester dates, breaks, exams, and registration deadlines.
+Academic calendar for **Universiti Teknologi MARA (UiTM)** — check semester dates, breaks, exams, and registration deadlines by program.
 
 **Live:** [bilauitmcuti.com](https://bilauitmcuti.com)
 
-## Features
+## What you get
 
-### Academic Calendar
-- Grid and list views for the 2026 academic calendar
-- Program-specific schedules: Foundation, Pre-Diploma, Diploma, Bachelor's, Master's, PhD
-- Group A (Foundation/Professional cohorts) and Group B (Mar – Aug 2026)
-- Regional date variations for Kedah, Kelantan, and Terengganu (Friday–Saturday weekend states)
-- Filter by event type: registration, lectures, exams, breaks
-- Countdown to next activity
-- Calendar catalogue and session data load via **same-origin** API routes (see below); the upstream origin is not exposed to the browser bundle
+| Area | Highlights |
+|------|------------|
+| **Calendar** | Grid and list views; Foundation through PhD; Group A/B; regional dates (Kedah, Kelantan, Terengganu); filters and countdown |
+| **AI chat** | Ask about dates or general UiTM info (English or Malay); Cloudflare Workers AI; rate limits apply |
+| **PWA** | Installable, offline-friendly, light/dark theme |
+| **Forms** | [Feedback](/feedback) and [Sponsor](/sponsor) with Turnstile; optional Discord webhooks |
 
-### AI Chat Assistant
-- Ask about academic dates, breaks, and exams in English or Malay
-- General UiTM info: campuses, faculties, programs, admission
-- Context-aware answers based on selected program
-- Powered by Cloudflare Workers AI (Gemma 4 on production; Llama 3.2 3B for dev/preview)
-- Rate limited: per IP per day and a global daily cap (see Rate Limits below)
+Calendar data loads from **same-origin** routes (`/api/v1/meta`, `/api/v1/calendar`) — the upstream API URL stays on the server.
 
-### Progressive Web App
-- Installable on mobile and desktop
-- Offline-capable via service worker
-- Dark and light theme with system detection
+## Tech stack
 
-### Contact & sponsor
-- **Feedback** (`/feedback`): feedback form; optional email; submissions are sent to Discord when `DISCORD_WEBHOOK_RATE_FEEDBACK` is configured; protected by Cloudflare Turnstile (`/contact` redirects here)
-- **Sponsor** (`/sponsor`): sponsorship form with optional nickname or anonymous mode, social platform + handle/URL, message, proof-of-payment upload (image or PDF), and Turnstile; a **Show payment QR** control reveals the static QR image at `public/sponsor-qr.png` (replace this file with your real QR). Submissions use the **same** Discord webhook as contact and engagement (summary text + proof file attachment in one message)
+- Next.js 16 (App Router), React 19, TypeScript, Tailwind CSS 4, shadcn/ui
+- **AI:** Cloudflare Workers AI — production: Gemma 4 + Gemini 3.1 Flash Lite backup; local/preview: Llama 3.2 3B
+- **Deploy:** Cloudflare Pages (`@cloudflare/next-on-pages`)
 
-## Tech Stack
+## Quick start
 
-- **Framework:** Next.js 16 (App Router), React 19, TypeScript
-- **Styling:** Tailwind CSS 4, shadcn/ui, Radix UI
-- **AI:** Cloudflare Workers AI — production: `@cf/google/gemma-4-26b-a4b-it`; dev/preview: `@cf/meta/llama-3.2-3b-instruct`
-- **Deployment:** Cloudflare Pages (`@cloudflare/next-on-pages`)
-
-## Getting Started
-
-### Prerequisites
-
-- Node.js 18+
-- Cloudflare account with Workers AI access (for chat in production/preview)
-
-### Installation
+**Prerequisites:** Node.js 18+, pnpm, Cloudflare account (Workers AI for chat)
 
 ```bash
-git clone <your-fork-or-repo-url>
+git clone <your-repo-url>
 cd bilauitmcuti
 pnpm install
-```
-
-### Environment Variables
-
-Copy the example file and add your keys:
-
-```bash
-cp .env.example .env.local
-```
-
-If you migrated from Telegram, remove `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID` from `.env.local` and set the Discord webhook env vars instead. Restart `pnpm dev` after changing env (Next.js reloads `.env.local` on save, but a restart is safest).
-
-| Variable | Required | Purpose |
-|----------|----------|---------|
-| Workers AI binding (`AI`) | Yes (for chat) | Pages Functions binding; configure in Cloudflare Dashboard or use `pnpm preview` locally |
-| `DISCORD_WEBHOOK_RATE_FEEDBACK` | Optional | Star rating, feedback form, sponsor form (server-only) |
-| `DISCORD_WEBHOOK_CHAT_HELPFUL` | Optional | Chat AI thumbs up (`POST /chat/feedback/api`) |
-| `DISCORD_WEBHOOK_CHAT_NOT_HELPFUL` | Optional | Chat AI thumbs down |
-| `NEXT_PUBLIC_TURNSTILE_SITE_KEY` | Yes (contact, chat, sponsor in production) | Cloudflare Turnstile site key (public) |
-| `TURNSTILE_SECRET_KEY` | Yes (for server verification) | Cloudflare Turnstile secret; never expose to the client |
-| `CALENDAR_API_BASE` | Optional | Server-only override for the calendar HTTP API origin (default `https://api.bilauitmcuti.com`). Do **not** use `NEXT_PUBLIC_*` — the browser calls same-origin `/api/v1/...` only. |
-
-Sponsor uploads: max proof file size **10 MB** (see `SPONSOR_MAX_FILE_BYTES` in `lib/sponsor.ts`); allowed types: common image formats and PDF.
-
-Example:
-
-```env
-DISCORD_WEBHOOK_RATE_FEEDBACK=https://discord.com/api/webhooks/your_rate_feedback_id/your_token
-DISCORD_WEBHOOK_CHAT_HELPFUL=https://discord.com/api/webhooks/your_chat_helpful_id/your_token
-DISCORD_WEBHOOK_CHAT_NOT_HELPFUL=https://discord.com/api/webhooks/your_chat_not_helpful_id/your_token
-NEXT_PUBLIC_TURNSTILE_SITE_KEY=your_turnstile_site_key_here
-TURNSTILE_SECRET_KEY=your_turnstile_secret_key_here
-# CALENDAR_API_BASE=https://api.bilauitmcuti.com
-```
-
-### Development
-
-```bash
-pnpm install
-npx wrangler login   # once per machine — required for Workers AI in `pnpm dev`
+cp .env.example .env.local   # add Turnstile keys if testing forms/chat
+npx wrangler login           # once — needed for Workers AI in dev
 pnpm dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000).
 
-`pnpm dev` loads Cloudflare bindings (including **Workers AI**) via Wrangler remote preview. If you see `edge-preview` / `Authentication error [code: 10000]`, run `npx wrangler login` again (OAuth tokens expire or go stale).
+If chat fails with an auth error, run `npx wrangler login` again.
 
-### Checks
+### Useful commands
 
-```bash
-pnpm lint        # ESLint
-pnpm typecheck   # TypeScript (tsc --noEmit)
-pnpm test        # Vitest unit tests
-pnpm test:smoke  # HTTP smoke checks (requires dev/preview server; set SMOKE_BASE_URL if needed)
-```
+| Command | Purpose |
+|---------|---------|
+| `pnpm dev` | Local dev (Workers AI via Wrangler) |
+| `pnpm lint` / `pnpm typecheck` | ESLint / TypeScript |
+| `pnpm test` | Unit tests (Vitest) |
+| `pnpm build:pages` | Build for Cloudflare Pages |
+| `pnpm preview` | Build + `wrangler pages dev` (full Pages runtime) |
+| `pnpm pages:dev` | Preview last build only (run `build:pages` first) |
 
-### Production Build
+## Environment variables
 
-```bash
-pnpm build:pages   # next build + @cloudflare/next-on-pages → .vercel/output/
-pnpm preview       # build:pages + wrangler pages dev (local Pages runtime)
-pnpm start         # standard Next.js server (not used in production on CF)
-```
+| Variable | Required | Notes |
+|----------|----------|--------|
+| Workers AI binding `AI` | For chat | Pages → Bindings → Workers AI; local: `pnpm preview` or dev platform |
+| `NEXT_PUBLIC_TURNSTILE_SITE_KEY` | Production forms/chat | Or `TURNSTILE_SITE_KEY` at runtime (`GET /api/turnstile/config`) |
+| `TURNSTILE_SECRET_KEY` | With Turnstile | Server-only |
+| `DISCORD_WEBHOOK_*` | Optional | Feedback, sponsor, chat thumbs — server-only, never commit URLs |
+| `CALENDAR_API_BASE` | Optional | Default `https://api.bilauitmcuti.com` — server-only, no `NEXT_PUBLIC_*` |
+| `CHAT_USE_AGENT` | Optional | Set `1` for tool-calling agent chat instead of full context in prompt |
 
-### Cloudflare Pages deployment
+See [`.env.example`](.env.example) for samples. Sponsor proof uploads: max **10 MB**, images or PDF.
 
-**Dashboard (Git integration):**
+## Deploy to Cloudflare Pages
 
 | Setting | Value |
 |---------|--------|
-| Framework preset | Next.js |
-| **Build command** | `npx @cloudflare/next-on-pages@1` or `pnpm run build:pages` |
-| **Build output directory** | `.vercel/output/static` |
-| **Environment variable** | `NODE_VERSION` = `20` (or ≥18) |
+| Build command | `pnpm run build:pages` or `npx @cloudflare/next-on-pages@1` |
+| Output directory | `.vercel/output/static` |
+| `NODE_VERSION` | `20` (or ≥18) |
 
-**After first deploy:** Pages **Settings → Functions** → enable **`nodejs_compat`** for production and preview; set compatibility date to at least `2022-11-30`.
+After deploy: **Settings → Functions** → enable **`nodejs_compat`** (date ≥ `2022-11-30`). Add binding **Workers AI** named `AI` (production + preview).
 
-**Bindings / env:** Workers AI binding named `AI`, optional Discord webhooks (`DISCORD_WEBHOOK_*`), Turnstile (`NEXT_PUBLIC_TURNSTILE_SITE_KEY`, `TURNSTILE_SECRET_KEY`), optional `CALENDAR_API_BASE`.
+- Health: `GET /api/health` (503 if AI binding missing)
+- Edge runtime: dynamic routes need `export const runtime = 'edge'` (see `scripts/add-edge-runtime.mjs`)
 
-**Troubleshooting:**
-- **“routes were not configured to run with the Edge Runtime”:** Run `node scripts/add-edge-runtime.mjs` or add `export const runtime = 'edge'` to every dynamic route/API.
-- **Build loops:** Do **not** set `package.json` `"build"` to `next-on-pages` — keep `"build": "next build"`; use `build:pages` or `npx @cloudflare/next-on-pages@1` as the Cloudflare **build command** only.
-- If chat fails: ensure a **Workers AI** binding named `AI` is configured under Pages → Settings → Bindings (production + preview), then redeploy
-- Health check: `GET /api/health` returns readiness (503 if Workers AI binding is missing at runtime)
+## Rate limits (24h rolling window)
 
-## Calendar API (same origin)
+| Layer | Limit |
+|-------|-------|
+| Per IP (known) | 120 / day |
+| Per IP (unknown) | 60 / day |
+| Global | 5000 / day |
 
-The UI requests **`/api/v1/meta`** and **`/api/v1/calendar`** (and the legacy **`/api/calendar-proxy/v1/...`** path). Server routes forward to `CALENDAR_API_BASE` so Content-Security-Policy can keep calendar traffic on `'self'`.
-
-## Project Structure
-
-```
-app/
-  page.tsx                 # Homepage (grid view)
-  layout.tsx               # Root layout, metadata, theme
-  [program]/               # Dynamic program-specific routes
-  chat/
-    page.tsx               # AI chat interface
-    api/route.ts           # Chat API (rate limiting, validation, AI)
-  feedback/
-    page.tsx               # Feedback form (Discord webhook + Turnstile)
-    api/route.ts           # Re-exports contact POST handler
-  contact/
-    page.tsx               # Redirects to /feedback
-    api/route.ts           # Contact POST handler (shared with feedback)
-  sponsor/
-    page.tsx               # Sponsor form (QR, proof upload, Discord webhook + Turnstile)
-    api/route.ts           # Sponsor multipart POST handler
-  list/                    # List view page
-  api/
-    health/route.ts        # Health/readiness
-    version/route.ts       # Build info
-    v1/meta/route.ts       # Calendar meta (proxied)
-    v1/calendar/route.ts   # Calendar sessions (proxied)
-    calendar-proxy/[...path]/route.ts  # Legacy proxy path
-components/
-  ui/                      # shadcn/ui components
-  shared-calendar-layout.tsx
-  calendar-wrapper.tsx
-  calendar-header.tsx
-  grid-view.tsx            # Grid calendar (scroll-aware hover/tooltips)
-  list-view.tsx
-  theme-toggle.tsx
-lib/
-  ai.ts                    # Workers AI integration
-  data.ts                  # Academic calendar logic (activities, dates)
-  calendar-api.ts          # Client fetch helpers (same-origin)
-  calendar-store.ts        # Client calendar session store
-  env.ts                   # Workers AI binding health check (used by /api/health)
-  rate-limit.ts            # Rate limiting (in-memory per isolate)
-  logger.ts
-  uitm-info.ts
-  cookie-utils.ts          # Filter persistence
-public/
-  manifest.json            # PWA manifest
-  sw.js                    # Service worker
-  system-rules.json        # AI system prompts
-  sponsor-qr.png           # Placeholder payment QR for /sponsor (replace with your asset)
-```
+Applies to chat, feedback, and sponsor routes.
 
 ## CI
 
-GitHub Actions (`.github/workflows/ci.yml`) on push/PR: `pnpm install --frozen-lockfile` → `pnpm lint` → `pnpm typecheck` → `pnpm run build:pages`.
+On push/PR: install → lint → typecheck → `build:pages` (see [`.github/workflows/ci.yml`](.github/workflows/ci.yml)).
 
-## Rate Limits
+## Project layout (short)
 
-Protected routes (including AI chat, contact, and sponsor) use a rolling 24-hour window per IP and a combined global daily cap:
+```
+app/          # Pages, chat, feedback, sponsor, API routes
+components/   # Calendar UI, shadcn components
+lib/          # AI, calendar logic, chat pipeline, rate limits
+public/       # PWA assets, sponsor-qr.png, all-cover.png
+```
 
-| Layer | Limit | Reset |
-|---|---|---|
-| Per IP / day (known IP) | 120 requests | Rolling 24-hour window |
-| Per IP / day (unknown IP) | 60 requests | Rolling 24-hour window |
-| Global / day | 5000 requests | Rolling 24-hour window |
+For agent/deployment details, see [`AGENTS.md`](AGENTS.md).
 
 ## License
 
