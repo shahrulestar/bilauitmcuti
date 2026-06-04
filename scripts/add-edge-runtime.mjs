@@ -22,7 +22,6 @@ const ROUTE_FILES = [
   "app/contact/api/route.ts",
   "app/engagement/api/route.ts",
   "app/feedback/api/route.ts",
-  "app/sponsor/api/route.ts",
 ];
 
 for (const rel of ROUTE_FILES) {

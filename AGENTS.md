@@ -11,11 +11,11 @@ pnpm install
 ## Required Environment
 
 - **Workers AI binding** — required for chat. In Cloudflare Pages: Settings → Bindings → Add → **Workers AI** → variable name `AI` (production + preview). Local: `pnpm run preview` after `build:pages`. Also declared in [`wrangler.jsonc`](wrangler.jsonc). No API key secret for inference. **Production** (`bilauitmcuti.com` only): **Gemma 4** (`@cf/google/gemma-4-26b-a4b-it`) + backup **Gemini 3.1 Flash Lite** (`google/gemini-3.1-flash-lite`). **Local + Pages preview** (default): **Llama 3.2 3B** (`@cf/meta/llama-3.2-3b-instruct`). Optional localhost-only Gemma test: `WORKERS_AI_USE_PRODUCTION_MODEL=1`. Overrides: `WORKERS_AI_MODEL`, `WORKERS_AI_BACKUP_MODEL`, `WORKERS_AI_USE_DEV_MODEL=1`. See `lib/ai.ts` (`resolveWorkersAiModelTier`, `resolveProductionChatModelChain`).
-- `NEXT_PUBLIC_TURNSTILE_SITE_KEY` + `TURNSTILE_SECRET_KEY` — required for Turnstile on feedback, sponsor, and chat in production. Set `NEXT_PUBLIC_TURNSTILE_SITE_KEY` in **Pages build environment** (inlined into the client bundle), or `TURNSTILE_SITE_KEY` at runtime (client loads via `GET /api/turnstile/config`).
+- `NEXT_PUBLIC_TURNSTILE_SITE_KEY` + `TURNSTILE_SECRET_KEY` — required for Turnstile on feedback and chat in production. Set `NEXT_PUBLIC_TURNSTILE_SITE_KEY` in **Pages build environment** (inlined into the client bundle), or `TURNSTILE_SITE_KEY` at runtime (client loads via `GET /api/turnstile/config`).
 
 ## Optional Environment
 
-- `DISCORD_WEBHOOK_RATE_FEEDBACK` — optional server-only webhook for star rating, feedback form, and sponsor form. `DISCORD_WEBHOOK_CHAT_HELPFUL` / `DISCORD_WEBHOOK_CHAT_NOT_HELPFUL` — chat AI thumbs up/down (`POST /chat/feedback/api`). Do not use `NEXT_PUBLIC_*` or commit URLs.
+- `DISCORD_WEBHOOK_RATE_FEEDBACK` — optional server-only webhook for star rating and feedback form. `DISCORD_WEBHOOK_CHAT_HELPFUL` / `DISCORD_WEBHOOK_CHAT_NOT_HELPFUL` — chat AI thumbs up/down (`POST /chat/feedback/api`). Do not use `NEXT_PUBLIC_*` or commit URLs.
 - `CALENDAR_API_BASE` — optional server-only override for the calendar API origin (default `https://api.bilauitmcuti.com`). Do not use `NEXT_PUBLIC_*` for this: the upstream URL must not be embedded in client bundles.
 - `CHAT_USE_AGENT` — set to `1` or `true` to enable tool-calling agent chat (see [`lib/chat/agent/run-agent.ts`](lib/chat/agent/run-agent.ts)).
 

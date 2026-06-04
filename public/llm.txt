@@ -42,7 +42,7 @@ Client requests use same-origin API routes; upstream details stay server-side.
 - /list : list calendar view
 - /chat : AI assistant
 - /feedback : feedback and report form
-- /sponsor : sponsorship form
+- /sponsor : redirects to https://shahrulestar.com/sponsor
 - /about : project details
 
 ## Important context for LLMs
