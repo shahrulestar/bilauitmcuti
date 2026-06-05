@@ -375,8 +375,14 @@ export function FeedbackFormPage({
             </CardHeader>
             <CardContent className="pt-0 px-3 sm:px-6">
               <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-                <Button type="button" className="w-full sm:w-auto h-[38px]" onClick={() => router.push("/sponsor")}>
-                  Sponsor
+                <Button asChild className="w-full sm:w-auto h-[38px]">
+                  <a
+                    href="https://shahrulestar.com/sponsor"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    Sponsor
+                  </a>
                 </Button>
                 <Button variant="secondary" asChild className="w-full sm:w-auto h-[38px]">
                   <a

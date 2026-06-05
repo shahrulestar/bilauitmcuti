@@ -1192,7 +1192,7 @@ export default function ChatPage() {
           isEmptyChat && "chat-input-area-centered lg:pt-0 lg:pb-10"
         )}
       >
-        <div className="mx-auto max-w-[600px]">
+        <div className="mx-auto flex max-w-[600px] flex-col">
           {/* Suggestion chips - swipeable carousel with edge fades */}
           {feedbackError && (
             <p className="text-xs text-destructive mb-2 px-1" role="status">
@@ -1201,6 +1201,7 @@ export default function ChatPage() {
           )}
           {messages.length === 0 && (
             <SuggestionCarousel
+              className="mb-2 lg:order-2 lg:mb-0 lg:mt-2"
               suggestions={suggestions}
               disabled={
                 waitForTurnstileConfig ||
@@ -1212,7 +1213,10 @@ export default function ChatPage() {
           )}
           <form
             onSubmit={handleSubmit}
-            className="relative rounded-[10px] border border-border bg-secondary dark:bg-[#2A2A2A] overflow-visible"
+            className={cn(
+              "relative rounded-[10px] border border-border bg-secondary dark:bg-[#2A2A2A] overflow-visible",
+              isEmptyChat && "lg:order-1"
+            )}
           >
             <div
               aria-hidden
@@ -1513,7 +1517,11 @@ export default function ChatPage() {
           </form>
           <span
             key={disclaimerIndex}
-            className={`block text-center text-xs text-muted-foreground mt-2 ${disclaimerFade === "in" ? "disclaimer-fade-in" : "disclaimer-fade-out"}`}
+            className={cn(
+              "block text-center text-xs text-muted-foreground mt-2",
+              isEmptyChat && "lg:hidden",
+              disclaimerFade === "in" ? "disclaimer-fade-in" : "disclaimer-fade-out"
+            )}
           >
             {disclaimerTexts[disclaimerIndex]}
           </span>

@@ -52,6 +52,11 @@ const nextConfig = {
         destination: '/download',
         permanent: true, // HTTP 308
       },
+      {
+        source: '/sponsor',
+        destination: 'https://shahrulestar.com/sponsor',
+        permanent: true, // HTTP 308
+      },
     ]
   },
   async headers() {

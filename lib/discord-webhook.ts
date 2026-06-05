@@ -104,31 +104,6 @@ export async function sendDiscordWebhook(params: {
   await assertDiscordResponseOk(response);
 }
 
-export async function sendDiscordWebhookWithFile(params: {
-  kind: DiscordWebhookKind;
-  content?: string;
-  embeds: DiscordEmbed[];
-  file: File;
-}): Promise<void> {
-  const url = getDiscordWebhookUrl(params.kind);
-  const payload: { content?: string; embeds: DiscordEmbed[] } = {
-    embeds: normalizeEmbeds(params.embeds),
-  };
-  if (params.content?.trim()) {
-    payload.content = truncateContent(params.content.trim());
-  }
-
-  const form = new FormData();
-  form.append("payload_json", JSON.stringify(payload));
-  form.append("files[0]", params.file, params.file.name || "proof");
-
-  const response = await fetch(url, {
-    method: "POST",
-    body: form,
-  });
-  await assertDiscordResponseOk(response);
-}
-
 export function buildContactNotificationEmbed(params: {
   who: string;
   category: string;
@@ -203,41 +178,5 @@ export function buildChatFeedbackEmbed(params: {
       { name: "Question", value: excerptForDiscord(params.userMessage), inline: false },
       { name: "Answer", value: excerptForDiscord(params.assistantMessage), inline: false },
     ],
-  };
-}
-
-export function buildSponsorNotificationEmbed(params: {
-  anonymous: boolean;
-  nickname: string;
-  socialPlatform: string;
-  socialHandle: string;
-  message: string;
-  userAgent: string;
-  fileName: string;
-  mimeType: string;
-  time: string;
-}): DiscordEmbed {
-  const nameValue = params.anonymous
-    ? "Anonymous"
-    : params.nickname.trim();
-  const socialValue = params.anonymous
-    ? "(not provided — anonymous submission)"
-    : `${params.socialPlatform} — ${params.socialHandle.trim()}`;
-
-  return {
-    title: "New Sponsor Submission",
-    color: 0x57f287,
-    fields: [
-      { name: "Time", value: params.time, inline: false },
-      { name: params.anonymous ? "Name" : "Nickname", value: nameValue, inline: true },
-      { name: "Social", value: socialValue, inline: false },
-      { name: "User Agent", value: params.userAgent || "unknown", inline: false },
-      {
-        name: "Proof file",
-        value: `${params.fileName} (${params.mimeType})`,
-        inline: false,
-      },
-    ],
-    description: params.message.trim(),
   };
 }
