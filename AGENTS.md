@@ -44,6 +44,8 @@ pnpm install
 | `pnpm preview` | Build for Pages + `wrangler pages dev` locally |
 | `pnpm pages:dev` | Preview last Pages build locally (requires `build:pages` first) |
 
+**`pnpm dev` lock error:** If startup fails with `Unable to acquire lock at .next/dev/lock`, another `next dev` is running or a stale lock was left behind. Check port 3000, stop the other process, or delete `.next/dev/lock` when nothing is listening on 3000, then rerun `pnpm dev`. Prefer `pnpm dev` over `npm run dev` (this repo uses pnpm).
+
 ## CI
 
 GitHub Actions workflow (`.github/workflows/ci.yml`) runs on push/PR:

@@ -103,10 +103,23 @@ const nextConfig = {
   },
 }
 
-if (process.env.NODE_ENV === 'development') {
-  await setupDevPlatform({
-    configPath: path.resolve(process.cwd(), 'wrangler.jsonc'),
-  });
+if (process.env.NODE_ENV === 'development' && process.env.SKIP_CLOUDFLARE_DEV !== '1') {
+  try {
+    await setupDevPlatform({
+      configPath: path.resolve(process.cwd(), 'wrangler.jsonc'),
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.warn(
+      [
+        '⚠ Cloudflare dev platform unavailable — starting Next.js without Workers AI bindings.',
+        '  Calendar and UI will work; chat will return 503 until AI is available.',
+        `  Cause: ${message}`,
+        '  Fix: ensure api.cloudflare.com is reachable, run `npx wrangler login`, then restart.',
+        '  Offline UI only: set SKIP_CLOUDFLARE_DEV=1 before `pnpm dev`.',
+      ].join('\n'),
+    );
+  }
 }
 
 export default nextConfig

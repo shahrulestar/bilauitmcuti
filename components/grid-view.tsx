@@ -41,6 +41,7 @@ interface TooltipActivityListProps {
   listMode: 'paginated' | 'full';
   /** Lecture week chip; rendered inside this list (scrolls with activities). */
   weekNum?: number | null;
+  surface: 'tooltip' | 'drawer';
 }
 
 function TooltipActivityList({
@@ -52,9 +53,18 @@ function TooltipActivityList({
   showKKT,
   listMode,
   weekNum = null,
+  surface,
 }: TooltipActivityListProps) {
-  const badgeTextClass = 'text-[10px] lg:text-xs';
-  const activityTextClass = 'text-xs';
+  const badgeTextClass = surface === 'tooltip' ? 'text-xs' : 'text-sm';
+  const activityTextClass = surface === 'tooltip' ? 'text-xs' : 'text-sm';
+  /** Dot (8px) + gap-2 (8px); aligns badges/week chip with activity name column. */
+  const activityContentIndentClass = 'pl-4';
+  /** First-line box so the dot centers on line 1; extra lines flow below without shifting the dot. */
+  const activityDotColumnClass = cn(
+    'flex h-[1lh] shrink-0 items-center',
+    activityTextClass,
+    'leading-relaxed',
+  );
   const PAGE_SIZE = 7;
   const [startIndex, setStartIndex] = useState(0);
   const [isMobile, setIsMobile] = useState(false);
@@ -102,13 +112,10 @@ function TooltipActivityList({
         ) : null}
 
         {weekNum != null ? (
-          <div className="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-2 border-0 shadow-none outline-none ring-0 ring-offset-0 [box-shadow:none]">
-            <div className="h-2 w-2 shrink-0 rounded-full bg-transparent" aria-hidden />
-            <div className="min-w-0 text-left">
-              <span className={cn('inline-block rounded-full bg-zinc-100 px-2 py-0.5 font-medium text-zinc-700 dark:bg-zinc-800 dark:text-zinc-200', badgeTextClass)}>
-                Week {weekNum}
-              </span>
-            </div>
+          <div className={cn('min-w-0 text-left', activityContentIndentClass)}>
+            <span className={cn('inline-block rounded-full bg-zinc-100 px-2 py-0.5 font-medium text-zinc-700 dark:bg-zinc-800 dark:text-zinc-200', badgeTextClass)}>
+              Week {weekNum}
+            </span>
           </div>
         ) : null}
 
@@ -133,19 +140,26 @@ function TooltipActivityList({
           const displayName = days != null ? `${label} (${formatCountdown(days)})` : label;
 
           return (
-            <div key={`${activity.name}|${activity.startDate}|${idx}`} className="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-2 transition-none">
-              <div className={`h-2 w-2 shrink-0 rounded-full ${dotColor} transition-none`} />
-              <div className="min-w-0">
-                {badgeConfigs.length > 0 ? (
-                  <div className="mb-1 flex flex-wrap gap-1">
-                    {badgeConfigs.map((cfg) => (
-                      <div key={cfg.label} className={cn('inline-block rounded-full px-2 py-0.5 font-medium', badgeTextClass, cfg.bgClass, cfg.textClass)}>
-                        {cfg.label}
-                      </div>
-                    ))}
-                  </div>
-                ) : null}
-                <p className={cn(activityTextClass, 'leading-relaxed whitespace-normal text-wrap break-words [overflow-wrap:anywhere] transition-none', lineClampClass)}>{displayName}</p>
+            <div key={`${activity.name}|${activity.startDate}|${idx}`} className="min-w-0 transition-none">
+              {badgeConfigs.length > 0 ? (
+                <div className={cn('mb-1 flex flex-wrap gap-1', activityContentIndentClass)}>
+                  {badgeConfigs.map((cfg) => (
+                    <div key={cfg.label} className={cn('inline-block rounded-full px-2 py-0.5 font-medium', badgeTextClass, cfg.bgClass, cfg.textClass)}>
+                      {cfg.label}
+                    </div>
+                  ))}
+                </div>
+              ) : null}
+              <div className="flex items-start gap-2 transition-none">
+                <div className={activityDotColumnClass}>
+                  <div
+                    className={cn('h-2 w-2 shrink-0 rounded-full transition-none', dotColor)}
+                    aria-hidden
+                  />
+                </div>
+                <p className={cn(activityTextClass, 'min-w-0 flex-1 leading-relaxed whitespace-normal text-wrap break-words [overflow-wrap:anywhere] transition-none', lineClampClass)}>
+                  {displayName}
+                </p>
               </div>
             </div>
           );
@@ -259,6 +273,7 @@ function GridDayActivitiesPanel({
         showKKT={showKKT}
         listMode="paginated"
         weekNum={weekNum}
+        surface="tooltip"
       />
     );
   }
@@ -273,6 +288,7 @@ function GridDayActivitiesPanel({
       showKKT={showKKT}
       listMode="full"
       weekNum={weekNum}
+      surface="drawer"
     />
   );
 }

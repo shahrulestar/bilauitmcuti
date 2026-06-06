@@ -1,6 +1,7 @@
 import { memo, useMemo, useCallback, useSyncExternalStore } from 'react';
 import { useCalendarHydrationVersion } from '@/components/calendar-hydration-context';
 import { getSnapshot, subscribe } from '@/lib/calendar-store';
+import { cn } from '@/lib/utils';
 import {
   getActivitiesForList,
   getActivityListDisplayAnchorDate,
@@ -253,42 +254,69 @@ export const ListView = memo(function ListView({
                     
                     {/* Activity info */}
                     <div className="flex flex-1 flex-col transition-none" suppressHydrationWarning>
-                      {/* Group B with badge: dot + badge(s) in one row above title (container fit content, left align, gap-2 like dot-title) */}
-                      {group === 'B' && hasAnyProgramBadge ? (
-                        <>
-                          <div className={`flex items-center w-fit mb-1 transition-none ${hasThreeOrMoreBadgesOnAllList ? 'flex-nowrap gap-2 max-[375px]:gap-1.5 max-[320px]:gap-1' : 'flex-wrap gap-2'}`} suppressHydrationWarning>
-                            <div className={`h-2 w-2 shrink-0 rounded-full ${getActivityColor(activity)} transition-none`} suppressHydrationWarning />
-                            {badgeConfigs.length > 0
-                              ? badgeConfigs.map((cfg) => (
-                                  <div key={cfg.label} className={`inline-block rounded-full font-medium transition-none ${hasThreeOrMoreBadgesOnAllList ? 'py-1 px-3 text-xs leading-4 max-[375px]:py-0.5 max-[375px]:px-2 max-[375px]:text-[10px] max-[320px]:px-1.5 max-[320px]:text-[9px]' : 'py-1 px-3 text-xs'} ${cfg.bgClass} ${cfg.textClass}`} suppressHydrationWarning>
-                                    {cfg.label}
-                                  </div>
-                                ))
-                              : singleBadgeConfig && (
-                                  <div className={`inline-block rounded-full font-medium transition-none ${hasThreeOrMoreBadgesOnAllList ? 'py-1 px-3 text-xs leading-4 max-[375px]:py-0.5 max-[375px]:px-2 max-[375px]:text-[10px] max-[320px]:px-1.5 max-[320px]:text-[9px]' : 'py-1 px-3 text-xs'} ${singleBadgeConfig.bgClass} ${singleBadgeConfig.textClass}`} suppressHydrationWarning>
-                                    {singleBadgeConfig.label}
-                                  </div>
-                                )}
-                          </div>
-                          <h3 className={`font-medium ${hasThreeOrMoreBadgesOnAllList ? 'text-base leading-6 max-[375px]:text-sm max-[375px]:leading-5 max-[320px]:text-xs max-[320px]:leading-4' : 'text-base leading-6'} break-words ${textClass} mb-1 transition-none`} suppressHydrationWarning>{activity.name}</h3>
-                        </>
-                      ) : (
-                        <>
-                          {/* Group A or no badge: dot and h3 title in same row */}
-                          <div className="flex items-start gap-2 mb-1 transition-none" suppressHydrationWarning>
-                            <div className={`h-2 w-2 shrink-0 rounded-full mt-2 ${getActivityColor(activity)} transition-none`} suppressHydrationWarning />
-                            <h3 className={`font-medium text-base leading-6 break-words ${textClass} transition-none`} suppressHydrationWarning>{activity.name}</h3>
-                          </div>
-                          {/* Badge row for Group A (if exists) */}
-                          {singleBadgeConfig ? (
-                            <div className="flex items-center mb-1 transition-none" suppressHydrationWarning>
-                              <div className={`inline-block py-1 rounded-full text-xs font-medium px-3 ${singleBadgeConfig.bgClass} ${singleBadgeConfig.textClass} transition-none`} suppressHydrationWarning>
-                                {singleBadgeConfig.label}
-                              </div>
-                            </div>
-                          ) : null}
-                        </>
-                      )}
+                      {hasAnyProgramBadge ? (
+                        <div
+                          className={cn(
+                            'mb-1 flex w-fit flex-wrap gap-2 pl-4 transition-none',
+                            hasThreeOrMoreBadgesOnAllList && 'flex-nowrap max-[375px]:gap-1.5 max-[320px]:gap-1',
+                          )}
+                          suppressHydrationWarning
+                        >
+                          {badgeConfigs.length > 0
+                            ? badgeConfigs.map((cfg) => (
+                                <div
+                                  key={cfg.label}
+                                  className={cn(
+                                    'inline-block rounded-full font-medium transition-none',
+                                    hasThreeOrMoreBadgesOnAllList
+                                      ? 'py-1 px-3 text-xs leading-4 max-[375px]:py-0.5 max-[375px]:px-2 max-[375px]:text-[10px] max-[320px]:px-1.5 max-[320px]:text-[9px]'
+                                      : 'py-1 px-3 text-xs',
+                                    cfg.bgClass,
+                                    cfg.textClass,
+                                  )}
+                                  suppressHydrationWarning
+                                >
+                                  {cfg.label}
+                                </div>
+                              ))
+                            : singleBadgeConfig && (
+                                <div
+                                  className={cn(
+                                    'inline-block rounded-full font-medium transition-none',
+                                    hasThreeOrMoreBadgesOnAllList
+                                      ? 'py-1 px-3 text-xs leading-4 max-[375px]:py-0.5 max-[375px]:px-2 max-[375px]:text-[10px] max-[320px]:px-1.5 max-[320px]:text-[9px]'
+                                      : 'py-1 px-3 text-xs',
+                                    singleBadgeConfig.bgClass,
+                                    singleBadgeConfig.textClass,
+                                  )}
+                                  suppressHydrationWarning
+                                >
+                                  {singleBadgeConfig.label}
+                                </div>
+                              )}
+                        </div>
+                      ) : null}
+                      <div className="mb-1 flex items-start gap-2 transition-none" suppressHydrationWarning>
+                        <div className="flex h-[1lh] shrink-0 items-center text-base leading-6" suppressHydrationWarning>
+                          <div
+                            className={cn('h-2 w-2 shrink-0 rounded-full transition-none', getActivityColor(activity))}
+                            aria-hidden
+                            suppressHydrationWarning
+                          />
+                        </div>
+                        <h3
+                          className={cn(
+                            'min-w-0 flex-1 font-medium break-words transition-none',
+                            hasThreeOrMoreBadgesOnAllList
+                              ? 'text-base leading-6 max-[375px]:text-sm max-[375px]:leading-5 max-[320px]:text-xs max-[320px]:leading-4'
+                              : 'text-base leading-6',
+                            textClass,
+                          )}
+                          suppressHydrationWarning
+                        >
+                          {activity.name}
+                        </h3>
+                      </div>
                       
                       {/* Date and other details */}
                       <div className="w-full transition-none" suppressHydrationWarning>
