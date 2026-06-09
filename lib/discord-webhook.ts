@@ -131,17 +131,32 @@ export function buildContactNotificationEmbed(params: {
   };
 }
 
+const ENGAGEMENT_REASON_MAX_CHARS = 1024;
+
+function excerptEngagementReason(text: string): string {
+  const trimmed = text.trim();
+  if (!trimmed) return "(empty)";
+  if (trimmed.length <= ENGAGEMENT_REASON_MAX_CHARS) return trimmed;
+  return trimmed.slice(0, ENGAGEMENT_REASON_MAX_CHARS - 3) + "...";
+}
+
 export function buildEngagementNotificationEmbed(params: {
   rating: number;
   time: string;
+  reason?: string;
 }): DiscordEmbed {
+  const fields: DiscordEmbed["fields"] = [
+    { name: "Rating", value: `${params.rating} out of 5 stars`, inline: true },
+    { name: "Time", value: params.time, inline: true },
+  ];
+  const reason = params.reason?.trim();
+  if (reason) {
+    fields.push({ name: "Reason", value: excerptEngagementReason(reason), inline: false });
+  }
   return {
     title: "User Star Rating",
     color: 0xfee75c,
-    fields: [
-      { name: "Rating", value: `${params.rating} out of 5 stars`, inline: true },
-      { name: "Time", value: params.time, inline: true },
-    ],
+    fields,
   };
 }
 

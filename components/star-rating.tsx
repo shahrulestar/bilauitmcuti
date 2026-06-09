@@ -8,7 +8,6 @@ interface StarRatingProps {
   onRatingChange: (value: number) => void;
   disabled?: boolean;
   centered?: boolean;
-  label?: string;
   className?: string;
 }
 
@@ -17,7 +16,6 @@ export function StarRating({
   onRatingChange,
   disabled = false,
   centered = false,
-  label = "How has your experience been so far?",
   className,
 }: StarRatingProps) {
   return (
@@ -28,14 +26,6 @@ export function StarRating({
         className
       )}
     >
-      <p
-        className={cn(
-          "text-sm text-muted-foreground",
-          centered && "text-center"
-        )}
-      >
-        {label}
-      </p>
       <div
         className={cn("flex items-center gap-1", centered && "justify-center")}
         role="group"

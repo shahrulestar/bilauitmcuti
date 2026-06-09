@@ -6,16 +6,31 @@ import { checkRateLimit } from "@/lib/rate-limit";
 import { jsonError, getClientIp, formatNotificationTime } from "@/lib/api-response";
 
 
-const MAX_BODY_SIZE_BYTES = 512;
+const MAX_BODY_SIZE_BYTES = 4 * 1024;
+const MIN_LOW_RATING_REASON_LENGTH = 10;
+const MAX_REASON_LENGTH = 400;
 
 interface RatingRequest {
   rating: number;
+  reason?: string;
 }
 
 function parseRatingRequest(raw: unknown): { success: true; data: RatingRequest } | { success: false } {
   if (!raw || typeof raw !== "object") return { success: false };
-  const rating = Number((raw as Record<string, unknown>).rating);
+  const record = raw as Record<string, unknown>;
+  const rating = Number(record.rating);
   if (!Number.isInteger(rating) || rating < 1 || rating > 5) return { success: false };
+
+  if (rating <= 3) {
+    const reasonRaw = record.reason;
+    if (typeof reasonRaw !== "string") return { success: false };
+    const reason = reasonRaw.trim();
+    if (reason.length < MIN_LOW_RATING_REASON_LENGTH || reason.length > MAX_REASON_LENGTH) {
+      return { success: false };
+    }
+    return { success: true, data: { rating, reason } };
+  }
+
   return { success: true, data: { rating } };
 }
 
@@ -47,6 +62,7 @@ export async function POST(request: NextRequest) {
     const embed = buildEngagementNotificationEmbed({
       rating: parsed.data.rating,
       time: formatNotificationTime(new Date()),
+      reason: parsed.data.reason,
     });
     await sendDiscordWebhook({ kind: "rate_feedback", embeds: [embed] });
 

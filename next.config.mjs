@@ -57,6 +57,12 @@ const nextConfig = {
         destination: 'https://shahrulestar.com/sponsor',
         permanent: true, // HTTP 308
       },
+      {
+        source: '/roadmap',
+        destination:
+          'https://bilauitmcuti.notion.site/3774a1187b9c8032ab31eb9a2fecf0ea?v=3774a1187b9c807793e9000c046a55e4',
+        permanent: true, // HTTP 308
+      },
     ]
   },
   async headers() {
