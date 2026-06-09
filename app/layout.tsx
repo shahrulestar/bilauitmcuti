@@ -107,6 +107,7 @@ export const viewport: Viewport = {
   minimumScale: 1,
   userScalable: false,
   viewportFit: 'cover',
+  interactiveWidget: 'resizes-content',
   // Single themeColor - updated dynamically by theme-toggle when user changes theme (PWA status bar sync)
   themeColor: '#ffffff',
 }

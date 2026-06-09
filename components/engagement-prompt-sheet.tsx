@@ -12,7 +12,7 @@ import {
   responsiveDialogContentClassName,
 } from "@/components/ui/dialog";
 import {
-  Drawer,
+  KeyboardAwareDrawer,
   DrawerContent,
   DrawerTitle,
   drawerBodyClassName,
@@ -37,8 +37,9 @@ import { trackZarazEvent, ZARAZ_EVENTS } from "@/lib/zaraz";
 const SHARE_TITLE = "Bila UiTM Cuti";
 const SHARE_TEXT =
   "Check out the UiTM academic calendar — registration, lectures, exams, and semester breaks.";
-const MIN_FEEDBACK_REASON_LENGTH = 10;
 const MAX_FEEDBACK_REASON_LENGTH = 400;
+const LOW_RATING_FEEDBACK_PLACEHOLDER =
+  "Share your feedback. A star rating is required before submitting.";
 
 interface EngagementPromptSheetProps {
   open: boolean;
@@ -76,10 +77,6 @@ function EngagementPromptBody({
   onFeedback: () => void;
   onShare: () => void;
 }) {
-  const trimmedReasonLength = feedbackReason.trim().length;
-  const canSubmitLowRating =
-    trimmedReasonLength >= MIN_FEEDBACK_REASON_LENGTH && !isSubmittingFeedback;
-
   return (
     <div className="flex w-full flex-col gap-5">
       <p className="text-sm text-muted-foreground">
@@ -121,21 +118,16 @@ function EngagementPromptBody({
                   }
                   maxLength={MAX_FEEDBACK_REASON_LENGTH}
                   rows={compactFeedbackInput ? 3 : 6}
-                  placeholder="Write your feedback..."
+                  placeholder={LOW_RATING_FEEDBACK_PLACEHOLDER}
                   disabled={isSubmittingFeedback}
                   className="resize-none bg-background text-sm shadow-none placeholder:text-sm focus-visible:ring-inset dark:bg-[#2A2A2A]"
                   data-vaul-no-drag=""
-                  onFocus={(event) => {
-                    requestAnimationFrame(() => {
-                      event.currentTarget.scrollIntoView({ block: "nearest" });
-                    });
-                  }}
                 />
                 <Button
                   type="button"
                   variant="default"
                   className="h-[38px] w-full"
-                  disabled={!canSubmitLowRating}
+                  disabled={isSubmittingFeedback}
                   onClick={onSubmitLowRatingFeedback}
                 >
                   {isSubmittingFeedback ? "Sending…" : "Send feedback"}
@@ -272,10 +264,7 @@ export function EngagementPromptSheet({
     }
 
     const reason = feedbackReason.trim();
-    if (reason.length < MIN_FEEDBACK_REASON_LENGTH) {
-      toast.error(`Please enter at least ${MIN_FEEDBACK_REASON_LENGTH} characters.`);
-      return;
-    }
+    if (reason.length === 0) return;
 
     if (ratingDisabled || isEngagementRatingLimitReached()) {
       setRatingDisabled(true);
@@ -361,8 +350,8 @@ export function EngagementPromptSheet({
 
   if (isMobileSheet) {
     return (
-      <Drawer open={open} onOpenChange={onOpenChange} repositionInputs fixed>
-        <DrawerContent className={responsiveKeyboardDrawerContentClassName}>
+      <KeyboardAwareDrawer open={open} onOpenChange={onOpenChange}>
+        <DrawerContent keyboardAware className={responsiveKeyboardDrawerContentClassName}>
           <div
             className={cn(
               drawerBodyClassName,
@@ -394,7 +383,7 @@ export function EngagementPromptSheet({
             </div>
           </div>
         </DrawerContent>
-      </Drawer>
+      </KeyboardAwareDrawer>
     );
   }
 

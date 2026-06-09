@@ -45,7 +45,7 @@ import {
   responsiveDialogContentClassName,
 } from "@/components/ui/dialog";
 import {
-  Drawer,
+  KeyboardAwareDrawer,
   DrawerContent,
   DrawerDescription,
   DrawerTitle,
@@ -1255,8 +1255,8 @@ export default function ChatPage() {
               className="chat-input relative z-10 w-full resize-none bg-transparent px-4 pt-3 pb-1 text-sm leading-relaxed placeholder:text-muted-foreground focus:outline-none disabled:opacity-50"
             />
             {isMobileMentionPicker ? (
-              <Drawer open={isMentionOpen} onOpenChange={setIsMentionOpen} repositionInputs fixed>
-                <DrawerContent className={responsiveKeyboardDrawerContentClassName}>
+              <KeyboardAwareDrawer open={isMentionOpen} onOpenChange={setIsMentionOpen}>
+                <DrawerContent keyboardAware className={responsiveKeyboardDrawerContentClassName}>
                   <div
                     className={cn(
                       drawerBodyClassName,
@@ -1295,7 +1295,7 @@ export default function ChatPage() {
                     </div>
                   </div>
                 </DrawerContent>
-              </Drawer>
+              </KeyboardAwareDrawer>
             ) : (
               <Dialog open={isMentionOpen} onOpenChange={setIsMentionOpen}>
                 <DialogContent className={responsiveDialogContentClassName} showCloseButton={false}>

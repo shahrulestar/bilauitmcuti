@@ -12,7 +12,7 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import {
-  Drawer,
+  KeyboardAwareDrawer,
   DrawerContent,
   DrawerDescription,
   DrawerTitle,
@@ -1207,13 +1207,13 @@ export const GridView = memo(function GridView({
           ))}
         </div>
       </div>
-      <Drawer
+      <KeyboardAwareDrawer
         open={drawerDateKey != null}
         onOpenChange={(open) => {
           if (!open) setDrawerDateKey(null);
         }}
       >
-        <DrawerContent className={activityDrawerContentClassName}>
+        <DrawerContent keyboardAware className={activityDrawerContentClassName}>
           <div
             className={cn(
               drawerBodyClassName,
@@ -1284,7 +1284,7 @@ export const GridView = memo(function GridView({
             ) : null}
           </div>
         </DrawerContent>
-      </Drawer>
+      </KeyboardAwareDrawer>
     </TooltipProvider>
   );
 });

@@ -7,7 +7,6 @@ import { jsonError, getClientIp, formatNotificationTime } from "@/lib/api-respon
 
 
 const MAX_BODY_SIZE_BYTES = 4 * 1024;
-const MIN_LOW_RATING_REASON_LENGTH = 10;
 const MAX_REASON_LENGTH = 400;
 
 interface RatingRequest {
@@ -25,7 +24,7 @@ function parseRatingRequest(raw: unknown): { success: true; data: RatingRequest 
     const reasonRaw = record.reason;
     if (typeof reasonRaw !== "string") return { success: false };
     const reason = reasonRaw.trim();
-    if (reason.length < MIN_LOW_RATING_REASON_LENGTH || reason.length > MAX_REASON_LENGTH) {
+    if (reason.length === 0 || reason.length > MAX_REASON_LENGTH) {
       return { success: false };
     }
     return { success: true, data: { rating, reason } };
