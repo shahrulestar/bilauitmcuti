@@ -55,7 +55,7 @@ function TooltipActivityList({
   weekNum = null,
   surface,
 }: TooltipActivityListProps) {
-  const badgeTextClass = surface === 'tooltip' ? 'text-xs' : 'text-sm';
+  const badgeTextClass = 'text-xs';
   const activityTextClass = surface === 'tooltip' ? 'text-xs' : 'text-sm';
   /** Dot (8px) + gap-2 (8px); aligns badges/week chip with activity name column. */
   const activityContentIndentClass = 'pl-4';
