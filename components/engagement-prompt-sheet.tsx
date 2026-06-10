@@ -39,7 +39,7 @@ const SHARE_TEXT =
   "Check out the UiTM academic calendar — registration, lectures, exams, and semester breaks.";
 const MAX_FEEDBACK_REASON_LENGTH = 400;
 const LOW_RATING_FEEDBACK_PLACEHOLDER =
-  "Share your feedback. A star rating is required before submitting.";
+  "We’d love to hear your thoughts!";
 
 interface EngagementPromptSheetProps {
   open: boolean;

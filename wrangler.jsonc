@@ -7,5 +7,29 @@
   "ai": {
     "binding": "AI",
     "remote": true
+  },
+  // AI Gateway id for chat (Workers AI binding third arg). Not a separate Pages binding.
+  "vars": {
+    "AI_GATEWAY_ID": "bilauitmcuti-chat"
+  },
+  "env": {
+    "preview": {
+      "vars": {
+        "AI_GATEWAY_ID": "bilauitmcuti-chat"
+      },
+      "ai": {
+        "binding": "AI",
+        "remote": true
+      }
+    },
+    "production": {
+      "vars": {
+        "AI_GATEWAY_ID": "bilauitmcuti-chat"
+      },
+      "ai": {
+        "binding": "AI",
+        "remote": true
+      }
+    }
   }
 }

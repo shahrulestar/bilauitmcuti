@@ -1,3 +1,7 @@
+import {
+  buildAiGatewayRunOptions,
+  type AiGatewayRunOptions,
+} from "@/lib/ai-gateway";
 import { CHAT_MAX_MESSAGE_LENGTH } from "@/lib/chat/limits";
 
 /** Dev / preview / localhost chat model (fast, lower cost). */
@@ -226,6 +230,25 @@ export async function getAiBinding(): Promise<Ai | null> {
   }
 }
 
+function buildChatGatewayMetadata(correlationId?: string): AiGatewayRunOptions["metadata"] {
+  return correlationId
+    ? { correlationId, path: "chat" }
+    : { path: "chat" };
+}
+
+async function runAiWithGateway(
+  ai: Ai,
+  modelId: string,
+  input: Record<string, unknown>,
+  gatewayOpts?: AiGatewayRunOptions
+): Promise<unknown> {
+  const options = await buildAiGatewayRunOptions(gatewayOpts);
+  if (options) {
+    return ai.run(modelId, input, options);
+  }
+  return ai.run(modelId, input);
+}
+
 function truncate(str: string, max: number): string {
   if (str.length <= max) return str;
   return str.slice(0, max) + "...[truncated]";
@@ -397,6 +420,7 @@ async function workersAiChatCompletion(params: {
   messages: { role: "system" | "user" | "assistant"; content: string }[];
   max_tokens: number;
   temperature: number;
+  correlationId?: string;
 }): Promise<string> {
   const ai = await getAiBinding();
   if (!ai) {
@@ -415,7 +439,11 @@ async function workersAiChatCompletion(params: {
       params.temperature,
       false
     );
-    const result = await ai.run(params.modelId, input);
+    const result = await runAiWithGateway(ai, params.modelId, input, {
+      skipCache: false,
+      cacheTtl: 120,
+      metadata: buildChatGatewayMetadata(params.correlationId),
+    });
     return extractWorkersAiContent(result);
   } catch (firstError) {
     const msg = normalizeAiErrorMessage(firstError).toLowerCase();
@@ -437,6 +465,7 @@ export async function askWorkersAi(
     temperature?: number;
     /** Request Host header — selects production vs dev model on Cloudflare Pages. */
     requestHost?: string | null;
+    correlationId?: string;
   }
 ): Promise<string> {
   const tier = resolveWorkersAiModelTier(options?.requestHost);
@@ -456,6 +485,7 @@ export async function askWorkersAi(
         messages,
         max_tokens,
         temperature,
+        correlationId: options?.correlationId,
       });
     } catch (err) {
       lastError = err;
@@ -566,6 +596,7 @@ async function workersAiChatCompletionStream(params: {
   messages: { role: "system" | "user" | "assistant"; content: string }[];
   max_tokens: number;
   temperature: number;
+  correlationId?: string;
 }): Promise<AsyncGenerator<string>> {
   const ai = await getAiBinding();
   if (!ai) {
@@ -583,7 +614,10 @@ async function workersAiChatCompletionStream(params: {
     params.temperature,
     true
   );
-  const result = await ai.run(params.modelId, input);
+  const result = await runAiWithGateway(ai, params.modelId, input, {
+    skipCache: true,
+    metadata: buildChatGatewayMetadata(params.correlationId),
+  });
   return iterateAiStream(result);
 }
 
@@ -591,6 +625,7 @@ export interface StreamWorkersAiOptions {
   maxTokens?: number;
   temperature?: number;
   requestHost?: string | null;
+  correlationId?: string;
   onToken: (token: string) => void | Promise<void>;
   /** When false, model still runs (and may stream internally) but onToken is not called until the end. */
   emitTokensToClient?: boolean;
@@ -622,6 +657,7 @@ export async function streamWorkersAi(
         messages,
         max_tokens,
         temperature,
+        correlationId: options.correlationId,
       });
       let full = "";
       for await (const token of stream) {
@@ -634,6 +670,7 @@ export async function streamWorkersAi(
           messages,
           max_tokens,
           temperature,
+          correlationId: options.correlationId,
         });
         if (full.trim()) {
           if (emitTokens) await options.onToken(full);
@@ -652,6 +689,7 @@ export async function streamWorkersAi(
           messages,
           max_tokens,
           temperature,
+          correlationId: options.correlationId,
         });
         if (emitTokens) await options.onToken(full);
         return full;
@@ -777,6 +815,7 @@ export interface RunWorkersAiAgentParams {
   preloadMessages?: AgentChatMessage[];
   tools: Array<{ name: string; description: string; parameters: unknown }>;
   requestHost?: string | null;
+  correlationId?: string;
   maxTokens: number;
   temperature: number;
   maxToolSteps: number;
@@ -844,7 +883,10 @@ export async function runWorkersAiAgent(params: RunWorkersAiAgentParams): Promis
           params.maxTokens,
           params.temperature
         );
-        const result = await ai.run(modelId, input);
+        const result = await runAiWithGateway(ai, modelId, input, {
+          skipCache: true,
+          metadata: buildChatGatewayMetadata(params.correlationId),
+        });
         const toolCalls = extractToolCalls(result);
         if (toolCalls.length === 0) {
           return extractWorkersAiContent(result);
@@ -871,7 +913,11 @@ export async function runWorkersAiAgent(params: RunWorkersAiAgentParams): Promis
         params.maxTokens,
         params.temperature
       );
-      const finalResult = await ai.run(modelId, finalInput);
+      const finalResult = await runAiWithGateway(ai, modelId, finalInput, {
+        skipCache: false,
+        cacheTtl: 120,
+        metadata: buildChatGatewayMetadata(params.correlationId),
+      });
       return extractWorkersAiContent(finalResult);
     } catch (err) {
       lastError = err;

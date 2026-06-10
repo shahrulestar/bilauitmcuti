@@ -35,7 +35,6 @@ import {
 } from "@/lib/turnstile";
 import { isTurnstileVerificationRequired } from "@/lib/turnstile-config";
 import { jsonError } from "@/lib/api-response";
-import { checkRateLimit } from "@/lib/rate-limit";
 import { logger } from "@/lib/logger";
 import {
   getModelResponseBudget,
@@ -144,18 +143,7 @@ export async function POST(request: NextRequest) {
       return jsonError("Request body too large", 413);
     }
 
-    const ip =
-      request.headers.get("cf-connecting-ip") ||
-      request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
-      request.headers.get("x-real-ip") ||
-      "unknown";
-
     correlationId = generateCorrelationId();
-    const rateLimit = checkRateLimit(ip, request);
-    if (rateLimit.limited) {
-      logger.warn("Rate limited", { correlationId, ip });
-      return jsonError(rateLimit.message, 429);
-    }
 
     const rawBody = await request.json();
 
@@ -479,6 +467,7 @@ export async function POST(request: NextRequest) {
           history: sanitizedHistory,
           ctx: agentTurnContext,
           requestHost,
+          correlationId,
           maxTokens: modelBudget.maxTokens,
           temperature: modelBudget.temperature,
           extraSystemDirectives: systemPromptWithCompletion,
@@ -491,14 +480,14 @@ export async function POST(request: NextRequest) {
           sanitizedMessage,
           systemPromptWithCompletion,
           sanitizedHistory,
-          { ...modelBudget, requestHost, onToken, emitTokensToClient: streamTokensToClient }
+          { ...modelBudget, requestHost, correlationId, onToken, emitTokensToClient: streamTokensToClient }
         );
       } else {
         rawReply = await askAiWithRetry(
           sanitizedMessage,
           systemPromptWithCompletion,
           sanitizedHistory,
-          { ...modelBudget, requestHost }
+          { ...modelBudget, requestHost, correlationId }
         );
       }
 
@@ -514,6 +503,7 @@ export async function POST(request: NextRequest) {
             history: sanitizedHistory,
             ctx: agentTurnContext,
             requestHost,
+            correlationId,
             maxTokens: modelBudget.maxTokens,
             temperature: modelBudget.temperature,
             extraSystemDirectives:
@@ -527,14 +517,14 @@ export async function POST(request: NextRequest) {
             sanitizedMessage,
             systemPromptWithCompletion + DATE_VALIDATION_RETRY_NUDGE,
             sanitizedHistory,
-            { ...modelBudget, requestHost, onToken, emitTokensToClient: streamTokensToClient }
+            { ...modelBudget, requestHost, correlationId, onToken, emitTokensToClient: streamTokensToClient }
           );
         } else {
           rawReply = await askAiWithRetry(
             sanitizedMessage,
             systemPromptWithCompletion + DATE_VALIDATION_RETRY_NUDGE,
             sanitizedHistory,
-            { ...modelBudget, requestHost }
+            { ...modelBudget, requestHost, correlationId }
           );
         }
       }
@@ -553,6 +543,7 @@ export async function POST(request: NextRequest) {
             history: sanitizedHistory,
             ctx: agentTurnContext,
             requestHost,
+            correlationId,
             maxTokens: bumpedBudget.maxTokens,
             temperature: bumpedBudget.temperature,
             extraSystemDirectives:
@@ -569,6 +560,7 @@ export async function POST(request: NextRequest) {
             {
               ...bumpedBudget,
               requestHost,
+              correlationId,
               onToken,
               emitTokensToClient: streamTokensToClient,
             }
@@ -578,7 +570,7 @@ export async function POST(request: NextRequest) {
             sanitizedMessage,
             systemPromptWithCompletion + REPLY_COMPLETION_RETRY_NUDGE,
             sanitizedHistory,
-            { ...bumpedBudget, requestHost }
+            { ...bumpedBudget, requestHost, correlationId }
           );
         }
         const cleanedRetry = normalizeAssistantTables(cleanAiReply(retryReply));

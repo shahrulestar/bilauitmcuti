@@ -28,6 +28,7 @@ export interface RunChatAgentOptions {
   history: ChatMessage[] | undefined;
   ctx: AgentTurnContext;
   requestHost?: string | null;
+  correlationId?: string;
   maxTokens: number;
   temperature: number;
   extraSystemDirectives?: string;
@@ -91,6 +92,7 @@ export async function runChatAgent(options: RunChatAgentOptions): Promise<AgentR
     preloadMessages,
     tools: workersTools,
     requestHost: options.requestHost,
+    correlationId: options.correlationId,
     maxTokens: options.maxTokens,
     temperature: options.temperature,
     maxToolSteps: MAX_AGENT_TOOL_STEPS,
