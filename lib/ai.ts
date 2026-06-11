@@ -295,27 +295,51 @@ function buildMessages(
   return messages;
 }
 
-function extractWorkersAiContent(result: unknown): string {
-  if (typeof result === "string" && result.trim()) return result;
+function normalizeReasoningFallback(reasoning: string): string | null {
+  const trimmed = reasoning.trim();
+  if (!trimmed) return null;
+  if (/^[\[{]/.test(trimmed) && /"name"\s*:/.test(trimmed)) return null;
+  return trimmed;
+}
 
-  if (result && typeof result === "object") {
-    const data = result as WorkersAiTextResponse;
-    if (typeof data.response === "string" && data.response.trim()) return data.response;
-    const message = data.choices?.[0]?.message as
-      | { content?: string | null; reasoning?: string | null }
-      | undefined;
-    if (typeof message?.content === "string" && message.content.trim()) {
-      return message.content.trim();
+function extractWorkersAiContentFromObject(result: unknown): string | null {
+  if (typeof result === "string" && result.trim()) return result.trim();
+
+  if (!result || typeof result !== "object") return null;
+
+  const data = result as WorkersAiTextResponse;
+  if (typeof data.response === "string" && data.response.trim()) return data.response.trim();
+
+  const message = data.choices?.[0]?.message as
+    | { content?: string | null; reasoning?: string | null }
+    | undefined;
+  if (typeof message?.content === "string" && message.content.trim()) {
+    return message.content.trim();
+  }
+  if (message?.content == null || String(message.content).trim() === "") {
+    if (typeof message?.reasoning === "string") {
+      const fromReasoning = normalizeReasoningFallback(message.reasoning);
+      if (fromReasoning) return fromReasoning;
     }
-
-    const geminiCandidates = (result as { candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }> })
-      .candidates;
-    const geminiText = geminiCandidates?.[0]?.content?.parts
-      ?.map((p) => (p as { text?: string }).text ?? "")
-      .join("");
-    if (geminiText?.trim()) return geminiText.trim();
   }
 
+  const geminiCandidates = (result as { candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }> })
+    .candidates;
+  const geminiText = geminiCandidates?.[0]?.content?.parts
+    ?.map((p) => (p as { text?: string }).text ?? "")
+    .join("");
+  if (geminiText?.trim()) return geminiText.trim();
+
+  return null;
+}
+
+export function tryExtractWorkersAiContent(result: unknown): string | null {
+  return extractWorkersAiContentFromObject(result);
+}
+
+function extractWorkersAiContent(result: unknown): string {
+  const content = extractWorkersAiContentFromObject(result);
+  if (content) return content;
   throw new Error("Empty response from model");
 }
 
@@ -517,8 +541,8 @@ function extractStreamDelta(chunk: unknown): string {
 
   const choice = (chunk as {
     choices?: Array<{
-      delta?: { content?: string };
-      message?: { content?: string };
+      delta?: { content?: string; reasoning?: string };
+      message?: { content?: string; reasoning?: string };
     }>;
   }).choices?.[0];
   const deltaContent = choice?.delta?.content;
@@ -526,6 +550,17 @@ function extractStreamDelta(chunk: unknown): string {
 
   const messageContent = choice?.message?.content;
   if (typeof messageContent === "string" && messageContent) return messageContent;
+
+  const deltaReasoning = choice?.delta?.reasoning;
+  if (typeof deltaReasoning === "string") {
+    const fromReasoning = normalizeReasoningFallback(deltaReasoning);
+    if (fromReasoning) return fromReasoning;
+  }
+  const messageReasoning = choice?.message?.reasoning;
+  if (typeof messageReasoning === "string") {
+    const fromReasoning = normalizeReasoningFallback(messageReasoning);
+    if (fromReasoning) return fromReasoning;
+  }
 
   const geminiParts = (
     chunk as { candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }> }
@@ -737,12 +772,28 @@ export function supportsFunctionCalling(modelId: string): boolean {
 export function extractToolCalls(result: unknown): WorkersAiToolCall[] {
   if (!result || typeof result !== "object") return [];
   const r = result as Record<string, unknown>;
-  const raw = r.tool_calls ?? r.toolCalls;
-  if (!Array.isArray(raw)) return [];
+  const rawItems: unknown[] = [];
+
+  const topLevel = r.tool_calls ?? r.toolCalls;
+  if (Array.isArray(topLevel)) rawItems.push(...topLevel);
+
+  const choiceMessage = (
+    r.choices as Array<{ message?: Record<string, unknown> }> | undefined
+  )?.[0]?.message;
+  if (choiceMessage && typeof choiceMessage === "object") {
+    const nested = choiceMessage.tool_calls ?? choiceMessage.toolCalls;
+    if (Array.isArray(nested)) rawItems.push(...nested);
+  }
+
   const calls: WorkersAiToolCall[] = [];
-  for (const item of raw) {
+  const seen = new Set<string>();
+  for (const item of rawItems) {
     const parsed = parseToolCallEntry(item);
-    if (parsed) calls.push(parsed);
+    if (!parsed) continue;
+    const key = `${parsed.id ?? ""}:${parsed.name}:${JSON.stringify(parsed.arguments)}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    calls.push(parsed);
   }
   return calls;
 }
@@ -931,6 +982,17 @@ function buildAgentModelRunInput(
   return input;
 }
 
+export const AGENT_SYNTHESIS_NUDGE =
+  "Write your complete final answer for the student now based on the conversation and any tool results above. Use tool output as the source of truth for dates and official events. If exact data was not found, say so clearly and still give helpful general UiTM student guidance — never leave the reply empty.";
+
+function appendAgentSynthesisNudge(
+  messages: AgentChatMessage[],
+  nudge: string
+): AgentChatMessage[] {
+  if (!nudge.trim()) return messages;
+  return [...messages, { role: "user", content: nudge }];
+}
+
 async function runAgentCompletionWithOptionalStream(params: {
   ai: Ai;
   modelId: string;
@@ -940,14 +1002,25 @@ async function runAgentCompletionWithOptionalStream(params: {
   correlationId?: string;
   onToken?: (token: string) => void | Promise<void>;
   emitTokens?: boolean;
+  synthesisNudge?: string;
 }): Promise<string> {
-  const { ai, modelId, messages, maxTokens, temperature, correlationId, onToken, emitTokens } =
-    params;
+  const {
+    ai,
+    modelId,
+    messages,
+    maxTokens,
+    temperature,
+    correlationId,
+    onToken,
+    emitTokens,
+    synthesisNudge = AGENT_SYNTHESIS_NUDGE,
+  } = params;
+  const synthesisMessages = appendAgentSynthesisNudge(messages, synthesisNudge);
 
   try {
     const streamInput = buildAgentModelRunInput(
       modelId,
-      messages,
+      synthesisMessages,
       [],
       maxTokens,
       temperature,
@@ -964,20 +1037,30 @@ async function runAgentCompletionWithOptionalStream(params: {
       full += token;
       if (emitTokens && onToken) await onToken(token);
     }
-    if (full.trim()) return full;
+    if (full.trim()) return full.trim();
   } catch {
     /* fall through to buffered completion */
   }
 
-  const input = buildAgentModelRunInput(modelId, messages, [], maxTokens, temperature, false);
+  const input = buildAgentModelRunInput(
+    modelId,
+    synthesisMessages,
+    [],
+    maxTokens,
+    temperature,
+    false
+  );
   const result = await runAiWithGateway(ai, modelId, input, {
     skipCache: false,
     cacheTtl: 120,
     metadata: buildChatGatewayMetadata(correlationId),
   });
-  const full = extractWorkersAiContent(result);
-  if (emitTokens && onToken && full) await onToken(full);
-  return full;
+  const full = tryExtractWorkersAiContent(result);
+  if (full?.trim()) {
+    if (emitTokens && onToken) await onToken(full);
+    return full;
+  }
+  return "";
 }
 
 export interface RunWorkersAiAgentParams {
@@ -1061,9 +1144,12 @@ export async function runWorkersAiAgent(params: RunWorkersAiAgentParams): Promis
     });
     const toolCalls = ensureToolCallIds(extractToolCalls(result));
     if (toolCalls.length === 0) {
-      const content = extractWorkersAiContent(result);
-      if (emitTokens && params.onToken && content) await params.onToken(content);
-      return content;
+      const content = tryExtractWorkersAiContent(result);
+      if (content?.trim()) {
+        if (emitTokens && params.onToken) await params.onToken(content);
+        return content;
+      }
+      break;
     }
     workingMessages.push({
       role: "assistant",

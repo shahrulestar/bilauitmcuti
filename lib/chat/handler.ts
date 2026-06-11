@@ -357,7 +357,30 @@ export async function POST(request: NextRequest) {
       includeSecondary,
     });
 
+    const buildLegacyContextSystemPrompt = () =>
+      useResearchOnly
+        ? buildResearchSystemPrompt(todayFormatted) +
+          (dataContextFull ? `\n\n${dataContextFull}` : "")
+        : buildChatAssistantSystemPrompt({
+            programLabel,
+            primaryGroup,
+            secondaryGroup,
+            todayFormatted,
+            sessionListContext,
+            primaryContext,
+            secondaryContext: includeSecondary ? secondaryContext : "",
+            dataContext: dataContextFull,
+            topics: topicRoute.topics,
+            selectedSessionCount: effectiveSessions.length,
+            forceTableOutput: wantsTableOutput,
+            multipleSessionsSelected,
+            uitmSupplement: includeUitmSupplement ? UITM_GENERAL_INFO : "",
+            includeSecondaryContext: includeSecondary,
+            maxPrimaryChars,
+          });
+
     let systemPrompt = "";
+    let legacyFallbackSystemPrompt = "";
     if (!useAgentPath || agentMode !== "tools") {
       if (useAgentPath && agentMode === "compact") {
         systemPrompt = await buildCompactFallbackSystemPrompt({
@@ -374,27 +397,10 @@ export async function POST(request: NextRequest) {
           useIntentFilter,
         });
       } else {
-        systemPrompt = useResearchOnly
-          ? buildResearchSystemPrompt(todayFormatted) +
-            (dataContextFull ? `\n\n${dataContextFull}` : "")
-          : buildChatAssistantSystemPrompt({
-              programLabel,
-              primaryGroup,
-              secondaryGroup,
-              todayFormatted,
-              sessionListContext,
-              primaryContext,
-              secondaryContext: includeSecondary ? secondaryContext : "",
-              dataContext: dataContextFull,
-              topics: topicRoute.topics,
-              selectedSessionCount: effectiveSessions.length,
-              forceTableOutput: wantsTableOutput,
-              multipleSessionsSelected,
-              uitmSupplement: includeUitmSupplement ? UITM_GENERAL_INFO : "",
-              includeSecondaryContext: includeSecondary,
-              maxPrimaryChars,
-            });
+        systemPrompt = buildLegacyContextSystemPrompt();
       }
+    } else {
+      legacyFallbackSystemPrompt = buildLegacyContextSystemPrompt();
     }
 
     const cacheKey = [
@@ -437,12 +443,15 @@ export async function POST(request: NextRequest) {
         ? getCalendarUnderstandingDirective(sanitizedMessage)
         : "";
 
-    const systemPromptWithCompletion =
-      systemPrompt +
+    const completionSuffix =
       getCompletionInstruction(isSimple, asksDetail, needsList, hasMatchedActivity) +
       understandingDirective +
       publicHolidayDirective +
       languageDirective;
+
+    const systemPromptWithCompletion = systemPrompt + completionSuffix;
+    const legacyFallbackPromptWithCompletion =
+      legacyFallbackSystemPrompt + completionSuffix;
 
     const validationActivityPool = !useResearchOnly
       ? getActivitiesFromSessions(loadSessions, selectedProgram, primaryGroup)
@@ -456,6 +465,27 @@ export async function POST(request: NextRequest) {
     }
 
     const streamTokensToClient = shouldStreamTokensToClient(requestHost);
+
+    const runLegacyLlm = async (
+      prompt: string,
+      onToken: (token: string) => void | Promise<void>,
+      budget = modelBudget
+    ): Promise<string> => {
+      if (wantStream) {
+        return streamAiWithRetry(
+          sanitizedMessage,
+          prompt,
+          sanitizedHistory,
+          { ...budget, requestHost, correlationId, onToken, emitTokensToClient: streamTokensToClient }
+        );
+      }
+      return askAiWithRetry(
+        sanitizedMessage,
+        prompt,
+        sanitizedHistory,
+        { ...budget, requestHost, correlationId }
+      );
+    };
 
     const runLlm = async (
       onToken: (token: string) => void | Promise<void>
@@ -480,6 +510,13 @@ export async function POST(request: NextRequest) {
           toolsUsed: agentResult.toolsUsed,
         });
         rawReply = agentResult.reply;
+        if (!rawReply.trim() && legacyFallbackPromptWithCompletion.trim()) {
+          logger.warn("Chat agent empty reply, using legacy context fallback", {
+            correlationId,
+            toolsUsed: agentResult.toolsUsed,
+          });
+          rawReply = await runLegacyLlm(legacyFallbackPromptWithCompletion, onToken);
+        }
       } else if (wantStream) {
         rawReply = await streamAiWithRetry(
           sanitizedMessage,
@@ -517,6 +554,12 @@ export async function POST(request: NextRequest) {
             emitTokensToClient: streamTokensToClient,
           });
           rawReply = agentRetry.reply;
+          if (!rawReply.trim() && legacyFallbackPromptWithCompletion.trim()) {
+            rawReply = await runLegacyLlm(
+              legacyFallbackPromptWithCompletion + DATE_VALIDATION_RETRY_NUDGE,
+              onToken
+            );
+          }
         } else if (wantStream) {
           rawReply = await streamAiWithRetry(
             sanitizedMessage,
@@ -557,6 +600,13 @@ export async function POST(request: NextRequest) {
             emitTokensToClient: streamTokensToClient,
           });
           retryReply = agentCompletion.reply;
+          if (!retryReply.trim() && legacyFallbackPromptWithCompletion.trim()) {
+            retryReply = await runLegacyLlm(
+              legacyFallbackPromptWithCompletion + REPLY_COMPLETION_RETRY_NUDGE,
+              onToken,
+              bumpedBudget
+            );
+          }
         } else if (wantStream) {
           retryReply = await streamAiWithRetry(
             sanitizedMessage,

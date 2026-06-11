@@ -341,8 +341,6 @@ export default function ChatPage() {
     const opt = programOptions.find((p) => p.value === selectedProgram);
     return opt?.label ?? "All";
   }, [selectedProgram, programOptions]);
-  const [disclaimerIndex, setDisclaimerIndex] = useState(0);
-  const [disclaimerFade, setDisclaimerFade] = useState<"in" | "out">("in");
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const hasScrolledRef = useRef(false);
   const wasStreamingRef = useRef(false);
@@ -444,23 +442,6 @@ export default function ChatPage() {
       !messages.some((m) => m.role === "assistant" && m.isComplete === false),
     [isLoading, showThinkingIndicator, messages]
   );
-
-  const disclaimerTexts = useMemo(() => [
-    "AI can make mistakes. Check important info.",
-    "Free-tier AI model with daily rate limits.",
-  ], []);
-
-  // Rotate disclaimer text every 8 seconds with fade animation
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setDisclaimerFade("out");
-      setTimeout(() => {
-        setDisclaimerIndex((prev) => (prev + 1) % disclaimerTexts.length);
-        setDisclaimerFade("in");
-      }, 600);
-    }, 8000);
-    return () => clearInterval(interval);
-  }, [disclaimerTexts.length]);
 
   // Rotate loading phrases while the delayed thinking indicator is visible
   useEffect(() => {
@@ -1529,14 +1510,12 @@ export default function ChatPage() {
             </div>
           </form>
           <span
-            key={disclaimerIndex}
             className={cn(
               "block text-center text-xs text-muted-foreground mt-2",
-              isEmptyChat && "lg:hidden",
-              disclaimerFade === "in" ? "disclaimer-fade-in" : "disclaimer-fade-out"
+              isEmptyChat && "lg:hidden"
             )}
           >
-            {disclaimerTexts[disclaimerIndex]}
+            AI can make mistakes. Check important info.
           </span>
         </div>
       </div>

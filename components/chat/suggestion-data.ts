@@ -71,7 +71,6 @@ export const SUGGESTIONS_GENERAL = [
   "Minggu Ulangkaji dan Peperiksaan Akhir — maksudnya apa dalam kalendar?",
   "Penangguhan yuran (Fee Deferment) — tarikh apa dalam kalendar?",
   "Apa beza cuti pertengahan semester dengan cuti umum?",
-  "Bilakah tempoh tambah/dropsubjek biasanya dibuka?",
 ];
 
 const DISPLAY_COUNT = 8;

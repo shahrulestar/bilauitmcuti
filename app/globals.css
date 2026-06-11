@@ -460,22 +460,6 @@ input[type="checkbox"],
     display: none;
   }
 
-  /* Disclaimer text fade animation */
-  .disclaimer-fade-in {
-    animation: disclaimerFadeIn 600ms ease-in-out forwards !important;
-  }
-  .disclaimer-fade-out {
-    animation: disclaimerFadeOut 600ms ease-in-out forwards !important;
-  }
-  @keyframes disclaimerFadeIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
-  }
-  @keyframes disclaimerFadeOut {
-    from { opacity: 1; }
-    to { opacity: 0; }
-  }
-
   /* Note: chat-input uses 14px (text-sm) across all devices */
   /* iOS Safari may auto-zoom on focus since font-size < 16px */
 
