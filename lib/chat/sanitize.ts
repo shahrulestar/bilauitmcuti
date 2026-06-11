@@ -13,7 +13,11 @@ export function sanitizeMessage(message: string): string {
 }
 
 const PLANNING_LINE =
-  /^(User Question|Language|Context|Selected Session|Today'?s Date|Header|Content|Format|Answer format|Peperiksaan\/Penilaian):/i;
+  /^(User Question|Language|Context|Selected Session|Today'?s Date|Header|Content|Format|Answer format|Peperiksaan\/Penilaian|Reasoning|Mode|FACT|EXPLAIN|OPINION|OPNION|SUGGESTION|CADANGAN):/i;
+
+/** Internal answer-mode tags models sometimes echo from the system prompt. */
+const INTERNAL_MODE_TAG =
+  /\((?:FACT|EXPLAIN|OPINION|OPNION|SUGGESTION|CADANGAN|REASONING|GUIDANCE)\)\s*/gi;
 
 /** Pull user-visible answer when Gemma/reasoning models leak planning text. */
 export function extractFinalAnswerFromPlanning(raw: string): string | null {
@@ -115,11 +119,11 @@ export function cleanAiReply(rawReply: string): string {
     .join("\n");
 
   const cleaned = normalizeLatexArtifacts(withoutPlanningLines)
+    .replace(INTERNAL_MODE_TAG, "")
     .replace(/\((?:PAST|NOW|UPCOMING)\)\s*/gi, "")
     .replace(/\*\*([^*]+)\*\*/g, "$1")
     .replace(/\*([^*]+)\*/g, "$1")
     .replace(/^[\s]*\*\s/gm, "- ")
-    .replace(/#{1,6}\s?/g, "")
     .replace(/`([^`]+)`/g, "$1")
     .replace(/~~/g, "")
     .replace(new RegExp(`\\|\\s*(?:${internalFields})\\s*:\\s*[^|\\n]+`, "gi"), "")

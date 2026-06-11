@@ -99,7 +99,6 @@ import {
   resolveSessionsForProgram,
   type ProgramSessionMap,
 } from "@/lib/chat/session-state";
-
 type Message = ChatMessageItem;
 
 interface MentionItem {
@@ -1420,7 +1419,7 @@ export default function ChatPage() {
                                     }
                                   >
                                     <span
-                                      className={`pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 flex size-3.5 shrink-0 items-center justify-center rounded-full border ${isSelected ? "border-primary bg-primary" : "border-muted-foreground"}`}
+                                      className={`pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 flex size-3 shrink-0 items-center justify-center rounded-full border ${isSelected ? "border-primary bg-primary" : "border-muted-foreground"}`}
                                       aria-hidden
                                     />
                                     <SessionSubmenuItemLabel session={sess} />
@@ -1476,7 +1475,7 @@ export default function ChatPage() {
                                   }
                                 >
                                   <span
-                                    className={`pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 flex size-3.5 shrink-0 items-center justify-center rounded-full border ${isSelected ? "border-primary bg-primary" : "border-muted-foreground"}`}
+                                    className={`pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 flex size-3 shrink-0 items-center justify-center rounded-full border ${isSelected ? "border-primary bg-primary" : "border-muted-foreground"}`}
                                     aria-hidden
                                   />
                                   <SessionSubmenuItemLabel session={sess} />
@@ -1500,7 +1499,7 @@ export default function ChatPage() {
                           {opt.label}
                           {opt.value === selectedProgram ? (
                             <span
-                              className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 flex size-3.5 shrink-0 items-center justify-center rounded-full border border-primary bg-primary"
+                              className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 flex size-3 shrink-0 items-center justify-center rounded-full border border-primary bg-primary"
                               aria-hidden
                             />
                           ) : null}

@@ -68,6 +68,14 @@ export const responsiveDialogDescriptionClassName =
 export const responsiveDrawerDescriptionClassName =
   responsiveDialogDescriptionClassName
 
+/** Full-width primary action — 38px tall (settings shell, drawers). */
+export const drawerPrimaryButtonClassName =
+  "w-full !h-[38px] justify-center border-border text-center transition-none"
+
+/** Full-width outline action — 38px tall (settings shell, drawers). */
+export const drawerOutlineButtonClassName =
+  "w-full h-[38px] justify-center border-border bg-background text-black shadow-xs transition-all hover:bg-muted hover:text-foreground dark:border-input dark:bg-input/30 dark:text-foreground dark:hover:bg-input/50"
+
 function Drawer({
   handleOnly = true,
   dismissible = true,

@@ -52,7 +52,10 @@ describe("shared prompt policies", () => {
     expect(prompt).toContain(CHAT_RESPONSE_FORMAT_RULES.slice(0, 20));
     expect(prompt).toContain(CHAT_ANSWER_MODE_POLICY.slice(0, 20));
     expect(prompt).not.toContain("say you do not have that information");
-    expect(prompt).toContain("EXPLAIN or OPINION mode");
+    expect(prompt).toContain("never output mode labels like (OPINION)");
+    expect(prompt).toContain("Never output internal labels");
+    expect(prompt).toContain("prose paragraphs or short ## headings");
+    expect(prompt).toContain("Explain / suggest / advise");
   });
 
   it("includes format rules in legacy chat prompt", () => {

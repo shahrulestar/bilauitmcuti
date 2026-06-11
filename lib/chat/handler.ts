@@ -474,6 +474,11 @@ export async function POST(request: NextRequest) {
           onToken,
           emitTokensToClient: streamTokensToClient,
         });
+        logger.info("Chat agent reply", {
+          correlationId,
+          agentMode,
+          toolsUsed: agentResult.toolsUsed,
+        });
         rawReply = agentResult.reply;
       } else if (wantStream) {
         rawReply = await streamAiWithRetry(
@@ -611,6 +616,7 @@ export async function POST(request: NextRequest) {
               cause: error instanceof Error ? error.message : String(error),
               modelTier,
               modelChain: modelChain.join(" → "),
+              agentMode,
             });
             enqueue(encodeSseEvent("error", { error: mapped.message, status: mapped.status }));
             controller.close();

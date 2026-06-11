@@ -51,6 +51,7 @@ import { useEngagementPrompt } from '@/components/engagement-prompt-provider';
 import { usePwaInstalled } from '@/hooks/use-pwa-installed';
 import { CalendarFilterToggle } from '@/components/calendar/filter-toggle';
 import { PwaInstallButton } from '@/components/calendar/pwa-install-hint';
+import { drawerOutlineButtonClassName } from '@/components/ui/drawer';
 
 interface CalendarControlsProps {
   selectedProgram: string;
@@ -403,7 +404,7 @@ export function CalendarControls({
                                 onClick={() => handleSessionToggle(option.value as ProgramValue, sess.id, 'A')}
                               >
                                 <span
-                                  className={`pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 flex size-3.5 shrink-0 items-center justify-center rounded-full border ${isSelected ? 'border-primary bg-primary' : 'border-muted-foreground'}`}
+                                  className={`pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 flex size-3 shrink-0 items-center justify-center rounded-full border ${isSelected ? 'border-primary bg-primary' : 'border-muted-foreground'}`}
                                   aria-hidden
                                 />
                                 <SessionSubmenuItemLabel session={sess} />
@@ -458,7 +459,7 @@ export function CalendarControls({
                               onClick={() => handleSessionToggle(groupBProgramForSessions, sess.id, 'B')}
                             >
                               <span
-                                className={`pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 flex size-3.5 shrink-0 items-center justify-center rounded-full border ${isSelected ? 'border-primary bg-primary' : 'border-muted-foreground'}`}
+                                className={`pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 flex size-3 shrink-0 items-center justify-center rounded-full border ${isSelected ? 'border-primary bg-primary' : 'border-muted-foreground'}`}
                                 aria-hidden
                               />
                               <SessionSubmenuItemLabel session={sess} />
@@ -482,7 +483,7 @@ export function CalendarControls({
                       {option.label}
                       {option.value === selectedProgram ? (
                         <span
-                          className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 flex size-3.5 shrink-0 items-center justify-center rounded-full border border-primary bg-primary"
+                          className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 flex size-3 shrink-0 items-center justify-center rounded-full border border-primary bg-primary"
                           aria-hidden
                         />
                       ) : null}
@@ -746,7 +747,7 @@ export function CalendarControls({
                         <Button
                           size="default"
                           variant="outline"
-                          className="w-full h-[38px] justify-center border-border bg-background text-black shadow-xs transition-all hover:bg-muted hover:text-foreground dark:border-input dark:bg-input/30 dark:text-foreground dark:hover:bg-input/50"
+                          className={drawerOutlineButtonClassName}
                         >
                           Send Feedback
                         </Button>

@@ -55,7 +55,7 @@ export interface AgentRunResult {
 }
 
 export const MAX_TOOL_OUTPUT_CHARS = 3_000;
-export const MAX_AGENT_TOOL_STEPS = 3;
+export const MAX_AGENT_TOOL_STEPS = 5;
 
 export function truncateToolOutput(text: string, max = MAX_TOOL_OUTPUT_CHARS): string {
   if (text.length <= max) return text;

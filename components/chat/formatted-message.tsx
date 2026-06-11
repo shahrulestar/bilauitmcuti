@@ -176,6 +176,20 @@ function renderTextSection(lines: string[], keyPrefix: string): React.ReactNode[
       continue;
     }
 
+    const headingMatch = trimmed.match(/^#{1,6}\s+(.+)$/);
+    if (headingMatch) {
+      elements.push(
+        <p
+          key={`${keyPrefix}-h-${i}`}
+          className={`font-semibold text-foreground ${elements.length > 0 ? "mt-2" : ""}`}
+        >
+          {headingMatch[1]}
+        </p>
+      );
+      i++;
+      continue;
+    }
+
     // Collect consecutive bullet lines (- item)
     if (/^-\s/.test(trimmed)) {
       const bullets: string[] = [];
@@ -232,7 +246,7 @@ function renderTextSection(lines: string[], keyPrefix: string): React.ReactNode[
               {item.details.length > 0 && (
                 <div className="ml-[calc(1.2em+0.5rem)] mt-0.5 space-y-0.5">
                   {item.details.map((d, dIdx) => (
-                    <div key={dIdx} className={d.isDash ? "flex gap-2 text-muted-foreground" : ""}>
+                    <div key={dIdx} className={d.isDash ? "flex gap-2" : ""}>
                       {d.isDash && <span className="text-muted-foreground shrink-0">-</span>}
                       <span>{d.text}</span>
                     </div>

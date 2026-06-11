@@ -56,6 +56,23 @@ function sessionScopeLine(ctx: AgentTurnContext): string {
   return `Program ${ctx.programLabel}, GROUP ${ctx.primaryGroup}, session(s) ${sessions}`;
 }
 
+function formatStructuredToolOutput(
+  rows: Record<string, unknown>[],
+  humanText: string
+): string {
+  if (rows.length === 0) return humanText;
+  return `${JSON.stringify({ rows })}\n\n${humanText}`;
+}
+
+function matchedActivitiesToRows(matches: import("@/lib/chat/activity-match").MatchedActivity[]) {
+  return matches.map(({ activity, sessionId }) => ({
+    sessionId,
+    name: activity.name,
+    start: toPromptDate(activity.startDate),
+    end: activity.endDate ? toPromptDate(activity.endDate) : undefined,
+  }));
+}
+
 export async function executeChatTool(
   name: ChatToolName,
   args: Record<string, unknown>,
@@ -89,7 +106,10 @@ function executeSearchCalendarActivities(
   const query = String(parsed.query ?? ctx.message).trim();
 
   if (ctx.activityMatches.length > 0 && !parsed.query) {
-    return truncateToolOutput(formatMatchedActivitiesBlock(ctx.activityMatches));
+    const human = formatMatchedActivitiesBlock(ctx.activityMatches);
+    return truncateToolOutput(
+      formatStructuredToolOutput(matchedActivitiesToRows(ctx.activityMatches), human)
+    );
   }
 
   const flatPool = flattenActivitiesWithSession(ctx.contextSessionIds, (sid) =>
@@ -97,7 +117,10 @@ function executeSearchCalendarActivities(
   );
   const matches = matchActivitiesInMessage(query || ctx.message, flatPool);
   if (matches.length > 0) {
-    return truncateToolOutput(formatMatchedActivitiesBlock(matches));
+    const human = formatMatchedActivitiesBlock(matches);
+    return truncateToolOutput(
+      formatStructuredToolOutput(matchedActivitiesToRows(matches), human)
+    );
   }
 
   const dateScope = resolveDateScope(query || ctx.message, ctx.todayISO);
@@ -109,11 +132,18 @@ function executeSearchCalendarActivities(
     if (scoped.length === 0) {
       lines.push("(no rows overlap this period)");
     } else {
+      const rows = scoped.slice(0, 24).map((a) => ({
+        name: a.name,
+        start: toPromptDate(a.startDate),
+        end: a.endDate ? toPromptDate(a.endDate) : undefined,
+      }));
       for (const a of scoped.slice(0, 24)) {
         let range = toPromptDate(a.startDate);
         if (a.endDate) range += ` to ${toPromptDate(a.endDate)}`;
         lines.push(`- ${a.name}: ${range}`);
       }
+      const human = lines.join("\n");
+      return truncateToolOutput(formatStructuredToolOutput(rows, human));
     }
     return truncateToolOutput(lines.join("\n"));
   }
@@ -214,25 +244,29 @@ async function executeGetLectureWeeks(
 
   if (wantTable) {
     const table = await buildLectureWeeksTableBlock(ctx.contextSessionIds);
-    return truncateToolOutput(
+    const human =
       table ||
-        formatToolMiss({
-          tool: "get_lecture_weeks",
-          searched: "full lecture week table",
-          scope: sessionScopeLine(ctx),
-          suggest: "lecture week API may be unavailable for this session",
-        })
+      formatToolMiss({
+        tool: "get_lecture_weeks",
+        searched: "full lecture week table",
+        scope: sessionScopeLine(ctx),
+        suggest: "lecture week API may be unavailable for this session",
+      });
+    return truncateToolOutput(
+      formatStructuredToolOutput([{ mode: "full_table", scope: sessionScopeLine(ctx) }], human)
     );
   }
   const quick = await buildLectureWeekQuickReference(ctx.contextSessionIds, ctx.todayISO);
-  return truncateToolOutput(
+  const human =
     quick ||
-      formatToolMiss({
-        tool: "get_lecture_weeks",
-        searched: "current lecture week",
-        scope: sessionScopeLine(ctx),
-        suggest: "try full_table=true if user asked for all weeks",
-      })
+    formatToolMiss({
+      tool: "get_lecture_weeks",
+      searched: "current lecture week",
+      scope: sessionScopeLine(ctx),
+      suggest: "try full_table=true if user asked for all weeks",
+    });
+  return truncateToolOutput(
+    formatStructuredToolOutput([{ mode: "current", scope: sessionScopeLine(ctx) }], human)
   );
 }
 

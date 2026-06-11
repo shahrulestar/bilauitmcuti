@@ -1,9 +1,11 @@
 'use client';
 
 import { Suspense, useState, useEffect, useCallback, useRef } from 'react';
+import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { ChevronLeft } from 'lucide-react';
 
+import { Button } from '@/components/ui/button';
 import {
   Card,
   CardContent,
@@ -352,6 +354,47 @@ function DownloadPageContent() {
               <BookmarkTabContent />
             </TabsContent>
           </Tabs>
+
+          <Card className="mt-4 gap-0 rounded-[10px] shadow-none">
+            <CardHeader className="space-y-1 px-3 pb-4 sm:px-6">
+              <CardTitle className="text-xl font-semibold">About Bila UiTM Cuti</CardTitle>
+              <CardDescription className="mt-1 text-sm text-foreground">
+                Learn what this project covers, how the calendar works, and where to send feedback.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="flex flex-col gap-4 px-3 pt-0 sm:px-6">
+              <Button asChild variant="default" className="h-[38px] w-fit">
+                <Link href="/about">About</Link>
+              </Button>
+
+              <div className="flex flex-col gap-2">
+                <p className="text-sm font-semibold text-foreground">Become Our Sponsors</p>
+                <p className="text-sm text-foreground">
+                  Support the project and help keep the calendar free for everyone.
+                </p>
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                  <Button asChild className="h-[38px] w-full sm:w-auto">
+                    <a
+                      href="https://shahrulestar.com/sponsor"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      Sponsor
+                    </a>
+                  </Button>
+                  <Button variant="outline" asChild className="h-[38px] w-full sm:w-auto">
+                    <a
+                      href="https://github.com/sponsors/shahrulestar"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      Github Sponsor
+                    </a>
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </div>
     </div>

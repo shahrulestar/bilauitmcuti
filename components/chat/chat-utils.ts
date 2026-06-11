@@ -30,16 +30,16 @@ export async function parseChatResponse(res: Response): Promise<{
 }
 
 export const LOADING_PHRASES = [
-  "Searching calendar data...",
-  "Checking your schedule...",
-  "Looking up dates...",
-  "Analyzing academic calendar...",
-  "Finding the answer...",
-  "Menyemak jadual akademik...",
-  "Mencari maklumat...",
-  "Menyusun jawapan...",
-  "Reviewing semester info...",
-  "Scanning timetable...",
+  "Processing your request...",
+  "Working on your query...",
+  "Searching for information...",
+  "Analyzing your input...",
+  "Looking for answers...",
+  "Gathering data...",
+  "Compiling response...",
+  "Please wait...",
+  "Retrieving information...",
+  "Checking details...",
 ];
 
 export const FETCH_TIMEOUT_MS = 60_000;

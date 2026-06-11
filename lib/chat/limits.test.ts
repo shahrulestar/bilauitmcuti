@@ -14,4 +14,5 @@ describe("chat message limits", () => {
     const result = parseChatRequest({ message });
     expect(result.success).toBe(false);
   });
+
 });

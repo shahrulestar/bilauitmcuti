@@ -3,7 +3,6 @@ import {
   CHAT_MAX_HISTORY_CONTENT_LENGTH,
   CHAT_MAX_MESSAGE_LENGTH,
 } from "@/lib/chat/limits";
-
 export const MAX_BODY_SIZE_BYTES = CHAT_MAX_BODY_BYTES;
 /** @deprecated Use CHAT_MAX_MESSAGE_LENGTH from @/lib/chat/limits */
 export const MAX_MESSAGE_LENGTH = CHAT_MAX_MESSAGE_LENGTH;

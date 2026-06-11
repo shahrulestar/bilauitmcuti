@@ -93,6 +93,17 @@ export function mapChatError(error: unknown): { message: string; status: number 
       status: 502,
     };
   }
+  if (
+    errMsg.includes("validation error") &&
+    errMsg.includes("tools") &&
+    errMsg.includes("function")
+  ) {
+    return {
+      message:
+        "AI tool format error. Please try again; if it persists, switch to Llama or report the issue.",
+      status: 502,
+    };
+  }
   return { message: "Failed to get response from AI. Please try again.", status: 500 };
 }
 

@@ -38,4 +38,29 @@ The exam week is 21-09-2026 to 25-09-2026.`;
     expect(out).not.toContain("User Question");
     expect(out).not.toMatch(/^Language:/m);
   });
+
+  it("strips internal mode tags like (OPINION)", () => {
+    const raw =
+      "(OPINION) Cadangkan susun jadual dengan minggu ulangkaji lebih awal.\n- Fokus subjek berat dulu\n- Rehat secukupnya";
+    const out = cleanAiReply(raw);
+    expect(out).not.toMatch(/\(OPINION\)/i);
+    expect(out).toContain("Cadangkan susun jadual");
+    expect(out).toContain("Fokus subjek berat");
+  });
+
+  it("preserves markdown headings for explain/suggest replies", () => {
+    const raw =
+      "## Kenapa penting\nMinggu ulangkaji membantu ulangkaji sebelum peperiksaan.\n\n## Cadangan\nMulakan awal dan fokus subjek berat.";
+    const out = cleanAiReply(raw);
+    expect(out).toContain("## Kenapa penting");
+    expect(out).toContain("## Cadangan");
+  });
+
+  it("strips planning lines with mode labels", () => {
+    const raw = `OPINION: general study tips
+Ini cadangan umum untuk pelajar UiTM.`;
+    const out = cleanAiReply(raw);
+    expect(out).not.toMatch(/^OPINION:/m);
+    expect(out).toContain("Ini cadangan umum");
+  });
 });

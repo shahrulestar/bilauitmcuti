@@ -384,7 +384,7 @@ export function FeedbackFormPage({
                     Sponsor
                   </a>
                 </Button>
-                <Button variant="secondary" asChild className="w-full sm:w-auto h-[38px]">
+                <Button variant="outline" asChild className="w-full sm:w-auto h-[38px]">
                   <a
                     href="https://github.com/sponsors/shahrulestar"
                     target="_blank"

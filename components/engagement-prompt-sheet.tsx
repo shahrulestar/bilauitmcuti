@@ -21,6 +21,8 @@ import {
   responsiveDialogTitleClassName,
   responsiveDrawerBodyClassName,
   responsiveKeyboardDrawerContentClassName,
+  drawerOutlineButtonClassName,
+  drawerPrimaryButtonClassName,
 } from "@/components/ui/drawer";
 import { Textarea } from "@/components/ui/textarea";
 import { StarRating } from "@/components/star-rating";
@@ -40,6 +42,7 @@ const SHARE_TEXT =
 const MAX_FEEDBACK_REASON_LENGTH = 400;
 const LOW_RATING_FEEDBACK_PLACEHOLDER =
   "We’d love to hear your thoughts!";
+const HIGH_RATING_AUTO_CLOSE_MS = 2000;
 
 interface EngagementPromptSheetProps {
   open: boolean;
@@ -125,8 +128,9 @@ function EngagementPromptBody({
                 />
                 <Button
                   type="button"
+                  size="sm"
                   variant="default"
-                  className="h-[38px] w-full"
+                  className={drawerPrimaryButtonClassName}
                   disabled={isSubmittingFeedback}
                   onClick={onSubmitLowRatingFeedback}
                 >
@@ -149,15 +153,16 @@ function EngagementPromptBody({
                 <Button
                   type="button"
                   variant="outline"
-                  className="h-[38px] w-full"
+                  className={drawerOutlineButtonClassName}
                   onClick={onFeedback}
                 >
                   Send feedback
                 </Button>
                 <Button
                   type="button"
+                  size="sm"
                   variant="default"
-                  className="h-[38px] w-full"
+                  className={drawerPrimaryButtonClassName}
                   onClick={onShare}
                 >
                   Share with friends
@@ -188,16 +193,42 @@ export function EngagementPromptSheet({
     isEngagementRatingLimitReached()
   );
   const latestSubmittedRatingRef = useRef(0);
+  const highRatingCloseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null
+  );
+
+  const clearHighRatingCloseTimer = useCallback(() => {
+    if (highRatingCloseTimerRef.current) {
+      clearTimeout(highRatingCloseTimerRef.current);
+      highRatingCloseTimerRef.current = null;
+    }
+  }, []);
+
+  const scheduleHighRatingClose = useCallback(() => {
+    clearHighRatingCloseTimer();
+    highRatingCloseTimerRef.current = setTimeout(() => {
+      highRatingCloseTimerRef.current = null;
+      if (document.activeElement instanceof HTMLElement) {
+        document.activeElement.blur();
+      }
+      onOpenChange(false);
+    }, HIGH_RATING_AUTO_CLOSE_MS);
+  }, [clearHighRatingCloseTimer, onOpenChange]);
 
   useEffect(() => {
-    if (!open) return;
+    if (!open) {
+      clearHighRatingCloseTimer();
+      return;
+    }
     setRating(0);
     setFeedbackReason("");
     setRequiresFeedback(false);
     setIsSubmittingFeedback(false);
     latestSubmittedRatingRef.current = 0;
     setRatingDisabled(isEngagementRatingLimitReached());
-  }, [open]);
+  }, [open, clearHighRatingCloseTimer]);
+
+  useEffect(() => () => clearHighRatingCloseTimer(), [clearHighRatingCloseTimer]);
 
   const submitHighRating = useCallback(
     async (value: number) => {
@@ -240,12 +271,14 @@ export function EngagementPromptSheet({
       setRating(value);
 
       if (value <= 3) {
+        clearHighRatingCloseTimer();
         setRequiresFeedback(true);
         return;
       }
 
       setRequiresFeedback(false);
       setFeedbackReason("");
+      scheduleHighRatingClose();
 
       const attempts = recordEngagementRatingAttempt();
       if (attempts >= MAX_ENGAGEMENT_RATING_ATTEMPTS) {
@@ -255,7 +288,7 @@ export function EngagementPromptSheet({
       latestSubmittedRatingRef.current = value;
       void submitHighRating(value);
     },
-    [ratingDisabled, submitHighRating]
+    [ratingDisabled, submitHighRating, clearHighRatingCloseTimer, scheduleHighRatingClose]
   );
 
   const handleSubmitLowRatingFeedback = useCallback(async () => {
@@ -295,6 +328,7 @@ export function EngagementPromptSheet({
         setRatingDisabled(true);
       }
 
+      clearHighRatingCloseTimer();
       onRatingComplete();
       trackZarazEvent(ZARAZ_EVENTS.engagementRating, { rating });
       setRequiresFeedback(false);
@@ -319,9 +353,11 @@ export function EngagementPromptSheet({
     onOpenChange,
     ratingDisabled,
     requiresFeedback,
+    clearHighRatingCloseTimer,
   ]);
 
   const handleShare = useCallback(async () => {
+    clearHighRatingCloseTimer();
     const url = getPageShareUrl();
     const result = await shareOrCopyLink({
       title: SHARE_TITLE,
@@ -340,13 +376,14 @@ export function EngagementPromptSheet({
     if (result === "aborted") return;
 
     toast.error("Could not copy the link. Please try again.");
-  }, [onShareComplete]);
+  }, [clearHighRatingCloseTimer, onShareComplete]);
 
   const handleFeedback = useCallback(() => {
+    clearHighRatingCloseTimer();
     trackZarazEvent(ZARAZ_EVENTS.engagementFeedbackClick);
     onFeedbackComplete();
     router.push("/feedback");
-  }, [onFeedbackComplete, router]);
+  }, [clearHighRatingCloseTimer, onFeedbackComplete, router]);
 
   if (isMobileSheet) {
     return (

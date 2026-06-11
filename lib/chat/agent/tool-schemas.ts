@@ -4,7 +4,7 @@ const TOOL_DEFINITIONS: Record<ChatToolName, WorkersAiToolSchema> = {
   search_calendar_activities: {
     name: "search_calendar_activities",
     description:
-      "Find official UiTM academic calendar rows by activity name or keywords. Returns authoritative dates for matched events.",
+      "Find official UiTM academic calendar rows by activity name or keywords. Returns authoritative dates for matched events. Examples: query \"cuti semester\", \"peperiksaan akhir\", \"yuran\", \"penangguhan\". Do NOT use for lecture week numbers (Week 1..N) — use get_lecture_weeks instead.",
     parameters: {
       type: "object",
       properties: {
@@ -51,7 +51,7 @@ const TOOL_DEFINITIONS: Record<ChatToolName, WorkersAiToolSchema> = {
   get_lecture_weeks: {
     name: "get_lecture_weeks",
     description:
-      "Get lecture week numbers and date ranges (Week 1..N). Use for minggu kuliah / lecture week questions — not Kuliah activity rows.",
+      "Get lecture week numbers and date ranges (Week 1..N). Use for minggu kuliah, week berapa, lecture week list, or current week — NOT Kuliah activity rows from the academic calendar. Set full_table=true when user asks for all weeks or a week table.",
     parameters: {
       type: "object",
       properties: {

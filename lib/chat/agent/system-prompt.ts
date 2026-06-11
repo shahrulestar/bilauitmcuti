@@ -66,7 +66,7 @@ export function buildAgentSystemPrompt(
 
   if (messageLooksLikeExplanationOrOpinion(ctx.message)) {
     prompt +=
-      "\n\nNOTE: This turn looks like explain/opinion/justification — use EXPLAIN or OPINION mode; answer helpfully even if tool data is partial.";
+      "\n\nNOTE: This turn looks like explain/opinion/justification — answer in prose paragraphs or short ## headings followed by paragraphs; optional dash list for tips; never output mode labels like (OPINION) or (EXPLAIN); answer helpfully even if tool data is partial.";
   }
 
   if (extraDirectives) {

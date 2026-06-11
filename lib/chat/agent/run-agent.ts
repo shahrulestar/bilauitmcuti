@@ -1,8 +1,7 @@
 import {
+  resolveProductionChatModelChain,
   runWorkersAiAgent,
   supportsFunctionCalling,
-  resolveProductionChatModelChain,
-  type AgentChatMessage,
   type ChatMessage,
 } from "@/lib/ai";
 import { formatMatchedActivitiesBlock } from "@/lib/chat/activity-match";
@@ -10,14 +9,22 @@ import { schemasForTools, toWorkersAiToolsParam } from "@/lib/chat/agent/tool-sc
 import { buildToolRegistryForTurn } from "@/lib/chat/agent/tool-registry";
 import { buildAgentSystemPrompt } from "@/lib/chat/agent/system-prompt";
 import { executeChatTool } from "@/lib/chat/agent/tools/execute";
-import type { AgentRunResult, AgentTurnContext } from "@/lib/chat/agent/types";
+import type { AgentRunResult, AgentTurnContext, ChatToolName } from "@/lib/chat/agent/types";
 import { MAX_AGENT_TOOL_STEPS } from "@/lib/chat/agent/types";
 
+/** Global kill-switch only — FC models use agent path when not disabled. */
 export function isChatAgentEnabled(): boolean {
   const v = process.env.CHAT_USE_AGENT;
-  return v === "1" || v === "true";
+  if (v === "0" || v === "false") return false;
+  return true;
 }
 
+export function agentModeForModelId(modelId: string): "tools" | "compact" {
+  if (supportsFunctionCalling(modelId)) return "tools";
+  return "compact";
+}
+
+/** @deprecated Use agentModeForModelId with user-selected model id. */
 export function agentModeForModelChain(modelChain: string[]): "tools" | "compact" {
   if (modelChain.some((id) => supportsFunctionCalling(id))) return "tools";
   return "compact";
@@ -48,25 +55,10 @@ export async function runChatAgent(options: RunChatAgentOptions): Promise<AgentR
     };
   }
 
-  const availableTools = buildToolRegistryForTurn(options.ctx);
-  const schemas = schemasForTools(availableTools);
-  const workersTools = toWorkersAiToolsParam(schemas);
-
+  let availableTools = buildToolRegistryForTurn(options.ctx);
   let extraDirectives = options.extraSystemDirectives ?? "";
-  if (options.ctx.activityMatches.length > 0) {
-    const preloaded = formatMatchedActivitiesBlock(options.ctx.activityMatches);
-    extraDirectives += `\n\n=== PRELOADED MATCH (call search_calendar_activities to confirm) ===\n${preloaded}`;
-  }
-
-  const systemPrompt = buildAgentSystemPrompt(
-    options.ctx,
-    availableTools,
-    extraDirectives
-  );
-
   const toolsUsed: string[] = [];
 
-  const preloadMessages: AgentChatMessage[] = [];
   if (options.ctx.activityMatches.length > 0) {
     const preloadedResult = await executeChatTool(
       "search_calendar_activities",
@@ -74,22 +66,23 @@ export async function runChatAgent(options: RunChatAgentOptions): Promise<AgentR
       options.ctx
     );
     toolsUsed.push("search_calendar_activities");
-    preloadMessages.push({
-      role: "assistant",
-      content: "[Called search_calendar_activities]",
-    });
-    preloadMessages.push({
-      role: "tool",
-      name: "search_calendar_activities",
-      content: preloadedResult,
-    });
+    extraDirectives += `\n\n=== PRELOADED CALENDAR MATCH (authoritative — do not re-search same activity) ===\n${preloadedResult}`;
+    availableTools = availableTools.filter((t) => t !== "search_calendar_activities");
   }
+
+  const schemas = schemasForTools(availableTools);
+  const workersTools = toWorkersAiToolsParam(schemas);
+
+  const systemPrompt = buildAgentSystemPrompt(
+    options.ctx,
+    availableTools,
+    extraDirectives
+  );
 
   const reply = await runWorkersAiAgent({
     userMessage: options.userMessage,
     systemPrompt,
     history: options.history,
-    preloadMessages,
     tools: workersTools,
     requestHost: options.requestHost,
     correlationId: options.correlationId,
@@ -99,7 +92,7 @@ export async function runChatAgent(options: RunChatAgentOptions): Promise<AgentR
     onToken: options.onToken,
     emitTokensToClient: options.emitTokensToClient,
     executeTool: async (name, args) => {
-      const toolName = name as import("@/lib/chat/agent/types").ChatToolName;
+      const toolName = name as ChatToolName;
       if (!availableTools.includes(toolName)) {
         return `(tool ${name} is not available for this turn)`;
       }

@@ -2,6 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
+import { drawerPrimaryButtonClassName } from '@/components/ui/drawer';
 
 interface PwaInstallButtonProps {
   isInstalled: boolean;
@@ -18,7 +19,7 @@ export function PwaInstallButton({ isInstalled }: PwaInstallButtonProps) {
       variant="default"
       onMouseEnter={() => router.prefetch('/download')}
       onClick={() => router.push('/download')}
-      className="w-full !h-[38px] justify-center border-border text-center transition-none"
+      className={drawerPrimaryButtonClassName}
     >
       Download as PWA
     </Button>

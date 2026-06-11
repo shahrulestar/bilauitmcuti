@@ -113,7 +113,12 @@ export async function askAiWithRetry(
   message: string,
   systemPrompt: string,
   history: ChatMessage[] | undefined,
-  options: { maxTokens: number; temperature: number; requestHost?: string | null; correlationId?: string }
+  options: {
+    maxTokens: number;
+    temperature: number;
+    requestHost?: string | null;
+    correlationId?: string;
+  }
 ): Promise<string> {
   let lastError: unknown = null;
   for (let attempt = 0; attempt <= RETRY_DELAYS_MS.length; attempt++) {

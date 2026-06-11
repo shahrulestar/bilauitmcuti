@@ -66,21 +66,11 @@ export const SUGGESTIONS_GROUP_B = [
 
 /** General UiTM calendar questions — mixed into carousel for Group A and Group B. */
 export const SUGGESTIONS_GENERAL = [
-  "Sesi, semester, atau penggal — apa bezanya pada kalendar UiTM?",
-  "Macam mana nak baca jadual pendaftaran, kuliah, peperiksaan, dan cuti?",
-  "Cuti umum Malaysia ada dalam kalendar UiTM tak?",
   "List semua week 1-14 untuk semester ini",
   "Cuti atau peperiksaan seterusnya bila pada kalendar semester ini?",
   "Minggu Ulangkaji dan Peperiksaan Akhir — maksudnya apa dalam kalendar?",
   "Penangguhan yuran (Fee Deferment) — tarikh apa dalam kalendar?",
-  "Bagaimana cara semak semua cuti dalam satu semester?",
-  "Jika ada perubahan jadual, macam mana nak dapat makluman terkini?",
   "Apa beza cuti pertengahan semester dengan cuti umum?",
-  "Bagaimana cara semak tarikh penting pada portal pelajar?",
-  "Adakah peperiksaan ulang (repeat) guna jadual sama?",
-  "Kalau kelas batal, bagaimana status rekod kuliah di kalendar?",
-  "Di mana boleh rujuk kalendar akademik versi rasmi terbaru?",
-  "Siapa perlu dihubungi jika tarikh kalendar bercanggah dengan maklumat fakulti?",
   "Bilakah tempoh tambah/dropsubjek biasanya dibuka?",
 ];
 
