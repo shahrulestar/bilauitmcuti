@@ -63,6 +63,16 @@ const nextConfig = {
           'https://bilauitmcuti.notion.site/3774a1187b9c8032ab31eb9a2fecf0ea?v=3774a1187b9c807793e9000c046a55e4',
         permanent: true, // HTTP 308
       },
+      {
+        source: '/internship',
+        destination: 'https://intern.bilauitmcuti.com/internship',
+        permanent: true,
+      },
+      {
+        source: '/internship/:path*',
+        destination: 'https://intern.bilauitmcuti.com/internship/:path*',
+        permanent: true,
+      },
     ]
   },
   async headers() {
