@@ -4,23 +4,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { ResponsiveOverlayShell } from "@/components/ui/responsive-overlay-shell";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  responsiveDialogContentClassName,
-} from "@/components/ui/dialog";
-import {
-  KeyboardAwareDrawer,
-  DrawerContent,
-  DrawerTitle,
-  drawerBodyClassName,
-  drawerBodyFlexClassName,
-  drawerScrollRegionClassName,
-  responsiveDialogTitleClassName,
-  responsiveDrawerBodyClassName,
-  responsiveKeyboardDrawerContentClassName,
   drawerOutlineButtonClassName,
   drawerPrimaryButtonClassName,
 } from "@/components/ui/drawer";
@@ -385,70 +370,27 @@ export function EngagementPromptSheet({
     router.push("/feedback");
   }, [clearHighRatingCloseTimer, onFeedbackComplete, router]);
 
-  if (isMobileSheet) {
-    return (
-      <KeyboardAwareDrawer open={open} onOpenChange={onOpenChange}>
-        <DrawerContent keyboardAware className={responsiveKeyboardDrawerContentClassName}>
-          <div
-            className={cn(
-              drawerBodyClassName,
-              drawerBodyFlexClassName,
-              responsiveDrawerBodyClassName,
-              "min-h-0 gap-0"
-            )}
-          >
-            <div data-vaul-no-drag="" className="w-full shrink-0">
-              <DrawerTitle>Enjoying Bila UiTM Cuti?</DrawerTitle>
-            </div>
-            <div
-              data-vaul-no-drag=""
-              className={cn(drawerScrollRegionClassName, "w-full min-w-0")}
-            >
-              <EngagementPromptBody
-                rating={rating}
-                ratingDisabled={ratingDisabled}
-                requiresFeedback={requiresFeedback}
-                feedbackReason={feedbackReason}
-                isSubmittingFeedback={isSubmittingFeedback}
-                compactFeedbackInput
-                onRatingChange={handleRatingChange}
-                onFeedbackReasonChange={setFeedbackReason}
-                onSubmitLowRatingFeedback={handleSubmitLowRatingFeedback}
-                onFeedback={handleFeedback}
-                onShare={handleShare}
-              />
-            </div>
-          </div>
-        </DrawerContent>
-      </KeyboardAwareDrawer>
-    );
-  }
-
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent
-        className={responsiveDialogContentClassName}
-        showCloseButton={false}
-      >
-        <DialogHeader className="gap-3 text-center md:text-left">
-          <DialogTitle className={responsiveDialogTitleClassName}>
-            Enjoying Bila UiTM Cuti?
-          </DialogTitle>
-        </DialogHeader>
-        <EngagementPromptBody
-          rating={rating}
-          ratingDisabled={ratingDisabled}
-          centerRating
-          requiresFeedback={requiresFeedback}
-          feedbackReason={feedbackReason}
-          isSubmittingFeedback={isSubmittingFeedback}
-          onRatingChange={handleRatingChange}
-          onFeedbackReasonChange={setFeedbackReason}
-          onSubmitLowRatingFeedback={handleSubmitLowRatingFeedback}
-          onFeedback={handleFeedback}
-          onShare={handleShare}
-        />
-      </DialogContent>
-    </Dialog>
+    <ResponsiveOverlayShell
+      open={open}
+      onOpenChange={onOpenChange}
+      isMobile={isMobileSheet}
+      title="Enjoying Bila UiTM Cuti?"
+    >
+      <EngagementPromptBody
+        rating={rating}
+        ratingDisabled={ratingDisabled}
+        centerRating={!isMobileSheet}
+        requiresFeedback={requiresFeedback}
+        feedbackReason={feedbackReason}
+        isSubmittingFeedback={isSubmittingFeedback}
+        compactFeedbackInput={isMobileSheet}
+        onRatingChange={handleRatingChange}
+        onFeedbackReasonChange={setFeedbackReason}
+        onSubmitLowRatingFeedback={handleSubmitLowRatingFeedback}
+        onFeedback={handleFeedback}
+        onShare={handleShare}
+      />
+    </ResponsiveOverlayShell>
   );
 }

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { ChatCalendarBootstrap } from "@/components/chat-calendar-bootstrap";
 import { PageSeoBlock } from "@/components/page-seo-block";
-import { TurnstileSiteKeyProvider } from "@/components/turnstile-site-key-provider";
+import { TurnstileSiteKeyProvider } from "@/hooks/use-turnstile-site-key";
 import {
   CHAT_SEO_DESCRIPTION,
   CHAT_SEO_TITLE,

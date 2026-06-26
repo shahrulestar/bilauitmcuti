@@ -36,28 +36,6 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  responsiveDialogContentClassName,
-} from "@/components/ui/dialog";
-import {
-  KeyboardAwareDrawer,
-  DrawerContent,
-  DrawerDescription,
-  DrawerTitle,
-  drawerBodyClassName,
-  drawerBodyFlexClassName,
-  drawerScrollRegionClassName,
-  responsiveDrawerDescriptionClassName,
-  responsiveDialogDescriptionClassName,
-  responsiveDialogTitleClassName,
-  responsiveDrawerBodyClassName,
-  responsiveKeyboardDrawerContentClassName,
-} from "@/components/ui/drawer";
 import { Button } from "@/components/ui/button";
 import {
   ContextMenu,
@@ -69,11 +47,12 @@ import {
   TurnstileWidget,
   type TurnstileWidgetHandle,
 } from "@/components/turnstile-widget";
-import { useTurnstileSiteKeyFromContext } from "@/components/turnstile-site-key-provider";
-import { useEngagementPrompt } from "@/components/engagement-prompt-provider";
-import { FormattedMessage } from "@/components/chat/formatted-message";
+import { useTurnstileSiteKeyFromContext } from "@/hooks/use-turnstile-site-key";
+import { useEngagementPrompt } from "@/components/engagement-prompt";
+import { MarkdownRenderer } from "@/components/ui/markdown-renderer";
+import { ResponsiveOverlayShell } from "@/components/ui/responsive-overlay-shell";
 import { SuggestionCarousel } from "@/components/chat/suggestion-carousel";
-import { useChatGreeting } from "@/components/chat/use-chat-greeting";
+import { useChatGreeting } from "@/hooks/use-chat-greeting";
 import { getRandomSuggestions } from "@/components/chat/suggestion-data";
 import { useDesktopViewport } from "@/lib/use-mobile-viewport";
 import {
@@ -1108,7 +1087,7 @@ export default function ChatPage() {
                     </ContextMenu>
                   ) : (
                     <div className="w-full px-1 py-1 text-sm leading-relaxed text-foreground">
-                      <FormattedMessage
+                      <MarkdownRenderer
                         content={msg.content}
                         isComplete={msg.isComplete !== false}
                       />
@@ -1237,81 +1216,33 @@ export default function ChatPage() {
               rows={1}
               className="chat-input relative z-10 w-full resize-none bg-transparent px-4 pt-3 pb-1 text-sm leading-relaxed placeholder:text-muted-foreground focus:outline-none disabled:opacity-50"
             />
-            {isMobileMentionPicker ? (
-              <KeyboardAwareDrawer open={isMentionOpen} onOpenChange={setIsMentionOpen}>
-                <DrawerContent keyboardAware className={responsiveKeyboardDrawerContentClassName}>
-                  <div
-                    className={cn(
-                      drawerBodyClassName,
-                      drawerBodyFlexClassName,
-                      responsiveDrawerBodyClassName,
-                      "min-h-0 gap-0"
-                    )}
+            <ResponsiveOverlayShell
+              open={isMentionOpen}
+              onOpenChange={setIsMentionOpen}
+              isMobile={isMobileMentionPicker}
+              title="Mention Session Calendar"
+              description="Select a session to insert into your message."
+              scrollClassName="space-y-2 text-left"
+              desktopBodyClassName="max-h-[80vh] overflow-auto space-y-2"
+            >
+              {mentionItems.length > 0 ? (
+                mentionItems.map((item, index) => (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => handleMentionSelect(item)}
+                    className={`flex w-full flex-col items-start rounded-md border border-border px-2 py-2 text-left text-sm text-secondary-foreground transition-colors focus-visible:outline-none focus-visible:ring-0 ${
+                      index === activeMentionIndex ? "bg-secondary/80" : "bg-secondary md:hover:bg-secondary/80"
+                    }`}
                   >
-                    <div data-vaul-no-drag="" className="w-full shrink-0">
-                      <DrawerTitle>Mention Session Calendar</DrawerTitle>
-                      <DrawerDescription className={responsiveDrawerDescriptionClassName}>
-                        Select a session to insert into your message.
-                      </DrawerDescription>
-                    </div>
-                    <div
-                      data-vaul-no-drag=""
-                      className={cn(drawerScrollRegionClassName, "w-full min-w-0 space-y-2 text-left")}
-                    >
-                      {mentionItems.length > 0 ? (
-                        mentionItems.map((item, index) => (
-                          <button
-                            key={item.id}
-                            type="button"
-                            onClick={() => handleMentionSelect(item)}
-                            className={`flex w-full flex-col items-start rounded-md border border-border px-2 py-2 text-left text-sm text-secondary-foreground transition-colors focus-visible:outline-none focus-visible:ring-0 ${
-                              index === activeMentionIndex ? "bg-secondary/80" : "bg-secondary md:hover:bg-secondary/80"
-                            }`}
-                          >
-                            <span className="font-medium">{item.label}</span>
-                            <span className="text-xs text-muted-foreground">{item.id}</span>
-                          </button>
-                        ))
-                      ) : (
-                        <div className="py-2 text-xs text-muted-foreground">No sessions found</div>
-                      )}
-                    </div>
-                  </div>
-                </DrawerContent>
-              </KeyboardAwareDrawer>
-            ) : (
-              <Dialog open={isMentionOpen} onOpenChange={setIsMentionOpen}>
-                <DialogContent className={responsiveDialogContentClassName} showCloseButton={false}>
-                  <DialogHeader className="gap-3 text-center md:text-left">
-                    <DialogTitle className={responsiveDialogTitleClassName}>
-                      Mention Session Calendar
-                    </DialogTitle>
-                    <DialogDescription className={responsiveDialogDescriptionClassName}>
-                      Select a session to insert into your message.
-                    </DialogDescription>
-                  </DialogHeader>
-                  <div className="max-h-[80vh] overflow-auto space-y-2">
-                    {mentionItems.length > 0 ? (
-                      mentionItems.map((item, index) => (
-                        <button
-                          key={item.id}
-                          type="button"
-                          onClick={() => handleMentionSelect(item)}
-                          className={`flex w-full flex-col items-start rounded-md border border-border px-2 py-2 text-left text-sm text-secondary-foreground transition-colors focus-visible:outline-none focus-visible:ring-0 ${
-                            index === activeMentionIndex ? "bg-secondary/80" : "bg-secondary md:hover:bg-secondary/80"
-                          }`}
-                        >
-                          <span className="font-medium">{item.label}</span>
-                          <span className="text-xs text-muted-foreground">{item.id}</span>
-                        </button>
-                      ))
-                    ) : (
-                      <div className="px-2 py-2 text-xs text-muted-foreground">No sessions found</div>
-                    )}
-                  </div>
-                </DialogContent>
-              </Dialog>
-            )}
+                    <span className="font-medium">{item.label}</span>
+                    <span className="text-xs text-muted-foreground">{item.id}</span>
+                  </button>
+                ))
+              ) : (
+                <div className="px-2 py-2 text-xs text-muted-foreground">No sessions found</div>
+              )}
+            </ResponsiveOverlayShell>
 
             {/* Bottom bar */}
             <div className="flex items-center justify-between px-3 py-2">

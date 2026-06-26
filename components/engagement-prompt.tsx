@@ -16,6 +16,8 @@ import {
   type EngagementActionType,
 } from "@/lib/engagement-prompt";
 import { trackZarazEvent, ZARAZ_EVENTS } from "@/lib/zaraz";
+import { EngagementPromptSheet } from "@/components/engagement-prompt-sheet";
+import { useMobileViewport } from "@/lib/use-mobile-viewport";
 
 interface EngagementPromptContextValue {
   open: boolean;
@@ -137,4 +139,30 @@ export function useEngagementPrompt(): EngagementPromptContextValue {
     throw new Error("useEngagementPrompt must be used within EngagementPromptProvider");
   }
   return ctx;
+}
+
+function EngagementPromptHost() {
+  const { open, setOpen, closeAfterShare, closeAfterFeedback, completeRating } =
+    useEngagementPrompt();
+  const isMobileSheet = useMobileViewport();
+
+  return (
+    <EngagementPromptSheet
+      open={open}
+      onOpenChange={setOpen}
+      isMobileSheet={isMobileSheet}
+      onShareComplete={closeAfterShare}
+      onFeedbackComplete={closeAfterFeedback}
+      onRatingComplete={completeRating}
+    />
+  );
+}
+
+export function EngagementPromptRoot({ children }: { children: ReactNode }) {
+  return (
+    <EngagementPromptProvider>
+      {children}
+      <EngagementPromptHost />
+    </EngagementPromptProvider>
+  );
 }

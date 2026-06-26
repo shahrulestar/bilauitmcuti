@@ -28,7 +28,7 @@ import { getActivitiesForDateMultiSessions, getMonthsForSessions, getDaysUntilSt
 import { fetchLectureWeeks } from '@/lib/calendar-api';
 import { buildDateToWeekNumberMap } from '@/lib/lecture-weeks-resolve';
 import { useMobileViewport } from '@/lib/use-mobile-viewport';
-import { useEngagementPrompt } from '@/components/engagement-prompt-provider';
+import { useEngagementPrompt } from '@/components/engagement-prompt';
 
 interface TooltipActivityListProps {
   dateKey: string;

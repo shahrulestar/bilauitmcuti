@@ -45,81 +45,38 @@ export function CalendarGridListMount({
   const calendarDataProgram = useCalendarCommittedProgram();
   const calendarDataSessions = useCalendarCommittedSessions();
 
+  const sharedViewProps = {
+    selectedProgram: calendarDataProgram,
+    selectedSessions: calendarDataSessions,
+    showKKT,
+    showRegistration,
+    showLecture,
+    showSemesterPendek,
+    showKuliahIntersesi,
+    showExamination,
+    showOthersExams,
+    showBreak,
+    showCountdown,
+    onMonthChange,
+    selectedStates,
+    initialCurrentDate,
+  };
+
   return (
     <>
       {bothViewsMounted ? (
         <>
           <div style={{ display: activeViewMode === 'list' ? 'block' : 'none' }}>
-            <ListView
-              selectedProgram={calendarDataProgram}
-              selectedSessions={calendarDataSessions}
-              showKKT={showKKT}
-              showRegistration={showRegistration}
-              showLecture={showLecture}
-              showSemesterPendek={showSemesterPendek}
-              showKuliahIntersesi={showKuliahIntersesi}
-              showExamination={showExamination}
-              showOthersExams={showOthersExams}
-              showBreak={showBreak}
-              showCountdown={showCountdown}
-              onMonthChange={onMonthChange}
-              selectedStates={selectedStates}
-              initialCurrentDate={initialCurrentDate}
-            />
+            <ListView {...sharedViewProps} />
           </div>
           <div style={{ display: activeViewMode === 'grid' ? 'block' : 'none' }}>
-            <GridView
-              selectedProgram={calendarDataProgram}
-              selectedSessions={calendarDataSessions}
-              showKKT={showKKT}
-              showRegistration={showRegistration}
-              showLecture={showLecture}
-              showSemesterPendek={showSemesterPendek}
-              showKuliahIntersesi={showKuliahIntersesi}
-              showExamination={showExamination}
-              showOthersExams={showOthersExams}
-              showBreak={showBreak}
-              showCountdown={showCountdown}
-              onMonthChange={onMonthChange}
-              selectedStates={selectedStates}
-              initialCurrentDate={initialCurrentDate}
-            />
+            <GridView {...sharedViewProps} />
           </div>
         </>
       ) : activeViewMode === 'list' ? (
-        <ListView
-          selectedProgram={calendarDataProgram}
-          selectedSessions={calendarDataSessions}
-          showKKT={showKKT}
-          showRegistration={showRegistration}
-          showLecture={showLecture}
-          showSemesterPendek={showSemesterPendek}
-          showKuliahIntersesi={showKuliahIntersesi}
-          showExamination={showExamination}
-          showOthersExams={showOthersExams}
-          showBreak={showBreak}
-          showCountdown={showCountdown}
-          onMonthChange={onMonthChange}
-          selectedStates={selectedStates}
-          initialCurrentDate={initialCurrentDate}
-        />
+        <ListView {...sharedViewProps} />
       ) : (
-        <GridView
-          selectedProgram={calendarDataProgram}
-          selectedSessions={calendarDataSessions}
-          showKKT={showKKT}
-          showRegistration={showRegistration}
-          showLecture={showLecture}
-          showSemesterPendek={showSemesterPendek}
-          showKuliahIntersesi={showKuliahIntersesi}
-          showExamination={showExamination}
-          showOthersExams={showOthersExams}
-          showBreak={showBreak}
-          showCountdown={showCountdown}
-          onMonthChange={onMonthChange}
-          selectedStates={selectedStates}
-          initialCurrentDate={initialCurrentDate}
-        />
+        <GridView {...sharedViewProps} />
       )}
     </>
   );

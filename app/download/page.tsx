@@ -14,6 +14,7 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { usePwaInstalled } from '@/hooks/use-pwa-installed';
 
 const pwaBenefits = [
   'Open the app from your home screen in one tap.',
@@ -282,22 +283,11 @@ function DownloadPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [headerVisible, setHeaderVisible] = useState(true);
-  const [isInstalled, setIsInstalled] = useState(false);
+  const isInstalled = usePwaInstalled();
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const lastScrollTop = useRef(0);
 
   const initialTab = searchParams.get('tab') === 'bookmark' ? 'bookmark' : 'pwa';
-
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-
-    const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
-    const isMinimalUI = (window.navigator as { standalone?: boolean }).standalone === true;
-
-    if (isStandalone || isMinimalUI) {
-      setIsInstalled(true);
-    }
-  }, []);
 
   const handleScroll = useCallback(() => {
     const el = scrollContainerRef.current;

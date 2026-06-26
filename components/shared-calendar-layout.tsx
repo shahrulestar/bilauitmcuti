@@ -4,10 +4,10 @@ import { Suspense, useState, useEffect, useLayoutEffect, useCallback, useMemo, u
 import { usePathname, useRouter } from 'next/navigation';
 import { CalendarHeader } from '@/components/calendar-header';
 import { CalendarControls } from '@/components/calendar-controls';
-import { PwaPromptAlert } from '@/components/pwa-prompt-alert';
 import { SessionQueryConsumer } from '@/components/session-query-consumer';
 import { ShareUrlSync } from '@/components/share-url-sync';
 import { CalendarGridListMount } from '@/components/calendar/grid-list-mount';
+import { CalendarInternshipFooter } from '@/components/calendar-internship-footer';
 import {
   getRoutePath,
   resolveProgramFromPathAndProps,
@@ -531,7 +531,6 @@ export function SharedCalendarLayout({
           initialDateLabel={initialDateLabel}
           initialLectureWeekByDate={initialLectureWeekByDate}
         />
-        <PwaPromptAlert />
 
         <CalendarControls
           selectedProgram={selectedProgram}
@@ -578,6 +577,7 @@ export function SharedCalendarLayout({
           />
         </div>
 
+        <CalendarInternshipFooter />
       </div>
     </div>
     </CalendarDataGate>

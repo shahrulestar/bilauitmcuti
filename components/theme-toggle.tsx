@@ -3,6 +3,7 @@
 import { useTheme } from 'next-themes';
 import { useEffect, useState } from 'react';
 import { Kbd } from '@/components/ui/kbd';
+import { SettingsSwitchRow } from '@/components/ui/settings-switch-row';
 
 type Theme = 'light' | 'dark';
 
@@ -10,18 +11,15 @@ export function ThemeToggle() {
   const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
 
-  // Validate and set theme safely
   const handleThemeChange = (checked: boolean) => {
     const newTheme: Theme = checked ? 'dark' : 'light';
     setTheme(newTheme);
   };
 
-  // Prevent hydration mismatch
   useEffect(() => {
     setMounted(true);
   }, []);
 
-  // Update theme-color meta tag when theme changes - prevent duplicate updates
   useEffect(() => {
     if (!mounted || !theme) return;
     const updateThemeColor = () => {
@@ -29,62 +27,36 @@ export function ThemeToggle() {
       if (metaThemeColor) {
         const currentValue = metaThemeColor.getAttribute('content');
         const newValue = theme === 'dark' ? '#1a1a1a' : '#ffffff';
-        // Only update if value has changed to prevent unnecessary DOM updates
         if (currentValue !== newValue) {
           metaThemeColor.setAttribute('content', newValue);
         }
       }
     };
-    // Use requestAnimationFrame to ensure DOM is ready
     requestAnimationFrame(updateThemeColor);
   }, [theme, mounted]);
 
-  // Don't render until mounted to prevent hydration mismatch
   if (!mounted) {
     return (
-      <label className="flex items-center justify-between cursor-pointer py-0.5">
-        <div className="flex items-center gap-2">
-          <span className="text-sm font-medium text-foreground">Theme</span>
-          <Kbd className="hidden md:inline-flex">D</Kbd>
-        </div>
-        <div className="relative inline-flex h-6 w-11 items-center rounded-full transition-none bg-muted"
-          style={{ transition: 'none' }}
-        >
-          <span
-            className="inline-block h-4 w-4 transform rounded-full transition-none shadow-sm bg-background dark:bg-foreground"
-            style={{ transform: 'translateX(2px)', transition: 'none' }}
-          />
-        </div>
-      </label>
+      <SettingsSwitchRow
+        label="Theme"
+        checked={false}
+        ariaLabel="Toggle theme"
+        interactive={false}
+        kbd={<Kbd className="hidden md:inline-flex">D</Kbd>}
+      />
     );
   }
 
-  // Validate theme value - ensure type safety
   const isDark = theme === 'dark';
   const isValidTheme = theme === 'light' || theme === 'dark';
 
   return (
-    <label className="flex items-center justify-between cursor-pointer py-0.5">
-      <div className="flex items-center gap-2">
-        <span className="text-sm font-medium text-foreground">Theme</span>
-        <Kbd className="hidden md:inline-flex">D</Kbd>
-      </div>
-      <div
-        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-none ${isDark ? 'bg-primary' : 'bg-muted'}`}
-        style={{ transition: 'none' }}
-      >
-        <span
-          className={`inline-block h-4 w-4 transform rounded-full transition-none shadow-sm ${isDark ? 'bg-background' : 'bg-background dark:bg-foreground'}`}
-          style={{ transform: isDark ? 'translateX(20px)' : 'translateX(2px)', transition: 'none' }}
-        />
-        <input
-          type="checkbox"
-          checked={isDark && isValidTheme}
-          onChange={(e) => handleThemeChange(e.target.checked)}
-          className="sr-only"
-          aria-label="Toggle theme"
-        />
-      </div>
-    </label>
+    <SettingsSwitchRow
+      label="Theme"
+      checked={isDark && isValidTheme}
+      onChange={handleThemeChange}
+      ariaLabel="Toggle theme"
+      kbd={<Kbd className="hidden md:inline-flex">D</Kbd>}
+    />
   );
 }

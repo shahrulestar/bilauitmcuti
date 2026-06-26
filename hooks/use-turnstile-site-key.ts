@@ -1,12 +1,14 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { createContext, createElement, useContext, useEffect, useState, type ReactNode } from "react";
 
 export interface TurnstileSiteKeyState {
   siteKey: string;
   /** False until inlined env, server prop, or /api/turnstile/config has been resolved. */
   isReady: boolean;
 }
+
+const TurnstileSiteKeyContext = createContext<TurnstileSiteKeyState | null>(null);
 
 /**
  * Resolves the Turnstile site key for client pages. Build-inlined NEXT_PUBLIC_* is used
@@ -58,4 +60,23 @@ export function useTurnstileSiteKey(initialSiteKey = ""): TurnstileSiteKeyState 
   }, [initialSiteKey]);
 
   return { siteKey, isReady };
+}
+
+export function TurnstileSiteKeyProvider({
+  initialSiteKey = "",
+  children,
+}: {
+  initialSiteKey?: string;
+  children: ReactNode;
+}) {
+  const value = useTurnstileSiteKey(initialSiteKey);
+  return createElement(TurnstileSiteKeyContext.Provider, { value }, children);
+}
+
+export function useTurnstileSiteKeyFromContext(): TurnstileSiteKeyState {
+  const ctx = useContext(TurnstileSiteKeyContext);
+  if (!ctx) {
+    throw new Error("useTurnstileSiteKeyFromContext must be used within TurnstileSiteKeyProvider");
+  }
+  return ctx;
 }

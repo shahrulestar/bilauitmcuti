@@ -19,6 +19,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { url: baseUrl, lastModified, changeFrequency: 'daily', priority: 1 },
     { url: `${baseUrl}/about`, lastModified, changeFrequency: 'monthly', priority: 0.6 },
     { url: `${baseUrl}/list`, lastModified, changeFrequency: 'weekly', priority: 0.8 },
+    { url: `${baseUrl}/internship`, lastModified, changeFrequency: 'weekly', priority: 0.7 },
   ]
 
   const programPages: MetadataRoute.Sitemap = programSlugs.flatMap((slug) => [

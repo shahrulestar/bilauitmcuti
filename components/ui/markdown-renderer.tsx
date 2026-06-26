@@ -1,10 +1,15 @@
 "use client";
 
-import type { Components } from "react-markdown";
+import type { ReactNode } from "react";
 import Markdown from "react-markdown";
+import type { Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
 
 import { cn } from "@/lib/utils";
+import {
+  contentToMarkdown,
+  shouldUseMarkdownRenderer,
+} from "@/lib/chat/markdown-suitability";
 import {
   Table,
   TableHeader,
@@ -17,6 +22,8 @@ import {
 interface MarkdownRendererProps {
   content: string;
   className?: string;
+  /** False while streaming; markdown is only rendered once the reply is complete. */
+  isComplete?: boolean;
 }
 
 const COMPONENTS: Components = {
@@ -89,11 +96,26 @@ const COMPONENTS: Components = {
   td: ({ children }) => <TableCell className="text-xs">{children}</TableCell>,
 };
 
-export function MarkdownRenderer({ content, className }: MarkdownRendererProps) {
+export function MarkdownRenderer({
+  content,
+  className,
+  isComplete = true,
+}: MarkdownRendererProps) {
+  const trimmed = content.trim();
+  if (!trimmed) return null;
+
+  if (!isComplete || !shouldUseMarkdownRenderer(trimmed)) {
+    return (
+      <p className={cn("text-sm leading-relaxed whitespace-pre-wrap", className)}>
+        {trimmed}
+      </p>
+    );
+  }
+
   return (
     <div className={cn("text-sm leading-relaxed break-words", className)}>
       <Markdown remarkPlugins={[remarkGfm]} components={COMPONENTS}>
-        {content}
+        {contentToMarkdown(trimmed)}
       </Markdown>
     </div>
   );

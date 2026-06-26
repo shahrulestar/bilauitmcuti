@@ -47,9 +47,9 @@ import type { ProgramValue } from '@/lib/route-utils';
 import { sessionSubmenuItemClass } from '@/lib/session-submenu-item-class';
 
 import { SessionSubmenuItemLabel } from '@/components/session-submenu-item-label';
-import { useEngagementPrompt } from '@/components/engagement-prompt-provider';
+import { useEngagementPrompt } from '@/components/engagement-prompt';
 import { usePwaInstalled } from '@/hooks/use-pwa-installed';
-import { CalendarFilterToggle } from '@/components/calendar/filter-toggle';
+import { SettingsSwitchRow } from '@/components/ui/settings-switch-row';
 import { PwaInstallButton } from '@/components/calendar/pwa-install-hint';
 import { drawerOutlineButtonClassName } from '@/components/ui/drawer';
 
@@ -561,175 +561,90 @@ export function CalendarControls({
                 <div className="space-y-3 transition-none">
                   {/* Activity Type Toggles */}
                   <div className="space-y-2 transition-none">
-                    <CalendarFilterToggle
+                    <SettingsSwitchRow
                       label="Registration"
                       checked={showRegistration}
                       onChange={(checked) => onFilterToggle(checked, onShowRegistrationChange)}
                       ariaLabel="Toggle registration events"
                     />
 
-                    <label className="flex items-center justify-between cursor-pointer py-0.5 transition-none">
-                      <span className="text-sm font-medium text-foreground">Lecture</span>
-                      <div className={`relative inline-flex h-6 w-11 items-center rounded-full transition-none ${showLecture ? 'bg-primary' : 'bg-muted'}`}
-                        style={{ transition: 'none' }}
-                      >
-                        <span
-                          className={`inline-block h-4 w-4 transform rounded-full transition-none shadow-sm ${showLecture ? 'bg-background' : 'bg-background dark:bg-foreground'}`}
-                          style={{ transform: showLecture ? 'translateX(20px)' : 'translateX(2px)', transition: 'none' }}
-                        />
-                        <input
-                          type="checkbox"
-                          checked={showLecture}
-                          onChange={(e) => onFilterToggle(e.target.checked, onShowLectureChange)}
-                          className="sr-only"
-                          aria-label="Toggle lecture events"
-                        />
-                      </div>
-                    </label>
+                    <SettingsSwitchRow
+                      label="Lecture"
+                      checked={showLecture}
+                      onChange={(checked) => onFilterToggle(checked, onShowLectureChange)}
+                      ariaLabel="Toggle lecture events"
+                    />
 
                     {hasSemesterPendek && (
-                    <label className="flex items-center justify-between cursor-pointer py-0.5 pl-4 transition-none">
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs font-medium text-muted-foreground">Short Semester</span>
-                      </div>
-                      <div className={`relative inline-flex h-6 w-11 items-center rounded-full transition-none ${showSemesterPendek ? 'bg-primary' : 'bg-muted'}`}
-                        style={{ transition: 'none' }}
-                      >
-                        <span
-                          className={`inline-block h-4 w-4 transform rounded-full transition-none shadow-sm ${showSemesterPendek ? 'bg-background' : 'bg-background dark:bg-foreground'}`}
-                          style={{ transform: showSemesterPendek ? 'translateX(20px)' : 'translateX(2px)', transition: 'none' }}
-                        />
-                        <input
-                          type="checkbox"
-                          checked={showSemesterPendek}
-                          onChange={(e) => onFilterToggle(e.target.checked, onShowSemesterPendekChange)}
-                          className="sr-only"
-                          aria-label="Toggle Short Semester events"
-                        />
-                      </div>
-                    </label>
+                    <SettingsSwitchRow
+                      label="Short Semester"
+                      checked={showSemesterPendek}
+                      onChange={(checked) => onFilterToggle(checked, onShowSemesterPendekChange)}
+                      nested
+                      ariaLabel="Toggle Short Semester events"
+                    />
                     )}
 
                     {hasKuliahIntersesi && (
-                    <label className="flex items-center justify-between cursor-pointer py-0.5 pl-4 transition-none">
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs font-medium text-muted-foreground">Intersession Classes</span>
-                      </div>
-                      <div className={`relative inline-flex h-6 w-11 items-center rounded-full transition-none ${showKuliahIntersesi ? 'bg-primary' : 'bg-muted'}`}
-                        style={{ transition: 'none' }}
-                      >
-                        <span
-                          className={`inline-block h-4 w-4 transform rounded-full transition-none shadow-sm ${showKuliahIntersesi ? 'bg-background' : 'bg-background dark:bg-foreground'}`}
-                          style={{ transform: showKuliahIntersesi ? 'translateX(20px)' : 'translateX(2px)', transition: 'none' }}
-                        />
-                        <input
-                          type="checkbox"
-                          checked={showKuliahIntersesi}
-                          onChange={(e) => onFilterToggle(e.target.checked, onShowKuliahIntersesiChange)}
-                          className="sr-only"
-                          aria-label="Toggle Intersession Classes events"
-                        />
-                      </div>
-                    </label>
+                    <SettingsSwitchRow
+                      label="Intersession Classes"
+                      checked={showKuliahIntersesi}
+                      onChange={(checked) => onFilterToggle(checked, onShowKuliahIntersesiChange)}
+                      nested
+                      ariaLabel="Toggle Intersession Classes events"
+                    />
                     )}
 
-                    <label className="flex items-center justify-between cursor-pointer py-0.5 transition-none">
-                      <span className="text-sm font-medium text-foreground">Examination</span>
-                      <div className={`relative inline-flex h-6 w-11 items-center rounded-full transition-none ${showExamination ? 'bg-primary' : 'bg-muted'}`}
-                        style={{ transition: 'none' }}
-                      >
-                        <span
-                          className={`inline-block h-4 w-4 transform rounded-full transition-none shadow-sm ${showExamination ? 'bg-background' : 'bg-background dark:bg-foreground'}`}
-                          style={{ transform: showExamination ? 'translateX(20px)' : 'translateX(2px)', transition: 'none' }}
-                        />
-                        <input
-                          type="checkbox"
-                          checked={showExamination}
-                          onChange={(e) => onFilterToggle(e.target.checked, onShowExaminationChange)}
-                          className="sr-only"
-                          aria-label="Toggle examination events"
-                        />
-                      </div>
-                    </label>
+                    <SettingsSwitchRow
+                      label="Examination"
+                      checked={showExamination}
+                      onChange={(checked) => onFilterToggle(checked, onShowExaminationChange)}
+                      ariaLabel="Toggle examination events"
+                    />
 
                     {hasOthersExams && (
-                    <label className="flex items-center justify-between cursor-pointer py-0.5 pl-4 transition-none">
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs font-medium text-muted-foreground">Others Exams</span>
-                      </div>
-                      <div className={`relative inline-flex h-6 w-11 items-center rounded-full transition-none ${showOthersExams ? 'bg-primary' : 'bg-muted'}`}
-                        style={{ transition: 'none' }}
-                      >
-                        <span
-                          className={`inline-block h-4 w-4 transform rounded-full transition-none shadow-sm ${showOthersExams ? 'bg-background' : 'bg-background dark:bg-foreground'}`}
-                          style={{ transform: showOthersExams ? 'translateX(20px)' : 'translateX(2px)', transition: 'none' }}
-                        />
-                        <input
-                          type="checkbox"
-                          checked={showOthersExams}
-                          onChange={(e) => onFilterToggle(e.target.checked, onShowOthersExamsChange)}
-                          className="sr-only"
-                          aria-label="Toggle others exams events"
-                        />
-                      </div>
-                    </label>
+                    <SettingsSwitchRow
+                      label="Others Exams"
+                      checked={showOthersExams}
+                      onChange={(checked) => onFilterToggle(checked, onShowOthersExamsChange)}
+                      nested
+                      ariaLabel="Toggle others exams events"
+                    />
                     )}
 
-                    <label className="flex items-center justify-between cursor-pointer py-0.5 transition-none">
-                      <span className="text-sm font-medium text-foreground">Break</span>
-                      <div className={`relative inline-flex h-6 w-11 items-center rounded-full transition-none ${showBreak ? 'bg-primary' : 'bg-muted'}`}
-                        style={{ transition: 'none' }}
-                      >
-                        <span
-                          className={`inline-block h-4 w-4 transform rounded-full transition-none shadow-sm ${showBreak ? 'bg-background' : 'bg-background dark:bg-foreground'}`}
-                          style={{ transform: showBreak ? 'translateX(20px)' : 'translateX(2px)', transition: 'none' }}
-                        />
-                        <input
-                          type="checkbox"
-                          checked={showBreak}
-                          onChange={(e) => onFilterToggle(e.target.checked, onShowBreakChange)}
-                          className="sr-only"
-                          aria-label="Toggle break events"
-                        />
-                      </div>
-                    </label>
+                    <SettingsSwitchRow
+                      label="Break"
+                      checked={showBreak}
+                      onChange={(checked) => onFilterToggle(checked, onShowBreakChange)}
+                      ariaLabel="Toggle break events"
+                    />
                   </div>
 
                   {hasRegionalDateRange && (
-                  <label className="flex items-center justify-between cursor-pointer py-0.5 transition-none">
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-medium text-foreground">Show</span>
-                      <div className="flex gap-1 pointer-events-none select-none">
-                        <Avatar className="h-5 w-5">
-                          <AvatarImage src="/flags/kedah.png" alt="Kedah" draggable={false} />
-                          <AvatarFallback>KD</AvatarFallback>
-                        </Avatar>
-                        <Avatar className="h-5 w-5">
-                          <AvatarImage src="/flags/kelantan.png" alt="Kelantan" draggable={false} />
-                          <AvatarFallback>KT</AvatarFallback>
-                        </Avatar>
-                        <Avatar className="h-5 w-5">
-                          <AvatarImage src="/flags/terengganu.png" alt="Terengganu" draggable={false} />
-                          <AvatarFallback>TG</AvatarFallback>
-                        </Avatar>
-                      </div>
-                    </div>
-                    <div className={`relative inline-flex h-6 w-11 items-center rounded-full transition-none ${showKKT ? 'bg-primary' : 'bg-muted'}`}
-                      style={{ transition: 'none' }}
-                    >
-                      <span
-                        className={`inline-block h-4 w-4 transform rounded-full transition-none shadow-sm ${showKKT ? 'bg-background' : 'bg-background dark:bg-foreground'}`}
-                        style={{ transform: showKKT ? 'translateX(20px)' : 'translateX(2px)', transition: 'none' }}
-                      />
-                      <input
-                        type="checkbox"
-                        checked={showKKT}
-                        onChange={(e) => onFilterToggle(e.target.checked, onShowKKTChange)}
-                        className="sr-only"
-                        aria-label="Toggle Kedah, Kelantan, and Terengganu regional holidays"
-                      />
-                    </div>
-                  </label>
+                  <SettingsSwitchRow
+                    label={
+                      <>
+                        <span className="text-sm font-medium text-foreground">Show</span>
+                        <div className="flex gap-1 pointer-events-none select-none">
+                          <Avatar className="h-5 w-5">
+                            <AvatarImage src="/flags/kedah.png" alt="Kedah" draggable={false} />
+                            <AvatarFallback>KD</AvatarFallback>
+                          </Avatar>
+                          <Avatar className="h-5 w-5">
+                            <AvatarImage src="/flags/kelantan.png" alt="Kelantan" draggable={false} />
+                            <AvatarFallback>KT</AvatarFallback>
+                          </Avatar>
+                          <Avatar className="h-5 w-5">
+                            <AvatarImage src="/flags/terengganu.png" alt="Terengganu" draggable={false} />
+                            <AvatarFallback>TG</AvatarFallback>
+                          </Avatar>
+                        </div>
+                      </>
+                    }
+                    checked={showKKT}
+                    onChange={(checked) => onFilterToggle(checked, onShowKKTChange)}
+                    ariaLabel="Toggle Kedah, Kelantan, and Terengganu regional holidays"
+                  />
                   )}
 
                   {/* Theme Toggle */}

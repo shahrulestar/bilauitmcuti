@@ -13,6 +13,7 @@ Bila UiTM Cuti helps UiTM students check academic dates (registration, lectures,
 - Includes Group A and Group B schedule differences.
 - Handles regional date variations for Kedah, Kelantan, and Terengganu.
 - Provides an AI chat assistant for calendar and UiTM general questions.
+- Links to Find My Internship for discovering internship opportunities from multiple sources across Malaysia.
 
 ## Intended users
 - UiTM students who need fast semester planning.
@@ -44,6 +45,7 @@ Client requests use same-origin API routes; upstream details stay server-side.
 - /feedback : feedback and report form
 - /sponsor : redirects to https://shahrulestar.com/sponsor
 - /about : project details
+- /internship : Find My Internship — discover internship opportunities from multiple sources across Malaysia
 
 ## Important context for LLMs
 - This is not an official UiTM product.
